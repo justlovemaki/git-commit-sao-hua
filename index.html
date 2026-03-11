@@ -113,6 +113,35 @@
             box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
         }
 
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .btn-random {
+            background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+            color: #fff;
+        }
+
+        .btn-random:hover {
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+        }
+
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             color: #fff;
@@ -185,6 +214,154 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        .history-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-title {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid #ff6b6b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            transform: translateX(5px);
+        }
+
+        .history-item .type {
+            font-size: 0.8em;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+
+        .history-item .text {
+            font-size: 0.9em;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+
+        .share-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .share-modal.show {
+            display: flex;
+        }
+
+        .share-content {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .share-content h3 {
+            margin-bottom: 20px;
+            color: #fff;
+        }
+
+        .share-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .share-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .share-btn-wechat {
+            background: #07c160;
+            color: #fff;
+        }
+
+        .share-btn-weibo {
+            background: #e6162d;
+            color: #fff;
+        }
+
+        .share-btn-copy {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        .share-close {
+            margin-top: 15px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #888;
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .share-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .qr-code {
+            margin: 20px auto;
+            padding: 10px;
+            background: #fff;
+            border-radius: 10px;
+            display: none;
+        }
+
         .footer {
             text-align: center;
             margin-top: 30px;
@@ -246,7 +423,10 @@
             <input type="text" id="description" placeholder="例如：用户登录功能">
         </div>
 
-        <button class="btn btn-primary" onclick="generate()">✨ 生成骚话 Commit</button>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="generate()">✨ 生成骚话 Commit</button>
+            <button class="btn btn-random" onclick="randomGenerate()">🎲 随机生成</button>
+        </div>
 
         <div class="result" id="result">
             <div class="result-label">生成的 Commit Message：</div>
@@ -254,18 +434,202 @@
             <div class="result-actions">
                 <button class="btn btn-secondary" onclick="copyResult()">📋 复制</button>
                 <button class="btn btn-secondary" onclick="regenerate()">🔄 换一个</button>
+                <button class="btn btn-secondary" onclick="showShare()">🔗 分享</button>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">
+                <span>📜</span>
+                <span>历史记录</span>
+                <span style="margin-left: auto; cursor: pointer; color: #666;" onclick="clearHistory()">清空</span>
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="history-empty">暂无历史记录</div>
             </div>
         </div>
 
         <div class="footer">
             Made with 💕 by coding-expert | 
-            <a href="https://github.com/justlovemaki" target="_blank">GitHub</a>
+            <a href="https://github.com/justlovemaki/git-commit-sao-hua" target="_blank">GitHub</a>
+        </div>
+    </div>
+
+    <!-- 分享弹窗 -->
+    <div class="share-modal" id="shareModal">
+        <div class="share-content">
+            <h3>🔗 分享骚话</h3>
+            <div class="share-buttons">
+                <button class="share-btn share-btn-wechat" onclick="shareToWeChat()">
+                    💬 微信分享
+                </button>
+                <button class="share-btn share-btn-weibo" onclick="shareToWeibo()">
+                    🧣 微博分享
+                </button>
+                <button class="share-btn share-btn-copy" onclick="copyShareLink()">
+                    📋 复制链接
+                </button>
+            </div>
+            <button class="share-close" onclick="closeShare()">关闭</button>
         </div>
     </div>
 
     <div class="toast" id="toast">✅ 已复制到剪贴板</div>
 
+    <!-- 二维码生成库 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
+        // 历史记录管理
+        const HISTORY_KEY = 'git_sao_hua_history';
+        const MAX_HISTORY = 10;
+
+        function getHistory() {
+            try {
+                return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveToHistory(commitType, style, text, description) {
+            const history = getHistory();
+            const item = {
+                id: Date.now(),
+                type: commitType,
+                style: style,
+                text: text,
+                description: description,
+                createdAt: new Date().toISOString()
+            };
+            history.unshift(item);
+            if (history.length > MAX_HISTORY) {
+                history.pop();
+            }
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = getHistory();
+            const container = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<div class="history-empty">暂无历史记录</div>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="history-item" onclick="loadHistory(${item.id})">
+                    <div class="type">${item.type} · ${getStyleName(item.style)}</div>
+                    <div class="text">${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistory(id) {
+            const history = getHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+
+            document.getElementById('commitType').value = item.type;
+            document.getElementById('style').value = item.style;
+            document.getElementById('description').value = item.description || '';
+            
+            const result = item.description ? `${item.type}: ${item.description}\n\n${item.text}` : `${item.type}: ${item.text}`;
+            document.getElementById('resultText').textContent = result;
+            document.getElementById('result').classList.add('show');
+            lastResult = result;
+            
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清空历史记录吗？')) {
+                localStorage.removeItem(HISTORY_KEY);
+                renderHistory();
+            }
+        }
+
+        function getStyleName(style) {
+            const names = {
+                love: '💕 情话',
+                sao: '😏 骚话',
+                zha: '💔 扎心',
+                chu: '😤 中二',
+                fo: '🙏 佛系'
+            };
+            return names[style] || style;
+        }
+
+        // 随机生成
+        function randomGenerate() {
+            const types = Object.keys(saoHuaDB);
+            const styles = ['love', 'sao', 'zha', 'chu', 'fo'];
+            
+            const randomType = types[Math.floor(Math.random() * types.length)];
+            const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+            
+            document.getElementById('commitType').value = randomType;
+            document.getElementById('style').value = randomStyle;
+            
+            // 添加抖动动画
+            const btn = document.querySelector('.btn-random');
+            btn.classList.add('shake');
+            setTimeout(() => btn.classList.remove('shake'), 500);
+            
+            generate();
+        }
+
+        // 分享功能
+        function showShare() {
+            document.getElementById('shareModal').classList.add('show');
+        }
+
+        function closeShare() {
+            document.getElementById('shareModal').classList.remove('show');
+        }
+
+        function shareToWeChat() {
+            const text = lastResult || 'Git Commit 骚话生成器';
+            const url = window.location.href;
+            const shareText = encodeURIComponent(`${text}\n\n来自 Git Commit 骚话生成器：${url}`);
+            
+            // 微信分享需要扫描二维码，这里显示二维码
+            const qrContainer = document.querySelector('.share-content');
+            const existingQr = document.getElementById('qrCode');
+            if (existingQr) existingQr.remove();
+            
+            const qrDiv = document.createElement('div');
+            qrDiv.id = 'qrCode';
+            qrDiv.className = 'qr-code';
+            qrDiv.style.display = 'block';
+            qrContainer.insertBefore(qrDiv, document.querySelector('.share-buttons'));
+            
+            new QRCode(qrDiv, {
+                text: shareText,
+                width: 200,
+                height: 200
+            });
+            
+            alert('请用微信扫描二维码分享');
+        }
+
+        function shareToWeibo() {
+            const text = lastResult || 'Git Commit 骚话生成器';
+            const url = window.location.href;
+            const shareUrl = `https://service.weibo.com/share/share.php?title=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+            window.open(shareUrl, '_blank');
+        }
+
+        function copyShareLink() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast();
+                closeShare();
+            });
+        }
+
         const saoHuaDB = {
             fix: {
                 love: [
@@ -651,6 +1015,9 @@
             lastResult = result;
             document.getElementById('resultText').textContent = result;
             document.getElementById('result').classList.add('show');
+            
+            // 保存到历史记录
+            saveToHistory(commitType, style, randomMessage, description);
         }
 
         function copyResult() {
@@ -688,6 +1055,9 @@
                 generate();
             }
         });
+
+        // 页面加载时渲染历史记录
+        window.addEventListener('DOMContentLoaded', renderHistory);
     </script>
 </body>
 </html>
