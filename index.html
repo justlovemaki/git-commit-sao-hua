@@ -582,6 +582,35 @@
             background: rgba(0, 0, 0, 0.1);
         }
 
+        .custom-btn {
+            background: rgba(255, 107, 107, 0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            color: var(--accent-color);
+            font-size: 0.85em;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .custom-btn:hover {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
         .progress-bar {
             width: 100%;
             height: 6px;
@@ -656,6 +685,10 @@
                 <div class="stat-value" id="achievementCount">0/12</div>
                 <div class="stat-label">成就</div>
             </div>
+            <button class="custom-btn" onclick="showCustomModal()">
+                <span>💕</span>
+                <span>我的骚话</span>
+            </button>
         </div>
 
         <div class="form-group">
@@ -796,6 +829,187 @@
         </div>
     </div>
 
+    <!-- 自定义骚话弹窗 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-content">
+            <h3>💕 我的骚话</h3>
+            <div class="custom-form">
+                <div class="form-group">
+                    <label for="customCommitType">📝 Commit 类型</label>
+                    <select id="customCommitType">
+                        <option value="fix">fix - 修复 bug</option>
+                        <option value="feat">feat - 新功能</option>
+                        <option value="chore">chore - 日常维护</option>
+                        <option value="docs">docs - 文档更新</option>
+                        <option value="refactor">refactor - 代码重构</option>
+                        <option value="style">style - 代码格式</option>
+                        <option value="test">test - 测试相关</option>
+                        <option value="perf">perf - 性能优化</option>
+                        <option value="ci">ci - CI 配置</option>
+                        <option value="build">build - 构建系统</option>
+                        <option value="revert">revert - 回滚</option>
+                        <option value="hotfix">hotfix - 紧急修复</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customStyle">🎨 风格</label>
+                    <select id="customStyle">
+                        <option value="love">💕 情话模式</option>
+                        <option value="sao">😏 骚话模式</option>
+                        <option value="zha">💔 扎心模式</option>
+                        <option value="chu">😤 中二模式</option>
+                        <option value="fo">🙏 佛系模式</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customText">📝 骚话内容</label>
+                    <input type="text" id="customText" placeholder="输入你的自定义骚话..." maxlength="100">
+                </div>
+                <button class="btn btn-primary" onclick="addCustomSaoHua()">➕ 添加骚话</button>
+            </div>
+            <div class="custom-actions">
+                <button class="btn btn-secondary" onclick="exportCustomSaoHua()">📤 导出</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importCustomSaoHua(event)">
+            </div>
+            <div class="custom-list" id="customList">
+                <div class="empty-state">暂无自定义骚话</div>
+            </div>
+            <button class="custom-close" onclick="closeCustomModal()">关闭</button>
+        </div>
+    </div>
+
+    <style>
+        .custom-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-modal.show {
+            display: flex;
+        }
+
+        .custom-content {
+            background: #1a1a2e;
+            padding: 25px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .light-theme .custom-content {
+            background: #fff;
+        }
+
+        .custom-content h3 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .custom-form {
+            margin-bottom: 15px;
+        }
+
+        .custom-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .custom-actions .btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .custom-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .custom-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .light-theme .custom-item {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .custom-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .custom-item-type {
+            font-size: 0.75em;
+            color: var(--accent-color);
+            margin-bottom: 3px;
+        }
+
+        .custom-item-text {
+            font-size: 0.85em;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .custom-item-delete {
+            background: transparent;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+
+        .custom-item-delete:hover {
+            color: #ff0000;
+            transform: scale(1.2);
+        }
+
+        .custom-close {
+            width: 100%;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .custom-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .custom-count {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            margin-bottom: 10px;
+        }
+    </style>
+
     <div class="toast" id="toast">✅ 已复制到剪贴板</div>
 
     <!-- 二维码生成库 -->
@@ -807,7 +1021,8 @@
             FAVORITES: 'git_sao_hua_favorites',
             STATS: 'git_sao_hua_stats',
             ACHIEVEMENTS: 'git_sao_hua_achievements',
-            THEME: 'git_sao_hua_theme'
+            THEME: 'git_sao_hua_theme',
+            CUSTOM: 'git_sao_hua_custom'
         };
 
         const MAX_HISTORY = 20;
@@ -847,7 +1062,12 @@
                     "修代码容易，修心难",
                     "我 fix 的不是 bug，是想你的心情",
                     "完美的代码，完美的你",
-                    "修复中，想你中"
+                    "修复中，想你中",
+                    "每个 bug 修复后都想告诉你",
+                    "修好这个 bug 就是我的今日成就",
+                    "为你，千千万万遍修 bug",
+                    "代码要修，感情也要修",
+                    "我的修复能力里藏着爱"
                 ],
                 sao: [
                     "这个 bug 是我故意留的，就想多见你几次",
@@ -864,7 +1084,12 @@
                     "bug ：你修我啊？我：就修你！",
                     "fix 完这个就去睡觉（才怪）",
                     "bug 克星在此",
-                    "修 bug 我是认真的"
+                    "修 bug 我是认真的",
+                    "修 bug 修到飞起",
+                    "我的 fix 骚动你的心",
+                    "又修了一个 bug，想我了吗",
+                    "骚骚的 fix 甜甜的你",
+                    "这波 fix 骚操作你看懂了吗"
                 ],
                 zha: [
                     "bug 修好了，你也该走了",
@@ -881,7 +1106,12 @@
                     "fix 了一辈子，还是单身",
                     "bug 修完了，天也亮了",
                     "修得好代码，修不好生活",
-                    "每个 bug 都是生活的隐喻"
+                    "每个 bug 都是生活的隐喻",
+                    "修完这个 bug 又是一个凌晨",
+                    "bug 修不完，就像我的焦虑",
+                    "fix 了代码，fix 不了工资",
+                    "又修了一个 bug，yet another day",
+                    "bug 修完还有 bug，就像作业写不完"
                 ],
                 chu: [
                     "以吾之名，修复此界之裂痕！",
@@ -898,7 +1128,12 @@
                     "这是命运的修复",
                     "bug 的末日到了",
                     "修复之力，全开！",
-                    "看我一剑斩了这 bug"
+                    "看我一剑斩了这 bug",
+                    "修复吧，我的赛亚之力！",
+                    "接招吧，bug！这就是我的完全形态！",
+                    "吾之修复魔法，无人可挡",
+                    "受死吧，杂菌 bug！",
+                    "修复之魂，燃烧吧！"
                 ],
                 fo: [
                     "bug 本无 bug，庸人自扰之",
@@ -915,7 +1150,12 @@
                     "来也 bug，去也 bug",
                     "bug 本清净，何须你来修",
                     "一念 fix，一念 bug",
-                    "无 bug 可修，无 fix 可得"
+                    "无 bug 可修，无 fix 可得",
+                    "bug 不 bug，是 bug",
+                    "修即是不修",
+                    "fix 无所谓好与不好",
+                    "bug 来吧，我佛系修复",
+                    "一切随缘，bug 自去"
                 ]
             },
             feat: {
@@ -934,7 +1174,12 @@
                     "新功能，新开始，新爱你",
                     "feat 你，是我最大的功能",
                     "代码在增长，爱也在",
-                    "新增的不仅是代码"
+                    "新增的不仅是代码",
+                    "每个新功能都是我想你的方式",
+                    "功能加一件，想你深一点",
+                    "新功能完成了，你看到了吗",
+                    "为你开发的爱情功能上线了",
+                    "我的新功能列表：更爱你"
                 ],
                 sao: [
                     "新 feature 来了，准备好被惊艳了吗",
@@ -951,7 +1196,12 @@
                     "feat 就是硬道理",
                     "这个功能我能吹一年",
                     "feat 使我强大",
-                    "新功能，新境界"
+                    "新功能，新境界",
+                    "这个 feat 骚到没朋友",
+                    "新功能骚操作闪瞎你的眼",
+                    "又加了一个功能，想我想得睡不着",
+                    "feat 一波，骚气冲天",
+                    "我加功能，你加微信吗"
                 ],
                 zha: [
                     "功能越做越多，快乐越做越少",
@@ -968,7 +1218,12 @@
                     "功能做完了，女朋友没了",
                     "feat 一时爽，一直 feat 一直肝",
                     "新功能，新 bug",
-                    "feat 的人生没有终点"
+                    "feat 的人生没有终点",
+                    "feat 完这个功能，天亮了呢",
+                    "新功能 = 新的加班",
+                    "功能加了，头发没了",
+                    "feat 完就凌晨，熟悉的味道",
+                    "每个新功能都是用头发换的"
                 ],
                 chu: [
                     "新力量觉醒吧！",
@@ -985,7 +1240,12 @@
                     "创造模式，启动！",
                     "此 feat，乃天命",
                     "觉醒吧，feat 之魂！",
-                    "创造新世界，就在此刻"
+                    "创造新世界，就在此刻",
+                    "创造之神，在此降临！",
+                    "新功能？接我一招！",
+                    "这是神的领域！",
+                    "接受来自创世神的祝福吧！",
+                    "新功能之力，突破天际！"
                 ],
                 fo: [
                     "功能本无功能，用的人多了就有了",
@@ -1002,7 +1262,12 @@
                     "feat 本清净",
                     "一念 feat，一念 revert",
                     "功能本无自性",
-                    "随缘 feat，随缘上线"
+                    "随缘 feat，随缘上线",
+                    "功能加不加，完全看心情",
+                    "feat 与不 feat，施主莫强求",
+                    "新功能不过是过眼云烟",
+                    "一切功能皆幻影",
+                    "添加是缘，不加也是缘"
                 ]
             },
             chore: {
@@ -1021,7 +1286,12 @@
                     "枯燥中带着温柔",
                     "每一次更新都是为你",
                     "chore 也要做得浪漫",
-                    "日常中的小确幸"
+                    "日常中的小确幸",
+                    "日常维护中的小甜蜜",
+                    "整理中想着你",
+                    "每次 chore 都想和你一起",
+                    "维护代码，维护我们的未来",
+                    "日常想你的日常"
                 ],
                 sao: [
                     "chore 嘛，就是又菜又爱玩",
@@ -1038,7 +1308,12 @@
                     "更新配置，更新人设",
                     "chore 就是硬道理",
                     "日常 chore，非常规操作",
-                    "chore 也能很骚"
+                    "chore 也能很骚",
+                    "日常 chore 骚操作",
+                    "我的 chore 很骚很骚",
+                    "chore 一下，浪一浪",
+                    "日常划水专业户",
+                    "chore 完我就去找你"
                 ],
                 zha: [
                     "chore 做了一整天，好像什么都没做",
@@ -1055,7 +1330,12 @@
                     "chore 完这个，天也亮了",
                     "chore 使我怀疑人生",
                     "更新依赖，依赖不了任何人",
-                    "chore 的人生没有终点"
+                    "chore 的人生没有终点",
+                    "日常 chore 日常穷",
+                    "chore 完了还是穷",
+                    "又做了一天杂活",
+                    "chore 做得我心累",
+                    "日常维护日常烦躁"
                 ],
                 chu: [
                     "日常修炼，功力 +1",
@@ -1072,7 +1352,12 @@
                     "chore 之力，加持吾身",
                     "日常积累，终有一日",
                     "chore 修炼，永无止境",
-                    "这是强者的必经之路"
+                    "这是强者的必经之路",
+                    "日常修炼，功德 +1",
+                    "积累吧，修炼之魂！",
+                    "这才是修行的开始！",
+                    " chore 之魂，燃烧！",
+                    "日常积累力量！"
                 ],
                 fo: [
                     "chore 即修行",
@@ -1089,7 +1374,12 @@
                     "chore 即是空",
                     "来也 chore，去也 chore",
                     "无 chore 可做",
-                    "平常心，做 chore 事"
+                    "平常心，做 chore 事",
+                    "chore 不 chore，随它去",
+                    "做与不做，都随缘",
+                    "日常即无常",
+                    " chore 如露亦如电",
+                    "平平淡淡才是真"
                 ]
             },
             docs: {
@@ -1108,7 +1398,12 @@
                     "文档是我的告白",
                     "注释是给你的情书",
                     "文档写得好，爱情没烦恼",
-                    "写文档，想你中"
+                    "写文档，想你中",
+                    "每个注释都是爱你的证明",
+                    "写文档时在想你",
+                    "文档里的字都是情书",
+                    "为你写最详细的文档",
+                    "文档是对你的承诺"
                 ],
                 sao: [
                     "文档写得好，下班下得早",
@@ -1125,7 +1420,12 @@
                     "写文档就是硬道理",
                     "文档也能很骚",
                     "写文档，骚操作",
-                    "docs 使我成名"
+                    "docs 使我成名",
+                    "我的文档骚到飞起",
+                    "写文档，我是专业的",
+                    "注释写得好，bug 找不到",
+                    "docs 是一种态度",
+                    "这文档，我写的真好"
                 ],
                 zha: [
                     "文档写了，没人看",
@@ -1142,7 +1442,12 @@
                     "写文档，没人看",
                     "文档写了白写",
                     "docs 使我崩溃",
-                    "写文档的人生没有意义"
+                    "写文档的人生没有意义",
+                    "写了等于白写系列",
+                    "文档写完没人看，心累",
+                    "做文档一小时，看的人十秒",
+                    "写文档写到怀疑人生",
+                    "文档的命运就是被遗忘"
                 ],
                 chu: [
                     "秘传之书，今日写成",
@@ -1159,7 +1464,12 @@
                     "这是知识的传承",
                     "文档之力，觉醒吧",
                     "写文档，传万世",
-                    "文档之力，解放"
+                    "文档之力，解放",
+                    "这是神留下的启示！",
+                    "接受知识的洗礼吧！",
+                    "文档之神，赐予我力量！",
+                    "此乃天书！",
+                    "传承之力，集结！"
                 ],
                 fo: [
                     "文档本无文档，代码本无代码",
@@ -1176,7 +1486,12 @@
                     "写文档即是放下",
                     "文档本无好坏",
                     "随缘 docs，随缘看",
-                    "写与不写，皆是空"
+                    "写与不写，皆是空",
+                    "文档写不写无所谓",
+                    "有即是无，无即是有",
+                    "写不写都随缘",
+                    "一切文档皆虚妄",
+                    "文档缘分到了自然要写"
                 ]
             },
             refactor: {
@@ -1195,7 +1510,12 @@
                     "重构是新的开始",
                     "重构代码，重构人生",
                     "重构使我更爱你",
-                    "重构之后，代码更美了"
+                    "重构之后，代码更美了",
+                    "重构是重写我们的故事",
+                    "代码翻新，爱意不变",
+                    "每一次重构都是新的告白",
+                    "重构代码，像重新爱你",
+                    "重构是爱的延续"
                 ],
                 sao: [
                     "重构代码，也重构一下人设",
@@ -1212,10 +1532,15 @@
                     "重构也能很骚",
                     "重构，骚操作",
                     "重构使我成名",
-                    "重构代码，重构心情"
+                    "重构代码，重构心情",
+                    "重构使我骚气冲天",
+                    "这波重构，骚到飞起",
+                    "重构一下，世界和平",
+                    "代码重构，骚气不减",
+                    "重构的人生不需要解释"
                 ],
                 zha: [
-                    "重构完发现，还不如不改",
+                    "重构完发现还不如不改",
                     "代码重构了，人生还是老样子",
                     "refactor 了一天，好像什么都没变",
                     "重构代码，重构寂寞",
@@ -1229,7 +1554,12 @@
                     "重构代码，重构孤独",
                     "重构使我崩溃",
                     "重构代码，重构空虚",
-                    "重构的人生没有终点"
+                    "重构的人生没有终点",
+                    "重构越改越乱",
+                    "refactor 完头发又没了",
+                    "重构不如不重构",
+                    "改了又改，bug 常在",
+                    "重构使我怀疑代码"
                 ],
                 chu: [
                     "破而后立，晓喻新生！",
@@ -1246,7 +1576,12 @@
                     "重构之力，觉醒吧",
                     "重构代码，创造传说",
                     "重构之力，加持！",
-                    "重构，破茧成蝶"
+                    "重构，破茧成蝶",
+                    "浴火重生，代码进化！",
+                    "打破枷锁，重塑辉煌！",
+                    "重构之力，突破天际！",
+                    "蜕变吧，代码之力！",
+                    "觉醒吧，沉睡的代码！"
                 ],
                 fo: [
                     "重构即放下",
@@ -1263,7 +1598,12 @@
                     "重构即是修行",
                     "重构本无自性",
                     "重构即放下执念",
-                    "随缘重构，随缘看"
+                    "随缘重构，随缘看",
+                    "重构不重构，都是浮云",
+                    "代码本无相",
+                    "重构随缘心自在",
+                    "心无所住，何须重构",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             style: {
@@ -1282,7 +1622,12 @@
                     "格式化是浪漫的",
                     "style 调整，爱意满满",
                     "格式化代码，表达爱意",
-                    "代码美了，你也美了"
+                    "代码美了，你也美了",
+                    "格式化的是代码，爱的是你",
+                    "style 调整，爱意调整",
+                    "代码美观，爱情圆满",
+                    "格式化让代码更爱你",
+                    "美美与共，爱你所爱"
                 ],
                 sao: [
                     "代码要骚，style 要骚",
@@ -1299,7 +1644,12 @@
                     "格式化也能很骚",
                     "format，骚操作",
                     "格式化使我成名",
-                    "格式化代码，格式化心情"
+                    "格式化代码，格式化心情",
+                    "格式化使我骚气侧漏",
+                    "这波格式骚气冲天",
+                    "format 一下，世界变美",
+                    "代码格式化，骚气不流失",
+                    "格式化的人生不需要解释"
                 ],
                 zha: [
                     "style 改来改去，功能还是烂的",
@@ -1316,7 +1666,12 @@
                     "格式化代码，格式化孤独",
                     "format 使我崩溃",
                     "格式化代码，格式化空虚",
-                    "format 的人生没有终点"
+                    "format 的人生没有终点",
+                    "格式改了又改",
+                    "format 完头发又没了",
+                    "格式化不如不格式化",
+                    "调了又调，bug 常在",
+                    "format 使我怀疑代码"
                 ],
                 chu: [
                     "美之力量，加持吾身",
@@ -1333,7 +1688,12 @@
                     "style 之力，觉醒吧",
                     "格式化代码，创造美感",
                     "style 之力，加持！",
-                    "格式化，美的觉醒"
+                    "格式化，美的觉醒",
+                    "美之审判，开始！",
+                    "颜值即是正义！",
+                    "美的力量，突破天际！",
+                    "觉醒吧，美学之魂！",
+                    "格式化之力，美之极致！"
                 ],
                 fo: [
                     "美与不美，都是代码",
@@ -1350,7 +1710,12 @@
                     "格式化即是修行",
                     "style 本无自性",
                     "格式化即放下执念",
-                    "随缘 style，随缘看"
+                    "随缘 style，随缘看",
+                    "格式不格式，都是浮云",
+                    "代码本无相",
+                    "格式化随缘心自在",
+                    "心无所住，何须格式化",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             test: {
@@ -1369,7 +1734,12 @@
                     "测试是浪漫的",
                     "test 通过了，爱情通过了",
                     "测试代码，测试幸福",
-                    "测试通过了，心情好了"
+                    "测试通过了，心情好了",
+                    "测试通过，爱你不变",
+                    "coverage 满了，爱也满了",
+                    "测试用例，也是爱的方式",
+                    "写测试，是爱你的表现",
+                    "测试成功，爱你成功"
                 ],
                 sao: [
                     "test 一时爽，一直 test 一直爽",
@@ -1386,7 +1756,12 @@
                     "test，骚操作",
                     "test 使我成名",
                     "测试代码，测试心情",
-                    "test 使我快乐"
+                    "test 使我快乐",
+                    "测试使我骚气冲天",
+                    "这波测试，骚到飞起",
+                    "test 一下，世界和平",
+                    "测试代码，骚气不减",
+                    "测试的人生不需要解释"
                 ],
                 zha: [
                     "测试写完了，bug 还在",
@@ -1403,7 +1778,12 @@
                     "测试代码，测试孤独",
                     "test 使我崩溃",
                     "测试代码，测试空虚",
-                    "test 的人生没有终点"
+                    "test 的人生没有终点",
+                    "测试改了又改",
+                    "test 完头发又没了",
+                    "测试通过，bug 照常",
+                    "测了又测，bug 常在",
+                    "test 使我怀疑代码"
                 ],
                 chu: [
                     "审判之力，测试开始",
@@ -1420,7 +1800,12 @@
                     "test 之力，觉醒吧",
                     "测试代码，审判 bug",
                     "test 之力，加持！",
-                    "测试，审判开始"
+                    "测试，审判开始",
+                    "审判时刻，到来！",
+                    "接受测试的审判吧！",
+                    "test 之力，裁决！",
+                    "bug 们，受死吧！",
+                    "测试圣剑，斩断 bug！"
                 ],
                 fo: [
                     "测与不测，bug 都在那里",
@@ -1437,7 +1822,12 @@
                     "测试即是放下",
                     "test 本无自性",
                     "测试即放下执念",
-                    "随缘 test，随缘看"
+                    "随缘 test，随缘看",
+                    "测试不测试，都是浮云",
+                    "代码本无相",
+                    "测试随缘心自在",
+                    "心无所住，何须测试",
+                    "本来无一物，何处惹 bug"
                 ]
             },
             perf: {
@@ -1456,7 +1846,12 @@
                     "优化是浪漫的",
                     "perf 优化了，爱情优化了",
                     "优化性能，优化幸福",
-                    "速度快了，心情好了"
+                    "速度快了，心情好了",
+                    "优化成功，爱你成功",
+                    "速度满格，爱意满格",
+                    "性能提升，爱意提升",
+                    "快马加鞭，爱你不减",
+                    "优化无止境，爱你无止境"
                 ],
                 sao: [
                     "perf 一时爽，一直 perf 一直爽",
@@ -1473,7 +1868,12 @@
                     "perf，骚操作",
                     "perf 使我成名",
                     "优化性能，优化心情",
-                    "perf 使我快乐"
+                    "perf 使我快乐",
+                    "优化使我骚气冲天",
+                    "这波优化，骚到飞起",
+                    "优化一下，世界加速",
+                    "性能优化，骚气不流失",
+                    "优化的人生不需要解释"
                 ],
                 zha: [
                     "性能提升了，下班时间没提升",
@@ -1490,7 +1890,12 @@
                     "优化性能，优化孤独",
                     "perf 使我崩溃",
                     "优化性能，优化空虚",
-                    "perf 的人生没有终点"
+                    "perf 的人生没有终点",
+                    "优化改了又改",
+                    "perf 完头发又没了",
+                    "优化不如不优化",
+                    "调了又调，性能照常",
+                    "perf 使我怀疑代码"
                 ],
                 chu: [
                     "速度之力，解放",
@@ -1507,7 +1912,12 @@
                     "perf 之力，觉醒吧",
                     "优化性能，创造速度",
                     "perf 之力，加持！",
-                    "优化，速度觉醒"
+                    "优化，速度觉醒",
+                    "极速之力，觉醒！",
+                    "速度的极致，就是现在！",
+                    "突破天际的速度！",
+                    "极速模式，启动！",
+                    "速度之魂，燃烧！"
                 ],
                 fo: [
                     "快与不快，都是缘分",
@@ -1524,7 +1934,12 @@
                     "优化即是修行",
                     "perf 本无自性",
                     "优化即放下执念",
-                    "随缘 perf，随缘看"
+                    "随缘 perf，随缘看",
+                    "优化不优化，都是浮云",
+                    "速度本无相",
+                    "优化随缘心自在",
+                    "心无所住，何须优化",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             ci: {
@@ -1543,7 +1958,12 @@
                     "CI 是浪漫的",
                     "ci 通过了，爱情通过了",
                     "配置 CI，配置幸福",
-                    "CI 通过了，心情好了"
+                    "CI 通过了，心情好了",
+                    "CI 绿了，爱更绿了",
+                    "流水线畅通，爱也畅通",
+                    "CI 通过，爱你通过",
+                    "构建成功，表白成功",
+                    "CI 成功，爱你也成功"
                 ],
                 sao: [
                     "ci 一时爽，一直 ci 一直爽",
@@ -1560,7 +1980,12 @@
                     "ci，骚操作",
                     "ci 使我成名",
                     "配置 CI，配置心情",
-                    "ci 使我快乐"
+                    "ci 使我快乐",
+                    "CI 使我骚气冲天",
+                    "这波配置，骚到飞起",
+                    "CI 一下，世界和平",
+                    "配置 CI，骚气不减",
+                    "CI 的人生不需要解释"
                 ],
                 zha: [
                     "CI 红了，我也红了（急的）",
@@ -1577,7 +2002,12 @@
                     "配置 CI，配置孤独",
                     "ci 使我崩溃",
                     "配置 CI，配置空虚",
-                    "ci 的人生没有终点"
+                    "ci 的人生没有终点",
+                    "CI 红了又红",
+                    "配置改了又改",
+                    "CI 失败是常态",
+                    "构建失败常态化",
+                    "ci 使我怀疑人生"
                 ],
                 chu: [
                     "自动化之力，觉醒",
@@ -1594,7 +2024,12 @@
                     "ci 之力，觉醒吧",
                     "配置 CI，创造自动化",
                     "ci 之力，加持！",
-                    "CI，自动化觉醒"
+                    "CI，自动化觉醒",
+                    "自动之力，启动！",
+                    "流水线之心，激活！",
+                    "CI 之魂，燃烧！",
+                    "自动化之魂，觉醒！",
+                    "机械之心，觉醒！"
                 ],
                 fo: [
                     "过与不过，都是缘分",
@@ -1611,7 +2046,12 @@
                     "CI 即是修行",
                     "ci 本无自性",
                     "CI 即放下执念",
-                    "随缘 ci，随缘看"
+                    "随缘 ci，随缘看",
+                    "CI 不 CI，都是浮云",
+                    "构建本无相",
+                    "CI 随缘心自在",
+                    "心无所住，何须 CI",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             build: {
@@ -1630,7 +2070,12 @@
                     "build 是浪漫的",
                     "build 通过了，爱情通过了",
                     "配置 build，配置幸福",
-                    "build 通过了，心情好了"
+                    "build 通过了，心情好了",
+                    "构建成功，爱你也成功",
+                    "打包完成，爱也打包",
+                    "build 成功，爱你成功",
+                    "编译通过，表白通过",
+                    "构建成功，爱情成功"
                 ],
                 sao: [
                     "build 一时爽，一直 build 一直爽",
@@ -1647,7 +2092,12 @@
                     "build，骚操作",
                     "build 使我成名",
                     "配置 build，配置心情",
-                    "build 使我快乐"
+                    "build 使我快乐",
+                    "build 使我骚气冲天",
+                    "这波构建，骚到飞起",
+                    "build 一下，世界和平",
+                    "打包构建，骚气不流失",
+                    "build 的人生不需要解释"
                 ],
                 zha: [
                     "build 失败了，人生也失败了",
@@ -1664,7 +2114,12 @@
                     "配置 build，配置孤独",
                     "build 使我崩溃",
                     "配置 build，配置空虚",
-                    "build 的人生没有终点"
+                    "build 的人生没有终点",
+                    "构建失败了又失败",
+                    "打包失败了常态化",
+                    "build 失败是常态",
+                    "编译失败是日常",
+                    "build 使我怀疑代码"
                 ],
                 chu: [
                     "构建之力，觉醒",
@@ -1681,7 +2136,12 @@
                     "build 之力，觉醒吧",
                     "配置 build，创造世界",
                     "build 之力，加持！",
-                    "build，创造觉醒"
+                    "build，创造觉醒",
+                    "创造之力，降临！",
+                    "世界之卵，孵化！",
+                    "构建之心，觉醒！",
+                    "从无到有，创造之神！",
+                    "万物诞生之时！"
                 ],
                 fo: [
                     "成与不成，都是 build",
@@ -1698,7 +2158,12 @@
                     "构建即是修行",
                     "build 本无自性",
                     "构建即放下执念",
-                    "随缘 build，随缘看"
+                    "随缘 build，随缘看",
+                    "build 不 build，都是浮云",
+                    "打包本无相",
+                    "构建随缘心自在",
+                    "心无所住，何须构建",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             revert: {
@@ -1717,7 +2182,12 @@
                     "revert 是浪漫的",
                     "revert 通过了，爱情通过了",
                     "配置 revert，配置幸福",
-                    "revert 通过了，心情好了"
+                    "revert 通过了，心情好了",
+                    "回滚成功，爱你不变",
+                    "时光倒流，爱意永存",
+                    "revert 成功，想你成功",
+                    "回到过去，爱不减少",
+                    "回滚代码，爱更坚定"
                 ],
                 sao: [
                     "revert 一时爽，一直 revert 一直爽",
@@ -1734,7 +2204,12 @@
                     "revert，骚操作",
                     "revert 使我成名",
                     "配置 revert，配置心情",
-                    "revert 使我快乐"
+                    "revert 使我快乐",
+                    "revert 使我骚气冲天",
+                    "这波回滚，骚到飞起",
+                    "revert 一下，世界和平",
+                    "代码回滚，骚气不流失",
+                    "revert 的人生不需要解释"
                 ],
                 zha: [
                     "revert 了，白干了",
@@ -1751,7 +2226,12 @@
                     "配置 revert，配置孤独",
                     "revert 使我崩溃",
                     "配置 revert，配置空虚",
-                    "revert 的人生没有终点"
+                    "revert 的人生没有终点",
+                    "回滚了又回滚",
+                    "revert 完头发又没了",
+                    "回滚不如不回滚",
+                    " revert 越弄越乱",
+                    "revert 使我怀疑代码"
                 ],
                 chu: [
                     "时间倒流，世界重置",
@@ -1768,7 +2248,12 @@
                     "revert 之力，觉醒吧",
                     "配置 revert，重置世界",
                     "revert 之力，加持！",
-                    "revert，时间觉醒"
+                    "revert，时间觉醒",
+                    "时间之轮，倒转！",
+                    "时光倒流的力量！",
+                    "回到过去的魔法！",
+                    "时间之力，重塑！",
+                    "时空逆转，觉醒！"
                 ],
                 fo: [
                     "回与不回，都是缘分",
@@ -1785,7 +2270,12 @@
                     "回滚即是修行",
                     "revert 本无自性",
                     "回滚即放下执念",
-                    "随缘 revert，随缘看"
+                    "随缘 revert，随缘看",
+                    "revert 不 revert，都是浮云",
+                    "时间本无相",
+                    "回滚随缘心自在",
+                    "心无所住，何须回滚",
+                    "本来无一物，何处惹尘埃"
                 ]
             },
             hotfix: {
@@ -1804,7 +2294,12 @@
                     "hotfix 是浪漫的",
                     "hotfix 通过了，爱情通过了",
                     "配置 hotfix，配置幸福",
-                    "hotfix 通过了，心情好了"
+                    "hotfix 通过了，心情好了",
+                    "修复成功，爱你成功",
+                    "紧急时刻，爱不缺席",
+                    "hotfix 成功，想你成功",
+                    "紧急修复，爱意不减",
+                    "修复完成，爱你也完成"
                 ],
                 sao: [
                     "hotfix 一时爽，一直 hotfix 一直爽",
@@ -1821,7 +2316,12 @@
                     "hotfix，骚操作",
                     "hotfix 使我成名",
                     "配置 hotfix，配置心情",
-                    "hotfix 使我快乐"
+                    "hotfix 使我快乐",
+                    "hotfix 使我骚气冲天",
+                    "这波修复，骚到飞起",
+                    "hotfix 一下，世界和平",
+                    "紧急修复，骚气不流失",
+                    "hotfix 的人生不需要解释"
                 ],
                 zha: [
                     "hotfix 完了，天也亮了",
@@ -1838,7 +2338,12 @@
                     "配置 hotfix，配置孤独",
                     "hotfix 使我崩溃",
                     "配置 hotfix，配置空虚",
-                    "hotfix 的人生没有终点"
+                    "hotfix 的人生没有终点",
+                    "修复了又修复",
+                    "hotfix 完头发又没了",
+                    "修复不如不修复",
+                    "fix 越修越多",
+                    "hotfix 使我怀疑代码"
                 ],
                 chu: [
                     "紧急事态，全力应对",
@@ -1855,7 +2360,12 @@
                     "hotfix 之力，觉醒吧",
                     "配置 hotfix，创造防线",
                     "hotfix 之力，加持！",
-                    "hotfix，防御觉醒"
+                    "hotfix，防御觉醒",
+                    "最后的防线，构筑！",
+                    "紧急模式，启动！",
+                    "守护之力，全开！",
+                    "危机时刻，觉醒！",
+                    "背水一战，出击！"
                 ],
                 fo: [
                     "急与不急，都是 bug",
@@ -1872,7 +2382,12 @@
                     "紧急修复即是修行",
                     "hotfix 本无自性",
                     "紧急修复即放下执念",
-                    "随缘 hotfix，随缘看"
+                    "随缘 hotfix，随缘看",
+                    "hotfix 不 hotfix，都是浮云",
+                    "修复本无相",
+                    "修复随缘心自在",
+                    "心无所住，何须修复",
+                    "本来无一物，何处惹 bug"
                 ]
             }
         };
@@ -1998,7 +2513,7 @@
             return getStorage(STORAGE_KEYS.HISTORY) || [];
         }
 
-        function saveToHistory(commitType, style, text, description) {
+        function saveToHistory(commitType, style, text, description, isCustom = false) {
             const history = getHistory();
             const item = {
                 id: generateId(),
@@ -2006,6 +2521,7 @@
                 style: style,
                 text: text,
                 description: description,
+                isCustom: isCustom,
                 createdAt: new Date().toISOString()
             };
             history.unshift(item);
@@ -2148,6 +2664,135 @@
             `).join('');
         }
 
+        // ==================== 自定义骚话管理 ====================
+        function getCustomSaoHua() {
+            return getStorage(STORAGE_KEYS.CUSTOM) || [];
+        }
+
+        function addCustomSaoHua() {
+            const commitType = document.getElementById('customCommitType').value;
+            const style = document.getElementById('customStyle').value;
+            const text = document.getElementById('customText').value.trim();
+
+            if (!text) {
+                showToast('⚠️ 请输入骚话内容');
+                return;
+            }
+
+            const customList = getCustomSaoHua();
+            customList.push({
+                id: generateId(),
+                type: commitType,
+                style: style,
+                text: text,
+                createdAt: new Date().toISOString()
+            });
+
+            setStorage(STORAGE_KEYS.CUSTOM, customList);
+            document.getElementById('customText').value = '';
+            renderCustomList();
+            showToast('✅ 骚话添加成功');
+        }
+
+        function deleteCustomSaoHua(id) {
+            if (!confirm('确定要删除这条骚话吗？')) return;
+
+            let customList = getCustomSaoHua();
+            customList = customList.filter(item => item.id !== id);
+            setStorage(STORAGE_KEYS.CUSTOM, customList);
+            renderCustomList();
+            showToast('🗑️ 已删除');
+        }
+
+        function renderCustomList() {
+            const customList = getCustomSaoHua();
+            const container = document.getElementById('customList');
+            
+            if (customList.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无自定义骚话</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="custom-count">共 ${customList.length} 条自定义骚话，生成时有 30% 概率被选中</div>
+                ${customList.map(item => `
+                    <div class="custom-item">
+                        <div class="custom-item-info">
+                            <div class="custom-item-type">${item.type} · ${getStyleName(item.style)}</div>
+                            <div class="custom-item-text">${item.text}</div>
+                        </div>
+                        <button class="custom-item-delete" onclick="deleteCustomSaoHua('${item.id}')">🗑️</button>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function exportCustomSaoHua() {
+            const customList = getCustomSaoHua();
+            if (customList.length === 0) {
+                showToast('⚠️ 没有可导出的骚话');
+                return;
+            }
+
+            const dataStr = JSON.stringify(customList, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'git_sao_hua_custom.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('✅ 已导出');
+        }
+
+        function importCustomSaoHua(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) {
+                        throw new Error('Invalid format');
+                    }
+
+                    const customList = getCustomSaoHua();
+                    let addedCount = 0;
+
+                    imported.forEach(item => {
+                        if (item.type && item.style && item.text) {
+                            customList.push({
+                                id: generateId(),
+                                type: item.type,
+                                style: item.style,
+                                text: item.text,
+                                createdAt: new Date().toISOString()
+                            });
+                            addedCount++;
+                        }
+                    });
+
+                    setStorage(STORAGE_KEYS.CUSTOM, customList);
+                    renderCustomList();
+                    showToast(`✅ 成功导入 ${addedCount} 条骚话`);
+                } catch (err) {
+                    showToast('⚠️ 导入失败，文件格式错误');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function showCustomModal() {
+            document.getElementById('customModal').classList.add('show');
+            renderCustomList();
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customModal').classList.remove('show');
+        }
+
         // ==================== 主题管理 ====================
         function initTheme() {
             const theme = getStorage(STORAGE_KEYS.THEME) || 'dark';
@@ -2211,8 +2856,20 @@
             const style = document.getElementById('style').value;
             const description = document.getElementById('description').value.trim();
 
-            const messages = saoHuaDB[commitType][style];
-            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            // 30% 概率从自定义骚话中选取
+            const customList = getCustomSaoHua();
+            const customForTypeStyle = customList.filter(c => c.type === commitType && c.style === style);
+            
+            let randomMessage;
+            let isCustom = false;
+
+            if (customForTypeStyle.length > 0 && Math.random() < 0.3) {
+                randomMessage = customForTypeStyle[Math.floor(Math.random() * customForTypeStyle.length)].text;
+                isCustom = true;
+            } else {
+                const messages = saoHuaDB[commitType][style];
+                randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            }
 
             let result;
             if (description) {
@@ -2228,7 +2885,7 @@
             isFavorite = false;
             updateFavoriteButton();
             
-            saveToHistory(commitType, style, randomMessage, description);
+            saveToHistory(commitType, style, randomMessage, description, isCustom);
             
             // 更新统计
             if (isKeyboard) {
