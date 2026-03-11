@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Commit 骚话生成器 💕</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #e0e0e0;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #ff6b6b);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+
+        @keyframes gradient {
+            0%, 100% { background-position: 0% center; }
+            50% { background-position: 100% center; }
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-family: inherit;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border-left: 4px solid #ff6b6b;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-label {
+            color: #888;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+
+        .result-text {
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #fff;
+            word-break: break-all;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-actions .btn {
+            flex: 1;
+            margin-bottom: 0;
+            font-size: 0.9em;
+            padding: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #4caf50;
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.8em;
+        }
+
+        .footer a {
+            color: #ff6b6b;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .emoji {
+            font-size: 1.5em;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💕 Git Commit 骚话生成器</h1>
+        <p class="subtitle">让每次提交都充满爱意（或骚气）</p>
+
+        <div class="form-group">
+            <label for="commitType">📝 Commit 类型</label>
+            <select id="commitType">
+                <option value="fix">fix - 修复 bug</option>
+                <option value="feat">feat - 新功能</option>
+                <option value="chore">chore - 日常维护</option>
+                <option value="docs">docs - 文档更新</option>
+                <option value="refactor">refactor - 代码重构</option>
+                <option value="style">style - 代码格式</option>
+                <option value="test">test - 测试相关</option>
+                <option value="perf">perf - 性能优化</option>
+                <option value="ci">ci - CI 配置</option>
+                <option value="build">build - 构建系统</option>
+                <option value="revert">revert - 回滚</option>
+                <option value="hotfix">hotfix - 紧急修复</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="style">🎨 风格</label>
+            <select id="style">
+                <option value="love">💕 情话模式</option>
+                <option value="sao">😏 骚话模式</option>
+                <option value="zha">💔 扎心模式</option>
+                <option value="chu">😤 中二模式</option>
+                <option value="fo">🙏 佛系模式</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">📄 简短描述（可选）</label>
+            <input type="text" id="description" placeholder="例如：用户登录功能">
+        </div>
+
+        <button class="btn btn-primary" onclick="generate()">✨ 生成骚话 Commit</button>
+
+        <div class="result" id="result">
+            <div class="result-label">生成的 Commit Message：</div>
+            <div class="result-text" id="resultText"></div>
+            <div class="result-actions">
+                <button class="btn btn-secondary" onclick="copyResult()">📋 复制</button>
+                <button class="btn btn-secondary" onclick="regenerate()">🔄 换一个</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            Made with 💕 by coding-expert | 
+            <a href="https://github.com/justlovemaki" target="_blank">GitHub</a>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">✅ 已复制到剪贴板</div>
+
+    <script>
+        const saoHuaDB = {
+            fix: {
+                love: [
+                    "我为你修复了整个世界",
+                    "bug 可以修，爱你的心不能修",
+                    "这个 bug 让我明白了，不完美才是完美",
+                    "修复的不是代码，是我们之间的裂痕",
+                    "每一个 fix，都是对你的告白",
+                    "bug 消失了，就像我从未离开",
+                    "修好了 bug，也修好了想你的心"
+                ],
+                sao: [
+                    "这个 bug 是我故意留的，就想多见你几次",
+                    "修 bug 和撩你，我都在行",
+                    "bug 修好了，要不要奖励我一个 star？",
+                    "我修的 not bug，是 feature（对你的爱）",
+                    "fix 一时爽，一直 fix 一直爽",
+                    "这个 bug 比我还会欲擒故纵"
+                ],
+                zha: [
+                    "bug 修好了，你也该走了",
+                    "代码能修好，感情修不好",
+                    "fix 得了 bug，fix 不了孤独",
+                    "bug 有尽头，加班没有",
+                    "修好了世界的 bug，修不好自己的人生"
+                ],
+                chu: [
+                    "以吾之名，修复此界之裂痕！",
+                    "禁忌的 bug 啊，被吾封印了",
+                    "这就是...真正的 fix 之力吗",
+                    "bug 酱，你已经死了",
+                    "解放吧，修复之锁！"
+                ],
+                fo: [
+                    "bug 本无 bug，庸人自扰之",
+                    "修与不修，bug 都在那里",
+                    "今日 fix，明日还会再有",
+                    "放下 bug，立地成佛",
+                    "一切 bug，皆是空性"
+                ]
+            },
+            feat: {
+                love: [
+                    "我又来了，带着新的惊喜",
+                    "新功能就像新恋情，充满期待",
+                    "为你，我添加了整个世界",
+                    "这个 feature，只为你一人",
+                    "添加的是功能，不变的是真心",
+                    "新功能上线，想你 +1"
+                ],
+                sao: [
+                    "新 feature 来了，准备好被惊艳了吗",
+                    "这个功能，比我还会撩",
+                    "feat 一时爽，一直 feat 一直爽",
+                    "我加的不是代码，是魅力",
+                    "新功能，新套路，不变的还是我"
+                ],
+                zha: [
+                    "功能越做越多，快乐越做越少",
+                    "feat 写完了，头发也没了",
+                    "新功能上线，旧 bug 又来",
+                    "添加的是功能，消耗的是青春"
+                ],
+                chu: [
+                    "新力量觉醒吧！",
+                    "吾创造了一个新世界",
+                    "这就是进化的力量",
+                    "feat 之力，解放！"
+                ],
+                fo: [
+                    "功能本无功能，用的人多了就有了",
+                    "加与不加，随缘",
+                    "今日 feat，明日也许要 revert"
+                ]
+            },
+            chore: {
+                love: [
+                    "日常想念，日复一日",
+                    "枯燥的更新，像我爱你的心一样永恒",
+                    "又在整理代码，像在整理对你的思念",
+                    "chore 很无聊，想你很有趣",
+                    "每一次 chore，都是爱的积累"
+                ],
+                sao: [
+                    "chore 嘛，就是又菜又爱玩",
+                    "日常划水，偶尔努力",
+                    "chore 一时爽，一直 chore 一直爽",
+                    "整理代码就像整理心情"
+                ],
+                zha: [
+                    "chore 做了一整天，好像什么都没做",
+                    "枯燥的 chore，枯燥的人生",
+                    "更新依赖，更新不了生活"
+                ],
+                chu: [
+                    "日常修炼，功力 +1",
+                    "chore 之力，正在积蓄",
+                    "这是变强的必经之路"
+                ],
+                fo: [
+                    "chore 即修行",
+                    "日复一日，年复一年",
+                    "平常心，做平常事"
+                ]
+            },
+            docs: {
+                love: [
+                    "文档写得好，就像情书写得妙",
+                    "注释是代码的情书",
+                    "我不写文档，因为爱无需解释",
+                    "文档里的每个字，都是想对你说的话",
+                    "写好文档，等你来看"
+                ],
+                sao: [
+                    "文档写得好，下班下得早",
+                    "注释写得骚，同事都说好",
+                    "docs 一时爽，一直 docs 一直爽",
+                    "我写的不是文档，是艺术"
+                ],
+                zha: [
+                    "文档写了，没人看",
+                    "注释写得再好，代码还是烂",
+                    "文档越写越厚，头发越掉越多"
+                ],
+                chu: [
+                    "秘传之书，今日写成",
+                    "文档之力，加持吾身",
+                    "后人啊，请参悟此道"
+                ],
+                fo: [
+                    "文档本无文档，代码本无代码",
+                    "写与不写，都是缘分",
+                    "懂的人自然懂"
+                ]
+            },
+            refactor: {
+                love: [
+                    "重构代码，也重构对你的爱",
+                    "代码可以重构，爱不能重来",
+                    "删掉的是代码，删不掉的是回忆",
+                    "重构之后，代码更美，你更美",
+                    "每一次重构，都是一次新生"
+                ],
+                sao: [
+                    "重构代码，也重构一下人设",
+                    "refactor 一时爽，测试火葬场",
+                    "代码重构了，我还是我",
+                    "重构的是代码，不变的是骚"
+                ],
+                zha: [
+                    "重构完发现，还不如不改",
+                    "代码重构了，人生还是老样子",
+                    "refactor 了一天，好像什么都没变"
+                ],
+                chu: [
+                    "破而后立，晓喻新生！",
+                    "重构之力，觉醒吧",
+                    "这是代码的进化"
+                ],
+                fo: [
+                    "重构即放下",
+                    "旧的不去，新的不来",
+                    "随缘重构，随缘上线"
+                ]
+            },
+            style: {
+                love: [
+                    "代码要美，你也要美",
+                    "格式化的是代码，无法格式化的是心",
+                    "style 调整了，代码更美了",
+                    "美的代码，送给美的你",
+                    "格式化全世界，格式化不了想你"
+                ],
+                sao: [
+                    "代码要骚，style 要骚",
+                    "format 一时爽，一直 format 一直爽",
+                    "我 format 的不是代码，是心情",
+                    "style 好看了，bug 也顺眼了"
+                ],
+                zha: [
+                    "style 改来改去，功能还是烂的",
+                    "格式化得了代码，格式化不了人生",
+                    "代码好看了，还是没人看"
+                ],
+                chu: [
+                    "美之力量，加持吾身",
+                    "style 之力，解放",
+                    "这是视觉的盛宴"
+                ],
+                fo: [
+                    "美与不美，都是代码",
+                    "format 即空",
+                    "外表不重要"
+                ]
+            },
+            test: {
+                love: [
+                    "测试写得好，就像情书写得妙",
+                    "每一个 test，都是对代码的告白",
+                    "测试通过了，就像你对我笑了",
+                    "coverage 100%，爱你的心 100%"
+                ],
+                sao: [
+                    "test 一时爽，一直 test 一直爽",
+                    "测试写得骚，bug 不敢来",
+                    "我测的不是代码，是寂寞"
+                ],
+                zha: [
+                    "测试写完了，bug 还在",
+                    "coverage 100%，头发 0%",
+                    "测试通过，上线失败"
+                ],
+                chu: [
+                    "审判之力，测试开始",
+                    "bug 啊，接受制裁吧",
+                    "test 之力，觉醒"
+                ],
+                fo: [
+                    "测与不测，bug 都在那里",
+                    "测试即修行",
+                    "随缘测试，随缘上线"
+                ]
+            },
+            perf: {
+                love: [
+                    "性能优化了，就像为你加速的心跳",
+                    "快一点，再快一点，只为追上你的脚步",
+                    "perf 优化，爱也优化",
+                    "速度提升了，想你的心更快了"
+                ],
+                sao: [
+                    "perf 一时爽，一直 perf 一直爽",
+                    "我优化的不是性能，是体验",
+                    "快，是我的代名词"
+                ],
+                zha: [
+                    "性能提升了，下班时间没提升",
+                    "优化了 100ms，加班了 100 分钟",
+                    "perf 做完了，头发也没了"
+                ],
+                chu: [
+                    "速度之力，解放",
+                    "突破极限，超越自我",
+                    "这就是真正的速度"
+                ],
+                fo: [
+                    "快与不快，都是缘分",
+                    "慢即是快",
+                    "随缘优化"
+                ]
+            },
+            ci: {
+                love: [
+                    "CI 通过了，就像你接受了我",
+                    "流水线跑通了，心也通了",
+                    "ci 配置，爱的配置",
+                    "自动化了，想你也可以自动化吗"
+                ],
+                sao: [
+                    "ci 一时爽，一直 ci 一直爽",
+                    "流水线比我还会跑",
+                    "配置写得好，下班下得早"
+                ],
+                zha: [
+                    "CI 红了，我也红了（急的）",
+                    "配置改了一天，还是报错",
+                    "流水线停了，我也累了"
+                ],
+                chu: [
+                    "自动化之力，觉醒",
+                    "流水线，启动",
+                    "CI 之力，加持吾身"
+                ],
+                fo: [
+                    "过与不过，都是缘分",
+                    "CI 即空",
+                    "随缘构建"
+                ]
+            },
+            build: {
+                love: [
+                    "构建成功了，就像我们的未来",
+                    "build 通过了，心也放下了",
+                    "打包的是代码，思念的是你",
+                    "构建完成，想你 +1"
+                ],
+                sao: [
+                    "build 一时爽，一直 build 一直爽",
+                    "打包成功，打包失败，都是常态",
+                    "我 build 的不是代码，是希望"
+                ],
+                zha: [
+                    "build 失败了，人生也失败了",
+                    "依赖下载了一天，还是失败",
+                    "构建成功，头发失败"
+                ],
+                chu: [
+                    "构建之力，觉醒",
+                    "打包完成，世界诞生",
+                    "这是创造的力量"
+                ],
+                fo: [
+                    "成与不成，都是 build",
+                    "构建即空",
+                    "随缘编译"
+                ]
+            },
+            revert: {
+                love: [
+                    "回滚了代码，回滚不了对你的爱",
+                    "revert 是暂时的，想你是永恒的",
+                    "回到过去，只为遇见你",
+                    "代码可以回滚，时间不能"
+                ],
+                sao: [
+                    "revert 一时爽，一直 revert 一直爽",
+                    "回滚了，就当没发生过",
+                    "我 revert 的不是代码，是历史"
+                ],
+                zha: [
+                    "revert 了，白干了",
+                    "回滚代码，回滚人生",
+                    "一天的工作，一键还原"
+                ],
+                chu: [
+                    "时间倒流，世界重置",
+                    "revert 之力，发动",
+                    "回到过去，改变未来"
+                ],
+                fo: [
+                    "回与不回，都是缘分",
+                    "revert 即放下",
+                    "随缘回滚"
+                ]
+            },
+            hotfix: {
+                love: [
+                    "紧急修复，就像紧急想你",
+                    "hotfix 是暂时的，爱是永恒的",
+                    "深夜修复，黎明想你",
+                    "修复的是 bug，思念的是你"
+                ],
+                sao: [
+                    "hotfix 一时爽，一直 hotfix 一直爽",
+                    "紧急修复，日常加班",
+                    "我 fix 的不是 bug，是命运"
+                ],
+                zha: [
+                    "hotfix 完了，天也亮了",
+                    "紧急修复，紧急加班",
+                    "fix 完了，人也废了"
+                ],
+                chu: [
+                    "紧急事态，全力应对",
+                    "hotfix 之力，全开",
+                    "这是最后的防线"
+                ],
+                fo: [
+                    "急与不急，都是 bug",
+                    "hotfix 即空",
+                    "随缘修复"
+                ]
+            }
+        };
+
+        let lastResult = '';
+
+        function generate() {
+            const commitType = document.getElementById('commitType').value;
+            const style = document.getElementById('style').value;
+            const description = document.getElementById('description').value.trim();
+
+            const messages = saoHuaDB[commitType][style];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+            let result;
+            if (description) {
+                result = `${commitType}: ${description}\n\n${randomMessage}`;
+            } else {
+                result = `${commitType}: ${randomMessage}`;
+            }
+
+            lastResult = result;
+            document.getElementById('resultText').textContent = result;
+            document.getElementById('result').classList.add('show');
+        }
+
+        function copyResult() {
+            if (!lastResult) return;
+
+            navigator.clipboard.writeText(lastResult).then(() => {
+                showToast();
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = lastResult;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast();
+            });
+        }
+
+        function regenerate() {
+            generate();
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 支持回车生成
+        document.getElementById('description').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generate();
+            }
+        });
+    </script>
+</body>
+</html>
