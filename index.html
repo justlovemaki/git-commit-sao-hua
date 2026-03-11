@@ -4,7 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Git Commit 骚话生成器 💕</title>
+    <meta name="description" content="让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格，还有每日一句、成就系统哦~">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💕</text></svg>">
     <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #ff6b6b, #feca57, #ff6b6b);
+            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-color: #ff6b6b;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+        }
+
+        .light-theme {
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-border: rgba(0, 0, 0, 0.1);
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --accent-color: #e53e3e;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,31 +36,37 @@
 
         body {
             font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            background: var(--bg-gradient);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
-            color: #e0e0e0;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 700px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--card-bg);
             border-radius: 20px;
             padding: 40px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--card-border);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        h1 {
-            text-align: center;
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 10px;
+        }
+
+        h1 {
             font-size: 1.8em;
-            background: linear-gradient(90deg, #ff6b6b, #feca57, #ff6b6b);
+            background: var(--primary-gradient);
             background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -49,11 +78,48 @@
             50% { background-position: 100% center; }
         }
 
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(180deg);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         .subtitle {
             text-align: center;
-            color: #888;
+            color: var(--text-secondary);
             margin-bottom: 30px;
             font-size: 0.9em;
+        }
+
+        .daily-quote {
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 4px solid var(--accent-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .daily-quote-icon {
+            font-size: 1.5em;
+        }
+
+        .daily-quote-text {
+            flex: 1;
+            font-size: 0.9em;
+            line-height: 1.4;
         }
 
         .form-group {
@@ -63,7 +129,7 @@
         label {
             display: block;
             margin-bottom: 8px;
-            color: #a0a0a0;
+            color: var(--text-secondary);
             font-size: 0.9em;
         }
 
@@ -73,15 +139,20 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 10px;
             background: rgba(0, 0, 0, 0.3);
-            color: #fff;
+            color: var(--text-primary);
             font-family: inherit;
             font-size: 1em;
             transition: all 0.3s ease;
         }
 
+        .light-theme select, .light-theme input[type="text"] {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
         select:focus, input[type="text"]:focus {
             outline: none;
-            border-color: #ff6b6b;
+            border-color: var(--accent-color);
             box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
         }
 
@@ -144,11 +215,21 @@
 
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+            color: var(--text-primary);
         }
 
         .btn-secondary:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-favorite {
+            background: rgba(255, 107, 107, 0.2);
+            color: var(--accent-color);
+        }
+
+        .btn-favorite.active {
+            background: var(--accent-color);
+            color: #fff;
         }
 
         .result {
@@ -156,7 +237,7 @@
             padding: 20px;
             background: rgba(0, 0, 0, 0.3);
             border-radius: 10px;
-            border-left: 4px solid #ff6b6b;
+            border-left: 4px solid var(--accent-color);
             display: none;
         }
 
@@ -171,7 +252,7 @@
         }
 
         .result-label {
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.85em;
             margin-bottom: 10px;
         }
@@ -179,8 +260,9 @@
         .result-text {
             font-size: 1.1em;
             line-height: 1.6;
-            color: #fff;
+            color: var(--text-primary);
             word-break: break-all;
+            white-space: pre-wrap;
         }
 
         .result-actions {
@@ -196,12 +278,129 @@
             padding: 10px;
         }
 
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tab.active {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        .history-section, .favorites-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .history-title, .favorites-title {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-list, .favorites-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item, .favorite-item {
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .light-theme .history-item, .light-theme .favorite-item {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .history-item:hover, .favorite-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            transform: translateX(5px);
+        }
+
+        .history-item .type, .favorite-item .type {
+            font-size: 0.8em;
+            color: var(--accent-color);
+            margin-bottom: 5px;
+        }
+
+        .history-item .text, .favorite-item .text {
+            font-size: 0.9em;
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 30px;
+        }
+
         .toast {
             position: fixed;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: #4caf50;
+            background: var(--success-color);
             color: #fff;
             padding: 15px 30px;
             border-radius: 10px;
@@ -214,62 +413,7 @@
             transform: translateX(-50%) translateY(0);
         }
 
-        .history-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .history-title {
-            color: #888;
-            font-size: 0.9em;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .history-item {
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 8px;
-            border-left: 3px solid #ff6b6b;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .history-item:hover {
-            background: rgba(0, 0, 0, 0.3);
-            transform: translateX(5px);
-        }
-
-        .history-item .type {
-            font-size: 0.8em;
-            color: #ff6b6b;
-            margin-bottom: 5px;
-        }
-
-        .history-item .text {
-            font-size: 0.9em;
-            color: #e0e0e0;
-            line-height: 1.4;
-        }
-
-        .history-empty {
-            text-align: center;
-            color: #666;
-            padding: 20px;
-        }
-
-        .share-modal {
+        .share-modal, .achievements-modal {
             display: none;
             position: fixed;
             top: 0;
@@ -282,11 +426,11 @@
             align-items: center;
         }
 
-        .share-modal.show {
+        .share-modal.show, .achievements-modal.show {
             display: flex;
         }
 
-        .share-content {
+        .share-content, .achievements-content {
             background: #1a1a2e;
             padding: 30px;
             border-radius: 20px;
@@ -295,9 +439,13 @@
             text-align: center;
         }
 
-        .share-content h3 {
+        .light-theme .share-content, .light-theme .achievements-content {
+            background: #fff;
+        }
+
+        .share-content h3, .achievements-content h3 {
             margin-bottom: 20px;
-            color: #fff;
+            color: var(--text-primary);
         }
 
         .share-buttons {
@@ -339,19 +487,19 @@
             opacity: 0.9;
         }
 
-        .share-close {
+        .share-close, .achievements-close {
             margin-top: 15px;
             background: transparent;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #888;
+            color: var(--text-secondary);
             padding: 8px 20px;
             border-radius: 8px;
             cursor: pointer;
         }
 
-        .share-close:hover {
+        .share-close:hover, .achievements-close:hover {
             background: rgba(255, 255, 255, 0.1);
-            color: #fff;
+            color: var(--text-primary);
         }
 
         .qr-code {
@@ -362,15 +510,53 @@
             display: none;
         }
 
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .achievement-item {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            text-align: center;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+        }
+
+        .achievement-item.unlocked {
+            opacity: 1;
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid var(--accent-color);
+        }
+
+        .achievement-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .achievement-name {
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .achievement-desc {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
         .footer {
             text-align: center;
             margin-top: 30px;
-            color: #666;
+            color: var(--text-secondary);
             font-size: 0.8em;
         }
 
         .footer a {
-            color: #ff6b6b;
+            color: var(--accent-color);
             text-decoration: none;
         }
 
@@ -378,16 +564,99 @@
             text-decoration: underline;
         }
 
-        .emoji {
-            font-size: 1.5em;
-            margin-right: 5px;
+        .keyboard-hints {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        .keyboard-hints kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 0 2px;
+        }
+
+        .light-theme .keyboard-hints kbd {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .result-actions {
+                flex-direction: column;
+            }
+
+            .stats-bar {
+                gap: 10px;
+            }
+
+            .stat-value {
+                font-size: 1.2em;
+            }
+
+            .achievements-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>💕 Git Commit 骚话生成器</h1>
+        <div class="header">
+            <h1>💕 Git Commit 骚话生成器</h1>
+            <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">🌓</button>
+        </div>
         <p class="subtitle">让每次提交都充满爱意（或骚气）</p>
+
+        <!-- 每日一句 -->
+        <div class="daily-quote" id="dailyQuote">
+            <span class="daily-quote-icon">💡</span>
+            <span class="daily-quote-text" id="dailyQuoteText">加载中...</span>
+        </div>
+
+        <!-- 统计栏 -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">生成次数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="favoriteCount">0</div>
+                <div class="stat-label">收藏夹</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="achievementCount">0/12</div>
+                <div class="stat-label">成就</div>
+            </div>
+        </div>
 
         <div class="form-group">
             <label for="commitType">📝 Commit 类型</label>
@@ -434,18 +703,60 @@
             <div class="result-actions">
                 <button class="btn btn-secondary" onclick="copyResult()">📋 复制</button>
                 <button class="btn btn-secondary" onclick="regenerate()">🔄 换一个</button>
+                <button class="btn btn-favorite" id="favoriteBtn" onclick="toggleFavorite()">⭐ 收藏</button>
                 <button class="btn btn-secondary" onclick="showShare()">🔗 分享</button>
             </div>
         </div>
 
-        <div class="history-section">
-            <div class="history-title">
-                <span>📜</span>
-                <span>历史记录</span>
-                <span style="margin-left: auto; cursor: pointer; color: #666;" onclick="clearHistory()">清空</span>
+        <div class="keyboard-hints">
+            <kbd>Enter</kbd> 生成 · <kbd>Ctrl+C</kbd> 复制 · <kbd>R</kbd> 随机 · <kbd>D</kbd> 主题
+        </div>
+
+        <!-- Tab 切换 -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('history')">📜 历史记录</button>
+            <button class="tab" onclick="switchTab('favorites')">⭐ 收藏夹</button>
+            <button class="tab" onclick="switchTab('achievements')">🏆 成就</button>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="history-section" id="historySection">
+            <div class="section-header">
+                <div class="history-title">
+                    <span>📜</span>
+                    <span>最近生成</span>
+                </div>
+                <span style="cursor: pointer; color: var(--text-secondary);" onclick="clearHistory()">清空</span>
             </div>
             <div class="history-list" id="historyList">
-                <div class="history-empty">暂无历史记录</div>
+                <div class="empty-state">暂无历史记录</div>
+            </div>
+        </div>
+
+        <!-- 收藏夹 -->
+        <div class="favorites-section" id="favoritesSection" style="display: none;">
+            <div class="section-header">
+                <div class="favorites-title">
+                    <span>⭐</span>
+                    <span>我的收藏</span>
+                </div>
+            </div>
+            <div class="favorites-list" id="favoritesList">
+                <div class="empty-state">暂无收藏</div>
+            </div>
+        </div>
+
+        <!-- 成就 -->
+        <div class="achievements-section" id="achievementsSection" style="display: none;">
+            <div class="section-header">
+                <div class="favorites-title">
+                    <span>🏆</span>
+                    <span>成就系统</span>
+                </div>
+                <button class="btn btn-secondary" style="width: auto; padding: 8px 16px; font-size: 0.85em;" onclick="showAchievements()">查看详情</button>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="achievementProgress" style="width: 0%"></div>
             </div>
         </div>
 
@@ -474,81 +785,1122 @@
         </div>
     </div>
 
+    <!-- 成就弹窗 -->
+    <div class="achievements-modal" id="achievementsModal">
+        <div class="achievements-content">
+            <h3>🏆 成就列表</h3>
+            <div class="achievements-grid" id="achievementsGrid">
+                <!-- 动态生成 -->
+            </div>
+            <button class="achievements-close" onclick="closeAchievements()">关闭</button>
+        </div>
+    </div>
+
     <div class="toast" id="toast">✅ 已复制到剪贴板</div>
 
     <!-- 二维码生成库 -->
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script>
-        // 历史记录管理
-        const HISTORY_KEY = 'git_sao_hua_history';
-        const MAX_HISTORY = 10;
+        // ==================== 数据管理 ====================
+        const STORAGE_KEYS = {
+            HISTORY: 'git_sao_hua_history',
+            FAVORITES: 'git_sao_hua_favorites',
+            STATS: 'git_sao_hua_stats',
+            ACHIEVEMENTS: 'git_sao_hua_achievements',
+            THEME: 'git_sao_hua_theme'
+        };
 
-        function getHistory() {
+        const MAX_HISTORY = 20;
+        const MAX_FAVORITES = 50;
+
+        // 成就系统
+        const ACHIEVEMENTS = [
+            { id: 'first_generate', name: '初次尝试', desc: '第一次生成骚话', icon: '🎉', condition: (stats) => stats.totalGenerates >= 1 },
+            { id: 'generate_10', name: '渐入佳境', desc: '累计生成 10 次', icon: '🔥', condition: (stats) => stats.totalGenerates >= 10 },
+            { id: 'generate_50', name: '骚话大师', desc: '累计生成 50 次', icon: '✨', condition: (stats) => stats.totalGenerates >= 50 },
+            { id: 'generate_100', name: '传说级骚话王', desc: '累计生成 100 次', icon: '👑', condition: (stats) => stats.totalGenerates >= 100 },
+            { id: 'favorite_5', name: '收藏家', desc: '收藏 5 条骚话', icon: '⭐', condition: (stats) => stats.totalFavorites >= 5 },
+            { id: 'use_all_types', name: '全能选手', desc: '使用所有 Commit 类型', icon: '🎯', condition: (stats) => Object.keys(stats.typesUsed).length >= 12 },
+            { id: 'use_all_styles', name: '风格大师', desc: '使用所有风格', icon: '🎨', condition: (stats) => Object.keys(stats.stylesUsed).length >= 5 },
+            { id: 'midnight_coder', name: '深夜 coder', desc: '在 23:00-06:00 生成', icon: '🌙', condition: (stats) => stats.midnightGenerates >= 1 },
+            { id: 'share_master', name: '分享达人', desc: '分享 1 次', icon: '📢', condition: (stats) => stats.totalShares >= 1 },
+            { id: 'keyboard_warrior', name: '键盘侠', desc: '使用快捷键生成', icon: '⌨️', condition: (stats) => stats.keyboardGenerates >= 1 },
+            { id: 'theme_switcher', name: '变脸大师', desc: '切换主题', icon: '🌓', condition: (stats) => stats.themeSwitches >= 1 },
+            { id: 'copy_paste', name: '复制粘贴', desc: '复制 10 次', icon: '📋', condition: (stats) => stats.totalCopies >= 10 }
+        ];
+
+        // ==================== 骚话数据库（扩充版） ====================
+        const saoHuaDB = {
+            fix: {
+                love: [
+                    "我为你修复了整个世界",
+                    "bug 可以修，爱你的心不能修",
+                    "这个 bug 让我明白了，不完美才是完美",
+                    "修复的不是代码，是我们之间的裂痕",
+                    "每一个 fix，都是对你的告白",
+                    "bug 消失了，就像我从未离开",
+                    "修好了 bug，也修好了想你的心",
+                    "代码有 bug，爱没有",
+                    "修复全世界，只为让你开心",
+                    "这个 fix，带着我的温度",
+                    "bug 会消失，爱不会",
+                    "修代码容易，修心难",
+                    "我 fix 的不是 bug，是想你的心情",
+                    "完美的代码，完美的你",
+                    "修复中，想你中"
+                ],
+                sao: [
+                    "这个 bug 是我故意留的，就想多见你几次",
+                    "修 bug 和撩你，我都在行",
+                    "bug 修好了，要不要奖励我一个 star？",
+                    "我修的 not bug，是 feature（对你的爱）",
+                    "fix 一时爽，一直 fix 一直爽",
+                    "这个 bug 比我还会欲擒故纵",
+                    "修 bug 就像追女生，要有耐心",
+                    "bug 修好了，女朋友呢？",
+                    "代码 fix 了，人生还没 fix",
+                    "这个 fix 很骚，就像我一样",
+                    "修 bug 使我快乐",
+                    "bug ：你修我啊？我：就修你！",
+                    "fix 完这个就去睡觉（才怪）",
+                    "bug 克星在此",
+                    "修 bug 我是认真的"
+                ],
+                zha: [
+                    "bug 修好了，你也该走了",
+                    "代码能修好，感情修不好",
+                    "fix 得了 bug，fix 不了孤独",
+                    "bug 有尽头，加班没有",
+                    "修好了世界的 bug，修不好自己的人生",
+                    "bug 越修越多，头发越掉越少",
+                    "修 bug 到凌晨，没人陪我",
+                    "fix 得再好，也没人看",
+                    "代码修好了，青春没了",
+                    "bug 会修复，遗憾不会",
+                    "修代码的人，最孤独",
+                    "fix 了一辈子，还是单身",
+                    "bug 修完了，天也亮了",
+                    "修得好代码，修不好生活",
+                    "每个 bug 都是生活的隐喻"
+                ],
+                chu: [
+                    "以吾之名，修复此界之裂痕！",
+                    "禁忌的 bug 啊，被吾封印了",
+                    "这就是...真正的 fix 之力吗",
+                    "bug 酱，你已经死了",
+                    "解放吧，修复之锁！",
+                    "圣剑啊，赐予我修复的力量！",
+                    "此 bug，由我来终结",
+                    "修复魔法，发动！",
+                    "bug 退散，正气长存！",
+                    "以代码之名，审判此 bug！",
+                    "究极修复，觉醒！",
+                    "这是命运的修复",
+                    "bug 的末日到了",
+                    "修复之力，全开！",
+                    "看我一剑斩了这 bug"
+                ],
+                fo: [
+                    "bug 本无 bug，庸人自扰之",
+                    "修与不修，bug 都在那里",
+                    "今日 fix，明日还会再有",
+                    "放下 bug，立地成佛",
+                    "一切 bug，皆是空性",
+                    "随缘修复，随缘上线",
+                    "bug 是缘，fix 也是缘",
+                    "不增不减，不垢不净",
+                    "修 bug 即是修行",
+                    "心无 bug，自然无 bug",
+                    "fix 即是空，空即是 fix",
+                    "来也 bug，去也 bug",
+                    "bug 本清净，何须你来修",
+                    "一念 fix，一念 bug",
+                    "无 bug 可修，无 fix 可得"
+                ]
+            },
+            feat: {
+                love: [
+                    "我又来了，带着新的惊喜",
+                    "新功能就像新恋情，充满期待",
+                    "为你，我添加了整个世界",
+                    "这个 feature，只为你一人",
+                    "添加的是功能，不变的是真心",
+                    "新功能上线，想你 +1",
+                    "为你创造新世界",
+                    "这个 feat 带着爱",
+                    "新增功能，新增爱意",
+                    "功能会更新，爱不会",
+                    "为你 feat 全世界",
+                    "新功能，新开始，新爱你",
+                    "feat 你，是我最大的功能",
+                    "代码在增长，爱也在",
+                    "新增的不仅是代码"
+                ],
+                sao: [
+                    "新 feature 来了，准备好被惊艳了吗",
+                    "这个功能，比我还会撩",
+                    "feat 一时爽，一直 feat 一直爽",
+                    "我加的不是代码，是魅力",
+                    "新功能，新套路，不变的还是我",
+                    "feat 使我快乐",
+                    "这个 feature 很骚",
+                    "新增功能，新增头发掉落",
+                    "feat 完这个就下班（才怪）",
+                    "新功能上线，旧 bug 再见",
+                    "我 feat 故我在",
+                    "feat 就是硬道理",
+                    "这个功能我能吹一年",
+                    "feat 使我强大",
+                    "新功能，新境界"
+                ],
+                zha: [
+                    "功能越做越多，快乐越做越少",
+                    "feat 写完了，头发也没了",
+                    "新功能上线，旧 bug 又来",
+                    "添加的是功能，消耗的是青春",
+                    "feat 做了一天，产品经理说不要了",
+                    "功能上线了，我也累了",
+                    "feat 越多，加班越多",
+                    "新功能，新压力",
+                    "feat 写得好，下班下得早（做梦）",
+                    "添加功能，删除头发",
+                    "feat 使我秃头",
+                    "功能做完了，女朋友没了",
+                    "feat 一时爽，一直 feat 一直肝",
+                    "新功能，新 bug",
+                    "feat 的人生没有终点"
+                ],
+                chu: [
+                    "新力量觉醒吧！",
+                    "吾创造了一个新世界",
+                    "这就是进化的力量",
+                    "feat 之力，解放！",
+                    "创造吧，新的传说！",
+                    "新功能，新神话！",
+                    "以吾之力，创造此 feat！",
+                    "feat 魔法，完全咏唱！",
+                    "这是创世的力量",
+                    "新功能降临！",
+                    "feat 之力，全开！",
+                    "创造模式，启动！",
+                    "此 feat，乃天命",
+                    "觉醒吧，feat 之魂！",
+                    "创造新世界，就在此刻"
+                ],
+                fo: [
+                    "功能本无功能，用的人多了就有了",
+                    "加与不加，随缘",
+                    "今日 feat，明日也许要 revert",
+                    "有无相生，难易相成",
+                    "feat 即是空",
+                    "不增不减，功能自来",
+                    "随缘添加，随缘删除",
+                    "功能如露亦如电",
+                    "feat 不 feat，都是代码",
+                    "来也 feat，去也 feat",
+                    "无功能可加，无代码可写",
+                    "feat 本清净",
+                    "一念 feat，一念 revert",
+                    "功能本无自性",
+                    "随缘 feat，随缘上线"
+                ]
+            },
+            chore: {
+                love: [
+                    "日常想念，日复一日",
+                    "枯燥的更新，像我爱你的心一样永恒",
+                    "又在整理代码，像在整理对你的思念",
+                    "chore 很无聊，想你很有趣",
+                    "每一次 chore，都是爱的积累",
+                    "日常 chore，日常想你",
+                    "整理依赖，整理心情",
+                    "chore 虽枯燥，但有你陪伴",
+                    "更新配置，更新爱意",
+                    "日常维护，日常爱你",
+                    "chore 是爱的修行",
+                    "枯燥中带着温柔",
+                    "每一次更新都是为你",
+                    "chore 也要做得浪漫",
+                    "日常中的小确幸"
+                ],
+                sao: [
+                    "chore 嘛，就是又菜又爱玩",
+                    "日常划水，偶尔努力",
+                    "chore 一时爽，一直 chore 一直爽",
+                    "整理代码就像整理心情",
+                    "chore 使我快乐",
+                    "更新依赖，更新寂寞",
+                    "chore 我是认真的",
+                    "日常摸鱼，偶尔 chore",
+                    "chore 完这个就去浪",
+                    "整理代码，整理人生",
+                    "chore 使我强大",
+                    "更新配置，更新人设",
+                    "chore 就是硬道理",
+                    "日常 chore，非常规操作",
+                    "chore 也能很骚"
+                ],
+                zha: [
+                    "chore 做了一整天，好像什么都没做",
+                    "枯燥的 chore，枯燥的人生",
+                    "更新依赖，更新不了生活",
+                    "chore 了一天，还是原地踏步",
+                    "日常 chore，日常迷茫",
+                    "chore 做完了，青春没了",
+                    "更新配置，配置不了人生",
+                    "chore 使我疲惫",
+                    "整理代码，整理不了人生",
+                    "chore 越多，越没意义",
+                    "日常 chore，日常崩溃",
+                    "chore 完这个，天也亮了",
+                    "chore 使我怀疑人生",
+                    "更新依赖，依赖不了任何人",
+                    "chore 的人生没有终点"
+                ],
+                chu: [
+                    "日常修炼，功力 +1",
+                    "chore 之力，正在积蓄",
+                    "这是变强的必经之路",
+                    "chore 修炼中",
+                    "日常修行，终成大道",
+                    "chore 魔法，吟唱中",
+                    "积蓄力量，等待爆发",
+                    "chore 之力，觉醒！",
+                    "日常修炼，终成王者",
+                    "chore 也是修行",
+                    "修炼中，勿扰",
+                    "chore 之力，加持吾身",
+                    "日常积累，终有一日",
+                    "chore 修炼，永无止境",
+                    "这是强者的必经之路"
+                ],
+                fo: [
+                    "chore 即修行",
+                    "日复一日，年复一年",
+                    "平常心，做平常事",
+                    "chore 本无 chore",
+                    "枯燥即清净",
+                    "chore 即是禅",
+                    "不增不减，不垢不净",
+                    "chore 本清净",
+                    "日常即道",
+                    "chore 不 chore，都是缘分",
+                    "随缘 chore，随缘更新",
+                    "chore 即是空",
+                    "来也 chore，去也 chore",
+                    "无 chore 可做",
+                    "平常心，做 chore 事"
+                ]
+            },
+            docs: {
+                love: [
+                    "文档写得好，就像情书写得妙",
+                    "注释是代码的情书",
+                    "我不写文档，因为爱无需解释",
+                    "文档里的每个字，都是想对你说的话",
+                    "写好文档，等你来看",
+                    "文档是我的心意",
+                    "写文档就像写情诗",
+                    "文档虽枯燥，但有你陪伴",
+                    "注释里藏着我的爱",
+                    "文档写完了，想你了",
+                    "写文档是最浪漫的",
+                    "文档是我的告白",
+                    "注释是给你的情书",
+                    "文档写得好，爱情没烦恼",
+                    "写文档，想你中"
+                ],
+                sao: [
+                    "文档写得好，下班下得早",
+                    "注释写得骚，同事都说好",
+                    "docs 一时爽，一直 docs 一直爽",
+                    "我写的不是文档，是艺术",
+                    "文档写得好，头发掉得早",
+                    "注释写得好，bug 找得早",
+                    "docs 使我快乐",
+                    "写文档我是认真的",
+                    "文档写完了，可以去浪了",
+                    "注释写得好，同事夸我好",
+                    "docs 使我强大",
+                    "写文档就是硬道理",
+                    "文档也能很骚",
+                    "写文档，骚操作",
+                    "docs 使我成名"
+                ],
+                zha: [
+                    "文档写了，没人看",
+                    "注释写得再好，代码还是烂",
+                    "文档越写越厚，头发越掉越多",
+                    "写文档一天，看文档一秒",
+                    "docs 写完了，天也亮了",
+                    "文档写了寂寞",
+                    "注释写了没人看",
+                    "docs 使我疲惫",
+                    "写文档是最无聊的",
+                    "文档写完，青春没了",
+                    "docs 使我怀疑人生",
+                    "写文档，没人看",
+                    "文档写了白写",
+                    "docs 使我崩溃",
+                    "写文档的人生没有意义"
+                ],
+                chu: [
+                    "秘传之书，今日写成",
+                    "文档之力，加持吾身",
+                    "后人啊，请参悟此道",
+                    "写文档，传千古",
+                    "文档之力，觉醒！",
+                    "以吾之名，写此文档",
+                    "文档魔法，发动！",
+                    "这是传承的力量",
+                    "文档之力，全开！",
+                    "写文档，创世纪",
+                    "文档之力，加持！",
+                    "这是知识的传承",
+                    "文档之力，觉醒吧",
+                    "写文档，传万世",
+                    "文档之力，解放"
+                ],
+                fo: [
+                    "文档本无文档，代码本无代码",
+                    "写与不写，都是缘分",
+                    "懂的人自然懂",
+                    "文档即空",
+                    "不写文档，才是好文档",
+                    "docs 本清净",
+                    "写文档即是修行",
+                    "文档本无自性",
+                    "随缘写文档",
+                    "来也 docs，去也 docs",
+                    "无文档可写",
+                    "写文档即是放下",
+                    "文档本无好坏",
+                    "随缘 docs，随缘看",
+                    "写与不写，皆是空"
+                ]
+            },
+            refactor: {
+                love: [
+                    "重构代码，也重构对你的爱",
+                    "代码可以重构，爱不能重来",
+                    "删掉的是代码，删不掉的是回忆",
+                    "重构之后，代码更美，你更美",
+                    "每一次重构，都是一次新生",
+                    "重构代码，重构心情",
+                    "代码重构了，爱还在",
+                    "重构是爱的洗礼",
+                    "重构代码，不忘初心",
+                    "重构之后，更加爱你",
+                    "代码可以重来，爱不能",
+                    "重构是新的开始",
+                    "重构代码，重构人生",
+                    "重构使我更爱你",
+                    "重构之后，代码更美了"
+                ],
+                sao: [
+                    "重构代码，也重构一下人设",
+                    "refactor 一时爽，测试火葬场",
+                    "代码重构了，我还是我",
+                    "重构的是代码，不变的是骚",
+                    "重构使我快乐",
+                    "重构代码，重构寂寞",
+                    "refactor 我是认真的",
+                    "重构完这个就去浪",
+                    "重构代码，重构人生",
+                    "重构使我强大",
+                    "重构就是硬道理",
+                    "重构也能很骚",
+                    "重构，骚操作",
+                    "重构使我成名",
+                    "重构代码，重构心情"
+                ],
+                zha: [
+                    "重构完发现，还不如不改",
+                    "代码重构了，人生还是老样子",
+                    "refactor 了一天，好像什么都没变",
+                    "重构代码，重构寂寞",
+                    "重构完了，bug 更多了",
+                    "refactor 使我疲惫",
+                    "重构代码，重构崩溃",
+                    "重构使我怀疑人生",
+                    "重构完这个，天也亮了",
+                    "重构代码，重构迷茫",
+                    "refactor 使我秃头",
+                    "重构代码，重构孤独",
+                    "重构使我崩溃",
+                    "重构代码，重构空虚",
+                    "重构的人生没有终点"
+                ],
+                chu: [
+                    "破而后立，晓喻新生！",
+                    "重构之力，觉醒吧",
+                    "这是代码的进化",
+                    "重构魔法，发动！",
+                    "以吾之力，重构此代码！",
+                    "重构之力，全开！",
+                    "这是蜕变的力量",
+                    "重构之力，加持吾身",
+                    "重构，觉醒！",
+                    "重构之力，解放",
+                    "这是重生的力量",
+                    "重构之力，觉醒吧",
+                    "重构代码，创造传说",
+                    "重构之力，加持！",
+                    "重构，破茧成蝶"
+                ],
+                fo: [
+                    "重构即放下",
+                    "旧的不去，新的不来",
+                    "随缘重构，随缘上线",
+                    "重构本无重构",
+                    "放下代码，立地成佛",
+                    "refactor 本清净",
+                    "重构即是空",
+                    "不增不减，不垢不净",
+                    "随缘 refactor",
+                    "来也重构，去也重构",
+                    "无代码可重构",
+                    "重构即是修行",
+                    "重构本无自性",
+                    "重构即放下执念",
+                    "随缘重构，随缘看"
+                ]
+            },
+            style: {
+                love: [
+                    "代码要美，你也要美",
+                    "格式化的是代码，无法格式化的是心",
+                    "style 调整了，代码更美了",
+                    "美的代码，送给美的你",
+                    "格式化全世界，格式化不了想你",
+                    "代码美了，心情也美了",
+                    "格式化代码，格式化不了爱",
+                    "style 是爱的表达",
+                    "美代码，美心情",
+                    "格式化代码，想你 +1",
+                    "代码格式化了，更爱你了",
+                    "格式化是浪漫的",
+                    "style 调整，爱意满满",
+                    "格式化代码，表达爱意",
+                    "代码美了，你也美了"
+                ],
+                sao: [
+                    "代码要骚，style 要骚",
+                    "format 一时爽，一直 format 一直爽",
+                    "我 format 的不是代码，是心情",
+                    "style 好看了，bug 也顺眼了",
+                    "格式化使我快乐",
+                    "格式化代码，格式化寂寞",
+                    "format 我是认真的",
+                    "格式化完这个就去浪",
+                    "格式化代码，格式化人生",
+                    "格式化使我强大",
+                    "格式化就是硬道理",
+                    "格式化也能很骚",
+                    "format，骚操作",
+                    "格式化使我成名",
+                    "格式化代码，格式化心情"
+                ],
+                zha: [
+                    "style 改来改去，功能还是烂的",
+                    "格式化得了代码，格式化不了人生",
+                    "代码好看了，还是没人看",
+                    "格式化了一天，好像什么都没做",
+                    "style 改完了，天也亮了",
+                    "format 使我疲惫",
+                    "格式化代码，格式化崩溃",
+                    "format 使我怀疑人生",
+                    "格式化代码，格式化迷茫",
+                    "style 改了白改",
+                    "format 使我秃头",
+                    "格式化代码，格式化孤独",
+                    "format 使我崩溃",
+                    "格式化代码，格式化空虚",
+                    "format 的人生没有终点"
+                ],
+                chu: [
+                    "美之力量，加持吾身",
+                    "style 之力，解放",
+                    "这是视觉的盛宴",
+                    "格式化魔法，发动！",
+                    "以吾之名，格式化此代码！",
+                    "style 之力，全开！",
+                    "这是美的力量",
+                    "style 之力，加持吾身",
+                    "格式化，觉醒！",
+                    "style 之力，解放",
+                    "这是视觉的冲击",
+                    "style 之力，觉醒吧",
+                    "格式化代码，创造美感",
+                    "style 之力，加持！",
+                    "格式化，美的觉醒"
+                ],
+                fo: [
+                    "美与不美，都是代码",
+                    "format 即空",
+                    "外表不重要",
+                    "style 本无 style",
+                    "美丑本无分别",
+                    "format 本清净",
+                    "格式化即是空",
+                    "不增不减，不垢不净",
+                    "随缘 format",
+                    "来也 style，去也 style",
+                    "无代码可格式化",
+                    "格式化即是修行",
+                    "style 本无自性",
+                    "格式化即放下执念",
+                    "随缘 style，随缘看"
+                ]
+            },
+            test: {
+                love: [
+                    "测试写得好，就像情书写得妙",
+                    "每一个 test，都是对代码的告白",
+                    "测试通过了，就像你对我笑了",
+                    "coverage 100%，爱你的心 100%",
+                    "测试代码，测试爱情",
+                    "测试通过了，开心 +1",
+                    "test 是爱的证明",
+                    "测试代码，表达爱意",
+                    "测试通过了，想你 +1",
+                    "test 使我更爱你",
+                    "测试代码，测试真心",
+                    "测试是浪漫的",
+                    "test 通过了，爱情通过了",
+                    "测试代码，测试幸福",
+                    "测试通过了，心情好了"
+                ],
+                sao: [
+                    "test 一时爽，一直 test 一直爽",
+                    "测试写得骚，bug 不敢来",
+                    "我测的不是代码，是寂寞",
+                    "test 使我快乐",
+                    "测试代码，测试寂寞",
+                    "test 我是认真的",
+                    "测试完这个就去浪",
+                    "测试代码，测试人生",
+                    "test 使我强大",
+                    "test 就是硬道理",
+                    "test 也能很骚",
+                    "test，骚操作",
+                    "test 使我成名",
+                    "测试代码，测试心情",
+                    "test 使我快乐"
+                ],
+                zha: [
+                    "测试写完了，bug 还在",
+                    "coverage 100%，头发 0%",
+                    "测试通过，上线失败",
+                    "test 了一天，好像什么都没做",
+                    "test 写完了，天也亮了",
+                    "test 使我疲惫",
+                    "测试代码，测试崩溃",
+                    "test 使我怀疑人生",
+                    "测试代码，测试迷茫",
+                    "test 写了白写",
+                    "test 使我秃头",
+                    "测试代码，测试孤独",
+                    "test 使我崩溃",
+                    "测试代码，测试空虚",
+                    "test 的人生没有终点"
+                ],
+                chu: [
+                    "审判之力，测试开始",
+                    "bug 啊，接受制裁吧",
+                    "test 之力，觉醒",
+                    "测试魔法，发动！",
+                    "以吾之名，审判此代码！",
+                    "test 之力，全开！",
+                    "这是审判的力量",
+                    "test 之力，加持吾身",
+                    "测试，觉醒！",
+                    "test 之力，解放",
+                    "这是制裁的力量",
+                    "test 之力，觉醒吧",
+                    "测试代码，审判 bug",
+                    "test 之力，加持！",
+                    "测试，审判开始"
+                ],
+                fo: [
+                    "测与不测，bug 都在那里",
+                    "测试即修行",
+                    "随缘测试，随缘上线",
+                    "test 本无 test",
+                    "bug 本无 bug",
+                    "test 本清净",
+                    "测试即是空",
+                    "不增不减，不垢不净",
+                    "随缘 test",
+                    "来也 test，去也 test",
+                    "无代码可测试",
+                    "测试即是放下",
+                    "test 本无自性",
+                    "测试即放下执念",
+                    "随缘 test，随缘看"
+                ]
+            },
+            perf: {
+                love: [
+                    "性能优化了，就像为你加速的心跳",
+                    "快一点，再快一点，只为追上你的脚步",
+                    "perf 优化，爱也优化",
+                    "速度提升了，想你的心更快了",
+                    "优化性能，优化爱情",
+                    "速度快了，心情好了",
+                    "perf 是爱的表达",
+                    "优化性能，表达爱意",
+                    "速度快了，想你 +1",
+                    "perf 使我更爱你",
+                    "优化性能，优化真心",
+                    "优化是浪漫的",
+                    "perf 优化了，爱情优化了",
+                    "优化性能，优化幸福",
+                    "速度快了，心情好了"
+                ],
+                sao: [
+                    "perf 一时爽，一直 perf 一直爽",
+                    "我优化的不是性能，是体验",
+                    "快，是我的代名词",
+                    "perf 使我快乐",
+                    "优化性能，优化寂寞",
+                    "perf 我是认真的",
+                    "优化完这个就去浪",
+                    "优化性能，优化人生",
+                    "perf 使我强大",
+                    "perf 就是硬道理",
+                    "perf 也能很骚",
+                    "perf，骚操作",
+                    "perf 使我成名",
+                    "优化性能，优化心情",
+                    "perf 使我快乐"
+                ],
+                zha: [
+                    "性能提升了，下班时间没提升",
+                    "优化了 100ms，加班了 100 分钟",
+                    "perf 做完了，头发也没了",
+                    "perf 了一天，好像什么都没做",
+                    "perf 写完了，天也亮了",
+                    "perf 使我疲惫",
+                    "优化性能，优化崩溃",
+                    "perf 使我怀疑人生",
+                    "优化性能，优化迷茫",
+                    "perf 做了白做",
+                    "perf 使我秃头",
+                    "优化性能，优化孤独",
+                    "perf 使我崩溃",
+                    "优化性能，优化空虚",
+                    "perf 的人生没有终点"
+                ],
+                chu: [
+                    "速度之力，解放",
+                    "突破极限，超越自我",
+                    "这就是真正的速度",
+                    "perf 魔法，发动！",
+                    "以吾之力，优化此代码！",
+                    "perf 之力，全开！",
+                    "这是速度的力量",
+                    "perf 之力，加持吾身",
+                    "优化，觉醒！",
+                    "perf 之力，解放",
+                    "这是突破的力量",
+                    "perf 之力，觉醒吧",
+                    "优化性能，创造速度",
+                    "perf 之力，加持！",
+                    "优化，速度觉醒"
+                ],
+                fo: [
+                    "快与不快，都是缘分",
+                    "慢即是快",
+                    "随缘优化",
+                    "perf 本无 perf",
+                    "快慢本无分别",
+                    "perf 本清净",
+                    "优化即是空",
+                    "不增不减，不垢不净",
+                    "随缘 perf",
+                    "来也 perf，去也 perf",
+                    "无性能可优化",
+                    "优化即是修行",
+                    "perf 本无自性",
+                    "优化即放下执念",
+                    "随缘 perf，随缘看"
+                ]
+            },
+            ci: {
+                love: [
+                    "CI 通过了，就像你接受了我",
+                    "流水线跑通了，心也通了",
+                    "ci 配置，爱的配置",
+                    "自动化了，想你也可以自动化吗",
+                    "CI 配置，爱情配置",
+                    "CI 通过了，开心 +1",
+                    "ci 是爱的证明",
+                    "配置 CI，表达爱意",
+                    "CI 通过了，想你 +1",
+                    "ci 使我更爱你",
+                    "配置 CI，配置真心",
+                    "CI 是浪漫的",
+                    "ci 通过了，爱情通过了",
+                    "配置 CI，配置幸福",
+                    "CI 通过了，心情好了"
+                ],
+                sao: [
+                    "ci 一时爽，一直 ci 一直爽",
+                    "流水线比我还会跑",
+                    "配置写得好，下班下得早",
+                    "ci 使我快乐",
+                    "配置 CI，配置寂寞",
+                    "ci 我是认真的",
+                    "配置完这个就去浪",
+                    "配置 CI，配置人生",
+                    "ci 使我强大",
+                    "ci 就是硬道理",
+                    "ci 也能很骚",
+                    "ci，骚操作",
+                    "ci 使我成名",
+                    "配置 CI，配置心情",
+                    "ci 使我快乐"
+                ],
+                zha: [
+                    "CI 红了，我也红了（急的）",
+                    "配置改了一天，还是报错",
+                    "流水线停了，我也累了",
+                    "ci 了一天，好像什么都没做",
+                    "ci 写完了，天也亮了",
+                    "ci 使我疲惫",
+                    "配置 CI，配置崩溃",
+                    "ci 使我怀疑人生",
+                    "配置 CI，配置迷茫",
+                    "ci 写了白写",
+                    "ci 使我秃头",
+                    "配置 CI，配置孤独",
+                    "ci 使我崩溃",
+                    "配置 CI，配置空虚",
+                    "ci 的人生没有终点"
+                ],
+                chu: [
+                    "自动化之力，觉醒",
+                    "流水线，启动",
+                    "CI 之力，加持吾身",
+                    "ci 魔法，发动！",
+                    "以吾之力，配置此 CI！",
+                    "ci 之力，全开！",
+                    "这是自动化的力量",
+                    "ci 之力，加持吾身",
+                    "CI，觉醒！",
+                    "ci 之力，解放",
+                    "这是流水线的力量",
+                    "ci 之力，觉醒吧",
+                    "配置 CI，创造自动化",
+                    "ci 之力，加持！",
+                    "CI，自动化觉醒"
+                ],
+                fo: [
+                    "过与不过，都是缘分",
+                    "CI 即空",
+                    "随缘构建",
+                    "ci 本无 ci",
+                    "过不过本无分别",
+                    "ci 本清净",
+                    "CI 即是空",
+                    "不增不减，不垢不净",
+                    "随缘 ci",
+                    "来也 ci，去也 ci",
+                    "无 CI 可配置",
+                    "CI 即是修行",
+                    "ci 本无自性",
+                    "CI 即放下执念",
+                    "随缘 ci，随缘看"
+                ]
+            },
+            build: {
+                love: [
+                    "构建成功了，就像我们的未来",
+                    "build 通过了，心也放下了",
+                    "打包的是代码，思念的是你",
+                    "构建完成，想你 +1",
+                    "build 配置，爱情配置",
+                    "build 通过了，开心 +1",
+                    "build 是爱的证明",
+                    "配置 build，表达爱意",
+                    "build 通过了，想你 +1",
+                    "build 使我更爱你",
+                    "配置 build，配置真心",
+                    "build 是浪漫的",
+                    "build 通过了，爱情通过了",
+                    "配置 build，配置幸福",
+                    "build 通过了，心情好了"
+                ],
+                sao: [
+                    "build 一时爽，一直 build 一直爽",
+                    "打包成功，打包失败，都是常态",
+                    "我 build 的不是代码，是希望",
+                    "build 使我快乐",
+                    "配置 build，配置寂寞",
+                    "build 我是认真的",
+                    "配置完这个就去浪",
+                    "配置 build，配置人生",
+                    "build 使我强大",
+                    "build 就是硬道理",
+                    "build 也能很骚",
+                    "build，骚操作",
+                    "build 使我成名",
+                    "配置 build，配置心情",
+                    "build 使我快乐"
+                ],
+                zha: [
+                    "build 失败了，人生也失败了",
+                    "依赖下载了一天，还是失败",
+                    "构建成功，头发失败",
+                    "build 了一天，好像什么都没做",
+                    "build 写完了，天也亮了",
+                    "build 使我疲惫",
+                    "配置 build，配置崩溃",
+                    "build 使我怀疑人生",
+                    "配置 build，配置迷茫",
+                    "build 写了白写",
+                    "build 使我秃头",
+                    "配置 build，配置孤独",
+                    "build 使我崩溃",
+                    "配置 build，配置空虚",
+                    "build 的人生没有终点"
+                ],
+                chu: [
+                    "构建之力，觉醒",
+                    "打包完成，世界诞生",
+                    "这是创造的力量",
+                    "build 魔法，发动！",
+                    "以吾之力，构建此代码！",
+                    "build 之力，全开！",
+                    "这是构建的力量",
+                    "build 之力，加持吾身",
+                    "build，觉醒！",
+                    "build 之力，解放",
+                    "这是创造的力量",
+                    "build 之力，觉醒吧",
+                    "配置 build，创造世界",
+                    "build 之力，加持！",
+                    "build，创造觉醒"
+                ],
+                fo: [
+                    "成与不成，都是 build",
+                    "构建即空",
+                    "随缘编译",
+                    "build 本无 build",
+                    "成不成本无分别",
+                    "build 本清净",
+                    "构建即是空",
+                    "不增不减，不垢不净",
+                    "随缘 build",
+                    "来也 build，去也 build",
+                    "无 build 可配置",
+                    "构建即是修行",
+                    "build 本无自性",
+                    "构建即放下执念",
+                    "随缘 build，随缘看"
+                ]
+            },
+            revert: {
+                love: [
+                    "回滚了代码，回滚不了对你的爱",
+                    "revert 是暂时的，想你是永恒的",
+                    "回到过去，只为遇见你",
+                    "代码可以回滚，时间不能",
+                    "revert 配置，爱情配置",
+                    "revert 通过了，开心 +1",
+                    "revert 是爱的证明",
+                    "配置 revert，表达爱意",
+                    "revert 通过了，想你 +1",
+                    "revert 使我更爱你",
+                    "配置 revert，配置真心",
+                    "revert 是浪漫的",
+                    "revert 通过了，爱情通过了",
+                    "配置 revert，配置幸福",
+                    "revert 通过了，心情好了"
+                ],
+                sao: [
+                    "revert 一时爽，一直 revert 一直爽",
+                    "回滚了，就当没发生过",
+                    "我 revert 的不是代码，是历史",
+                    "revert 使我快乐",
+                    "配置 revert，配置寂寞",
+                    "revert 我是认真的",
+                    "配置完这个就去浪",
+                    "配置 revert，配置人生",
+                    "revert 使我强大",
+                    "revert 就是硬道理",
+                    "revert 也能很骚",
+                    "revert，骚操作",
+                    "revert 使我成名",
+                    "配置 revert，配置心情",
+                    "revert 使我快乐"
+                ],
+                zha: [
+                    "revert 了，白干了",
+                    "回滚代码，回滚人生",
+                    "一天的工作，一键还原",
+                    "revert 了一天，好像什么都没做",
+                    "revert 写完了，天也亮了",
+                    "revert 使我疲惫",
+                    "配置 revert，配置崩溃",
+                    "revert 使我怀疑人生",
+                    "配置 revert，配置迷茫",
+                    "revert 写了白写",
+                    "revert 使我秃头",
+                    "配置 revert，配置孤独",
+                    "revert 使我崩溃",
+                    "配置 revert，配置空虚",
+                    "revert 的人生没有终点"
+                ],
+                chu: [
+                    "时间倒流，世界重置",
+                    "revert 之力，发动",
+                    "这是回到过去的力量",
+                    "revert 魔法，发动！",
+                    "以吾之力，回滚此代码！",
+                    "revert 之力，全开！",
+                    "这是时间的力量",
+                    "revert 之力，加持吾身",
+                    "revert，觉醒！",
+                    "revert 之力，解放",
+                    "这是重置的力量",
+                    "revert 之力，觉醒吧",
+                    "配置 revert，重置世界",
+                    "revert 之力，加持！",
+                    "revert，时间觉醒"
+                ],
+                fo: [
+                    "回与不回，都是缘分",
+                    "revert 即放下",
+                    "随缘回滚",
+                    "revert 本无 revert",
+                    "回不回本无分别",
+                    "revert 本清净",
+                    "回滚即是空",
+                    "不增不减，不垢不净",
+                    "随缘 revert",
+                    "来也 revert，去也 revert",
+                    "无 revert 可配置",
+                    "回滚即是修行",
+                    "revert 本无自性",
+                    "回滚即放下执念",
+                    "随缘 revert，随缘看"
+                ]
+            },
+            hotfix: {
+                love: [
+                    "紧急修复，就像紧急想你",
+                    "hotfix 是暂时的，爱是永恒的",
+                    "深夜修复，黎明想你",
+                    "修复的是 bug，思念的是你",
+                    "hotfix 配置，爱情配置",
+                    "hotfix 通过了，开心 +1",
+                    "hotfix 是爱的证明",
+                    "配置 hotfix，表达爱意",
+                    "hotfix 通过了，想你 +1",
+                    "hotfix 使我更爱你",
+                    "配置 hotfix，配置真心",
+                    "hotfix 是浪漫的",
+                    "hotfix 通过了，爱情通过了",
+                    "配置 hotfix，配置幸福",
+                    "hotfix 通过了，心情好了"
+                ],
+                sao: [
+                    "hotfix 一时爽，一直 hotfix 一直爽",
+                    "紧急修复，日常加班",
+                    "我 fix 的不是 bug，是命运",
+                    "hotfix 使我快乐",
+                    "配置 hotfix，配置寂寞",
+                    "hotfix 我是认真的",
+                    "配置完这个就去浪",
+                    "配置 hotfix，配置人生",
+                    "hotfix 使我强大",
+                    "hotfix 就是硬道理",
+                    "hotfix 也能很骚",
+                    "hotfix，骚操作",
+                    "hotfix 使我成名",
+                    "配置 hotfix，配置心情",
+                    "hotfix 使我快乐"
+                ],
+                zha: [
+                    "hotfix 完了，天也亮了",
+                    "紧急修复，紧急加班",
+                    "fix 完了，人也废了",
+                    "hotfix 了一天，好像什么都没做",
+                    "hotfix 写完了，天也亮了",
+                    "hotfix 使我疲惫",
+                    "配置 hotfix，配置崩溃",
+                    "hotfix 使我怀疑人生",
+                    "配置 hotfix，配置迷茫",
+                    "hotfix 写了白写",
+                    "hotfix 使我秃头",
+                    "配置 hotfix，配置孤独",
+                    "hotfix 使我崩溃",
+                    "配置 hotfix，配置空虚",
+                    "hotfix 的人生没有终点"
+                ],
+                chu: [
+                    "紧急事态，全力应对",
+                    "hotfix 之力，全开",
+                    "这是最后的防线",
+                    "hotfix 魔法，发动！",
+                    "以吾之力，修复此 bug！",
+                    "hotfix 之力，全开！",
+                    "这是紧急的力量",
+                    "hotfix 之力，加持吾身",
+                    "hotfix，觉醒！",
+                    "hotfix 之力，解放",
+                    "这是防御的力量",
+                    "hotfix 之力，觉醒吧",
+                    "配置 hotfix，创造防线",
+                    "hotfix 之力，加持！",
+                    "hotfix，防御觉醒"
+                ],
+                fo: [
+                    "急与不急，都是 bug",
+                    "hotfix 即空",
+                    "随缘修复",
+                    "hotfix 本无 hotfix",
+                    "急不急本无分别",
+                    "hotfix 本清净",
+                    "紧急修复即是空",
+                    "不增不减，不垢不净",
+                    "随缘 hotfix",
+                    "来也 hotfix，去也 hotfix",
+                    "无 hotfix 可配置",
+                    "紧急修复即是修行",
+                    "hotfix 本无自性",
+                    "紧急修复即放下执念",
+                    "随缘 hotfix，随缘看"
+                ]
+            }
+        };
+
+        // ==================== 状态管理 ====================
+        let lastResult = '';
+        let isFavorite = false;
+        let currentGenerateId = null;
+
+        // ==================== 工具函数 ====================
+        function getStorage(key) {
             try {
-                return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+                return JSON.parse(localStorage.getItem(key)) || null;
             } catch (e) {
-                return [];
+                return null;
             }
         }
 
-        function saveToHistory(commitType, style, text, description) {
-            const history = getHistory();
-            const item = {
-                id: Date.now(),
-                type: commitType,
-                style: style,
-                text: text,
-                description: description,
-                createdAt: new Date().toISOString()
-            };
-            history.unshift(item);
-            if (history.length > MAX_HISTORY) {
-                history.pop();
+        function setStorage(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                console.error('Storage error:', e);
             }
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-            renderHistory();
         }
 
-        function renderHistory() {
-            const history = getHistory();
-            const container = document.getElementById('historyList');
-            
-            if (history.length === 0) {
-                container.innerHTML = '<div class="history-empty">暂无历史记录</div>';
-                return;
-            }
-
-            container.innerHTML = history.map(item => `
-                <div class="history-item" onclick="loadHistory(${item.id})">
-                    <div class="type">${item.type} · ${getStyleName(item.style)}</div>
-                    <div class="text">${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
-                </div>
-            `).join('');
-        }
-
-        function loadHistory(id) {
-            const history = getHistory();
-            const item = history.find(h => h.id === id);
-            if (!item) return;
-
-            document.getElementById('commitType').value = item.type;
-            document.getElementById('style').value = item.style;
-            document.getElementById('description').value = item.description || '';
-            
-            const result = item.description ? `${item.type}: ${item.description}\n\n${item.text}` : `${item.type}: ${item.text}`;
-            document.getElementById('resultText').textContent = result;
-            document.getElementById('result').classList.add('show');
-            lastResult = result;
-            
-            // 滚动到顶部
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function clearHistory() {
-            if (confirm('确定要清空历史记录吗？')) {
-                localStorage.removeItem(HISTORY_KEY);
-                renderHistory();
-            }
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
         function getStyleName(style) {
@@ -562,7 +1914,331 @@
             return names[style] || style;
         }
 
-        // 随机生成
+        // ==================== 统计管理 ====================
+        function getStats() {
+            return getStorage(STORAGE_KEYS.STATS) || {
+                totalGenerates: 0,
+                totalCopies: 0,
+                totalShares: 0,
+                totalFavorites: 0,
+                typesUsed: {},
+                stylesUsed: {},
+                midnightGenerates: 0,
+                keyboardGenerates: 0,
+                themeSwitches: 0
+            };
+        }
+
+        function updateStats(update) {
+            const stats = getStats();
+            Object.assign(stats, update);
+            setStorage(STORAGE_KEYS.STATS, stats);
+            updateStatsDisplay();
+            checkAchievements();
+        }
+
+        function updateStatsDisplay() {
+            const stats = getStats();
+            document.getElementById('totalCount').textContent = stats.totalGenerates;
+            document.getElementById('favoriteCount').textContent = getFavorites().length;
+        }
+
+        // ==================== 成就系统 ====================
+        function getAchievements() {
+            return getStorage(STORAGE_KEYS.ACHIEVEMENTS) || [];
+        }
+
+        function checkAchievements() {
+            const stats = getStats();
+            const unlocked = getAchievements();
+            let newUnlock = false;
+
+            ACHIEVEMENTS.forEach(achievement => {
+                if (!unlocked.includes(achievement.id) && achievement.condition(stats)) {
+                    unlocked.push(achievement.id);
+                    newUnlock = true;
+                    showToast(`🏆 解锁成就：${achievement.name}`);
+                }
+            });
+
+            setStorage(STORAGE_KEYS.ACHIEVEMENTS, unlocked);
+            if (newUnlock) {
+                updateAchievementsDisplay();
+            }
+        }
+
+        function updateAchievementsDisplay() {
+            const unlocked = getAchievements();
+            const progress = (unlocked.length / ACHIEVEMENTS.length) * 100;
+            document.getElementById('achievementProgress').style.width = `${progress}%`;
+            document.getElementById('achievementCount').textContent = `${unlocked.length}/${ACHIEVEMENTS.length}`;
+        }
+
+        function showAchievements() {
+            const unlocked = getAchievements();
+            const grid = document.getElementById('achievementsGrid');
+            
+            grid.innerHTML = ACHIEVEMENTS.map(achievement => `
+                <div class="achievement-item ${unlocked.includes(achievement.id) ? 'unlocked' : ''}">
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <div class="achievement-name">${achievement.name}</div>
+                    <div class="achievement-desc">${achievement.desc}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('achievementsModal').classList.add('show');
+        }
+
+        function closeAchievements() {
+            document.getElementById('achievementsModal').classList.remove('show');
+        }
+
+        // ==================== 历史记录管理 ====================
+        function getHistory() {
+            return getStorage(STORAGE_KEYS.HISTORY) || [];
+        }
+
+        function saveToHistory(commitType, style, text, description) {
+            const history = getHistory();
+            const item = {
+                id: generateId(),
+                type: commitType,
+                style: style,
+                text: text,
+                description: description,
+                createdAt: new Date().toISOString()
+            };
+            history.unshift(item);
+            if (history.length > MAX_HISTORY) {
+                history.pop();
+            }
+            setStorage(STORAGE_KEYS.HISTORY, history);
+            renderHistory();
+            
+            // 更新统计
+            const stats = getStats();
+            stats.totalGenerates++;
+            stats.typesUsed[commitType] = (stats.typesUsed[commitType] || 0) + 1;
+            stats.stylesUsed[style] = (stats.stylesUsed[style] || 0) + 1;
+            
+            // 检查是否是深夜
+            const hour = new Date().getHours();
+            if (hour >= 23 || hour < 6) {
+                stats.midnightGenerates++;
+            }
+            
+            setStorage(STORAGE_KEYS.STATS, stats);
+            updateStatsDisplay();
+            checkAchievements();
+        }
+
+        function renderHistory() {
+            const history = getHistory();
+            const container = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="history-item" onclick="loadHistoryItem('${item.id}')">
+                    <div class="type">${item.type} · ${getStyleName(item.style)}</div>
+                    <div class="text">${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistoryItem(id) {
+            const history = getHistory();
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+
+            document.getElementById('commitType').value = item.type;
+            document.getElementById('style').value = item.style;
+            document.getElementById('description').value = item.description || '';
+            
+            const result = item.description ? `${item.type}: ${item.description}\n\n${item.text}` : `${item.type}: ${item.text}`;
+            document.getElementById('resultText').textContent = result;
+            document.getElementById('result').classList.add('show');
+            lastResult = result;
+            currentGenerateId = item.id;
+            
+            // 检查是否已收藏
+            const favorites = getFavorites();
+            isFavorite = favorites.some(f => f.id === item.id);
+            updateFavoriteButton();
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function clearHistory() {
+            if (confirm('确定要清空历史记录吗？')) {
+                setStorage(STORAGE_KEYS.HISTORY, []);
+                renderHistory();
+            }
+        }
+
+        // ==================== 收藏管理 ====================
+        function getFavorites() {
+            return getStorage(STORAGE_KEYS.FAVORITES) || [];
+        }
+
+        function toggleFavorite() {
+            if (!lastResult || !currentGenerateId) return;
+
+            const favorites = getFavorites();
+            const index = favorites.findIndex(f => f.id === currentGenerateId);
+            
+            if (index > -1) {
+                // 取消收藏
+                favorites.splice(index, 1);
+                isFavorite = false;
+                showToast('❌ 已取消收藏');
+            } else {
+                // 添加收藏
+                if (favorites.length >= MAX_FAVORITES) {
+                    showToast('⚠️ 收藏夹已满');
+                    return;
+                }
+                
+                const history = getHistory();
+                const item = history.find(h => h.id === currentGenerateId);
+                if (item) {
+                    favorites.push(item);
+                    isFavorite = true;
+                    showToast('⭐ 已加入收藏夹');
+                    
+                    // 更新统计
+                    updateStats({ totalFavorites: favorites.length });
+                }
+            }
+            
+            setStorage(STORAGE_KEYS.FAVORITES, favorites);
+            updateFavoriteButton();
+            renderFavorites();
+            updateStatsDisplay();
+        }
+
+        function updateFavoriteButton() {
+            const btn = document.getElementById('favoriteBtn');
+            if (isFavorite) {
+                btn.classList.add('active');
+                btn.textContent = '⭐ 已收藏';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '⭐ 收藏';
+            }
+        }
+
+        function renderFavorites() {
+            const favorites = getFavorites();
+            const container = document.getElementById('favoritesList');
+            
+            if (favorites.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无收藏</div>';
+                return;
+            }
+
+            container.innerHTML = favorites.map(item => `
+                <div class="favorite-item" onclick="loadHistoryItem('${item.id}')">
+                    <div class="type">${item.type} · ${getStyleName(item.style)}</div>
+                    <div class="text">${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 主题管理 ====================
+        function initTheme() {
+            const theme = getStorage(STORAGE_KEYS.THEME) || 'dark';
+            if (theme === 'light') {
+                document.body.classList.add('light-theme');
+            }
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            setStorage(STORAGE_KEYS.THEME, isLight ? 'light' : 'dark');
+            
+            // 更新统计
+            const stats = getStats();
+            stats.themeSwitches++;
+            setStorage(STORAGE_KEYS.STATS, stats);
+            checkAchievements();
+        }
+
+        // ==================== 每日一句 ====================
+        function loadDailyQuote() {
+            const allQuotes = [];
+            Object.values(saoHuaDB).forEach(type => {
+                Object.values(type).forEach(style => {
+                    allQuotes.push(...style);
+                });
+            });
+            
+            const today = new Date().toDateString();
+            const seed = today.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+            const quote = allQuotes[seed % allQuotes.length];
+            
+            document.getElementById('dailyQuoteText').textContent = quote;
+        }
+
+        // ==================== Tab 切换 ====================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('historySection').style.display = 'none';
+            document.getElementById('favoritesSection').style.display = 'none';
+            document.getElementById('achievementsSection').style.display = 'none';
+
+            if (tab === 'history') {
+                document.getElementById('historySection').style.display = 'block';
+                renderHistory();
+            } else if (tab === 'favorites') {
+                document.getElementById('favoritesSection').style.display = 'block';
+                renderFavorites();
+            } else if (tab === 'achievements') {
+                document.getElementById('achievementsSection').style.display = 'block';
+                updateAchievementsDisplay();
+            }
+        }
+
+        // ==================== 核心功能 ====================
+        function generate(isKeyboard = false) {
+            const commitType = document.getElementById('commitType').value;
+            const style = document.getElementById('style').value;
+            const description = document.getElementById('description').value.trim();
+
+            const messages = saoHuaDB[commitType][style];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+
+            let result;
+            if (description) {
+                result = `${commitType}: ${description}\n\n${randomMessage}`;
+            } else {
+                result = `${commitType}: ${randomMessage}`;
+            }
+
+            lastResult = result;
+            currentGenerateId = generateId();
+            document.getElementById('resultText').textContent = result;
+            document.getElementById('result').classList.add('show');
+            isFavorite = false;
+            updateFavoriteButton();
+            
+            saveToHistory(commitType, style, randomMessage, description);
+            
+            // 更新统计
+            if (isKeyboard) {
+                const stats = getStats();
+                stats.keyboardGenerates++;
+                setStorage(STORAGE_KEYS.STATS, stats);
+                checkAchievements();
+            }
+        }
+
         function randomGenerate() {
             const types = Object.keys(saoHuaDB);
             const styles = ['love', 'sao', 'zha', 'chu', 'fo'];
@@ -573,7 +2249,6 @@
             document.getElementById('commitType').value = randomType;
             document.getElementById('style').value = randomStyle;
             
-            // 添加抖动动画
             const btn = document.querySelector('.btn-random');
             btn.classList.add('shake');
             setTimeout(() => btn.classList.remove('shake'), 500);
@@ -581,7 +2256,38 @@
             generate();
         }
 
-        // 分享功能
+        function regenerate() {
+            generate();
+        }
+
+        function copyResult() {
+            if (!lastResult) return;
+
+            navigator.clipboard.writeText(lastResult).then(() => {
+                showToast();
+                updateStats({ totalCopies: (getStats().totalCopies || 0) + 1 });
+            }).catch(err => {
+                const textarea = document.createElement('textarea');
+                textarea.value = lastResult;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast();
+                updateStats({ totalCopies: (getStats().totalCopies || 0) + 1 });
+            });
+        }
+
+        function showToast(message = '✅ 已复制到剪贴板') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // ==================== 分享功能 ====================
         function showShare() {
             document.getElementById('shareModal').classList.add('show');
         }
@@ -595,7 +2301,6 @@
             const url = window.location.href;
             const shareText = encodeURIComponent(`${text}\n\n来自 Git Commit 骚话生成器：${url}`);
             
-            // 微信分享需要扫描二维码，这里显示二维码
             const qrContainer = document.querySelector('.share-content');
             const existingQr = document.getElementById('qrCode');
             if (existingQr) existingQr.remove();
@@ -613,6 +2318,7 @@
             });
             
             alert('请用微信扫描二维码分享');
+            updateStats({ totalShares: (getStats().totalShares || 0) + 1 });
         }
 
         function shareToWeibo() {
@@ -620,6 +2326,7 @@
             const url = window.location.href;
             const shareUrl = `https://service.weibo.com/share/share.php?title=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
             window.open(shareUrl, '_blank');
+            updateStats({ totalShares: (getStats().totalShares || 0) + 1 });
         }
 
         function copyShareLink() {
@@ -627,437 +2334,36 @@
             navigator.clipboard.writeText(url).then(() => {
                 showToast();
                 closeShare();
+                updateStats({ totalShares: (getStats().totalShares || 0) + 1 });
             });
         }
 
-        const saoHuaDB = {
-            fix: {
-                love: [
-                    "我为你修复了整个世界",
-                    "bug 可以修，爱你的心不能修",
-                    "这个 bug 让我明白了，不完美才是完美",
-                    "修复的不是代码，是我们之间的裂痕",
-                    "每一个 fix，都是对你的告白",
-                    "bug 消失了，就像我从未离开",
-                    "修好了 bug，也修好了想你的心"
-                ],
-                sao: [
-                    "这个 bug 是我故意留的，就想多见你几次",
-                    "修 bug 和撩你，我都在行",
-                    "bug 修好了，要不要奖励我一个 star？",
-                    "我修的 not bug，是 feature（对你的爱）",
-                    "fix 一时爽，一直 fix 一直爽",
-                    "这个 bug 比我还会欲擒故纵"
-                ],
-                zha: [
-                    "bug 修好了，你也该走了",
-                    "代码能修好，感情修不好",
-                    "fix 得了 bug，fix 不了孤独",
-                    "bug 有尽头，加班没有",
-                    "修好了世界的 bug，修不好自己的人生"
-                ],
-                chu: [
-                    "以吾之名，修复此界之裂痕！",
-                    "禁忌的 bug 啊，被吾封印了",
-                    "这就是...真正的 fix 之力吗",
-                    "bug 酱，你已经死了",
-                    "解放吧，修复之锁！"
-                ],
-                fo: [
-                    "bug 本无 bug，庸人自扰之",
-                    "修与不修，bug 都在那里",
-                    "今日 fix，明日还会再有",
-                    "放下 bug，立地成佛",
-                    "一切 bug，皆是空性"
-                ]
-            },
-            feat: {
-                love: [
-                    "我又来了，带着新的惊喜",
-                    "新功能就像新恋情，充满期待",
-                    "为你，我添加了整个世界",
-                    "这个 feature，只为你一人",
-                    "添加的是功能，不变的是真心",
-                    "新功能上线，想你 +1"
-                ],
-                sao: [
-                    "新 feature 来了，准备好被惊艳了吗",
-                    "这个功能，比我还会撩",
-                    "feat 一时爽，一直 feat 一直爽",
-                    "我加的不是代码，是魅力",
-                    "新功能，新套路，不变的还是我"
-                ],
-                zha: [
-                    "功能越做越多，快乐越做越少",
-                    "feat 写完了，头发也没了",
-                    "新功能上线，旧 bug 又来",
-                    "添加的是功能，消耗的是青春"
-                ],
-                chu: [
-                    "新力量觉醒吧！",
-                    "吾创造了一个新世界",
-                    "这就是进化的力量",
-                    "feat 之力，解放！"
-                ],
-                fo: [
-                    "功能本无功能，用的人多了就有了",
-                    "加与不加，随缘",
-                    "今日 feat，明日也许要 revert"
-                ]
-            },
-            chore: {
-                love: [
-                    "日常想念，日复一日",
-                    "枯燥的更新，像我爱你的心一样永恒",
-                    "又在整理代码，像在整理对你的思念",
-                    "chore 很无聊，想你很有趣",
-                    "每一次 chore，都是爱的积累"
-                ],
-                sao: [
-                    "chore 嘛，就是又菜又爱玩",
-                    "日常划水，偶尔努力",
-                    "chore 一时爽，一直 chore 一直爽",
-                    "整理代码就像整理心情"
-                ],
-                zha: [
-                    "chore 做了一整天，好像什么都没做",
-                    "枯燥的 chore，枯燥的人生",
-                    "更新依赖，更新不了生活"
-                ],
-                chu: [
-                    "日常修炼，功力 +1",
-                    "chore 之力，正在积蓄",
-                    "这是变强的必经之路"
-                ],
-                fo: [
-                    "chore 即修行",
-                    "日复一日，年复一年",
-                    "平常心，做平常事"
-                ]
-            },
-            docs: {
-                love: [
-                    "文档写得好，就像情书写得妙",
-                    "注释是代码的情书",
-                    "我不写文档，因为爱无需解释",
-                    "文档里的每个字，都是想对你说的话",
-                    "写好文档，等你来看"
-                ],
-                sao: [
-                    "文档写得好，下班下得早",
-                    "注释写得骚，同事都说好",
-                    "docs 一时爽，一直 docs 一直爽",
-                    "我写的不是文档，是艺术"
-                ],
-                zha: [
-                    "文档写了，没人看",
-                    "注释写得再好，代码还是烂",
-                    "文档越写越厚，头发越掉越多"
-                ],
-                chu: [
-                    "秘传之书，今日写成",
-                    "文档之力，加持吾身",
-                    "后人啊，请参悟此道"
-                ],
-                fo: [
-                    "文档本无文档，代码本无代码",
-                    "写与不写，都是缘分",
-                    "懂的人自然懂"
-                ]
-            },
-            refactor: {
-                love: [
-                    "重构代码，也重构对你的爱",
-                    "代码可以重构，爱不能重来",
-                    "删掉的是代码，删不掉的是回忆",
-                    "重构之后，代码更美，你更美",
-                    "每一次重构，都是一次新生"
-                ],
-                sao: [
-                    "重构代码，也重构一下人设",
-                    "refactor 一时爽，测试火葬场",
-                    "代码重构了，我还是我",
-                    "重构的是代码，不变的是骚"
-                ],
-                zha: [
-                    "重构完发现，还不如不改",
-                    "代码重构了，人生还是老样子",
-                    "refactor 了一天，好像什么都没变"
-                ],
-                chu: [
-                    "破而后立，晓喻新生！",
-                    "重构之力，觉醒吧",
-                    "这是代码的进化"
-                ],
-                fo: [
-                    "重构即放下",
-                    "旧的不去，新的不来",
-                    "随缘重构，随缘上线"
-                ]
-            },
-            style: {
-                love: [
-                    "代码要美，你也要美",
-                    "格式化的是代码，无法格式化的是心",
-                    "style 调整了，代码更美了",
-                    "美的代码，送给美的你",
-                    "格式化全世界，格式化不了想你"
-                ],
-                sao: [
-                    "代码要骚，style 要骚",
-                    "format 一时爽，一直 format 一直爽",
-                    "我 format 的不是代码，是心情",
-                    "style 好看了，bug 也顺眼了"
-                ],
-                zha: [
-                    "style 改来改去，功能还是烂的",
-                    "格式化得了代码，格式化不了人生",
-                    "代码好看了，还是没人看"
-                ],
-                chu: [
-                    "美之力量，加持吾身",
-                    "style 之力，解放",
-                    "这是视觉的盛宴"
-                ],
-                fo: [
-                    "美与不美，都是代码",
-                    "format 即空",
-                    "外表不重要"
-                ]
-            },
-            test: {
-                love: [
-                    "测试写得好，就像情书写得妙",
-                    "每一个 test，都是对代码的告白",
-                    "测试通过了，就像你对我笑了",
-                    "coverage 100%，爱你的心 100%"
-                ],
-                sao: [
-                    "test 一时爽，一直 test 一直爽",
-                    "测试写得骚，bug 不敢来",
-                    "我测的不是代码，是寂寞"
-                ],
-                zha: [
-                    "测试写完了，bug 还在",
-                    "coverage 100%，头发 0%",
-                    "测试通过，上线失败"
-                ],
-                chu: [
-                    "审判之力，测试开始",
-                    "bug 啊，接受制裁吧",
-                    "test 之力，觉醒"
-                ],
-                fo: [
-                    "测与不测，bug 都在那里",
-                    "测试即修行",
-                    "随缘测试，随缘上线"
-                ]
-            },
-            perf: {
-                love: [
-                    "性能优化了，就像为你加速的心跳",
-                    "快一点，再快一点，只为追上你的脚步",
-                    "perf 优化，爱也优化",
-                    "速度提升了，想你的心更快了"
-                ],
-                sao: [
-                    "perf 一时爽，一直 perf 一直爽",
-                    "我优化的不是性能，是体验",
-                    "快，是我的代名词"
-                ],
-                zha: [
-                    "性能提升了，下班时间没提升",
-                    "优化了 100ms，加班了 100 分钟",
-                    "perf 做完了，头发也没了"
-                ],
-                chu: [
-                    "速度之力，解放",
-                    "突破极限，超越自我",
-                    "这就是真正的速度"
-                ],
-                fo: [
-                    "快与不快，都是缘分",
-                    "慢即是快",
-                    "随缘优化"
-                ]
-            },
-            ci: {
-                love: [
-                    "CI 通过了，就像你接受了我",
-                    "流水线跑通了，心也通了",
-                    "ci 配置，爱的配置",
-                    "自动化了，想你也可以自动化吗"
-                ],
-                sao: [
-                    "ci 一时爽，一直 ci 一直爽",
-                    "流水线比我还会跑",
-                    "配置写得好，下班下得早"
-                ],
-                zha: [
-                    "CI 红了，我也红了（急的）",
-                    "配置改了一天，还是报错",
-                    "流水线停了，我也累了"
-                ],
-                chu: [
-                    "自动化之力，觉醒",
-                    "流水线，启动",
-                    "CI 之力，加持吾身"
-                ],
-                fo: [
-                    "过与不过，都是缘分",
-                    "CI 即空",
-                    "随缘构建"
-                ]
-            },
-            build: {
-                love: [
-                    "构建成功了，就像我们的未来",
-                    "build 通过了，心也放下了",
-                    "打包的是代码，思念的是你",
-                    "构建完成，想你 +1"
-                ],
-                sao: [
-                    "build 一时爽，一直 build 一直爽",
-                    "打包成功，打包失败，都是常态",
-                    "我 build 的不是代码，是希望"
-                ],
-                zha: [
-                    "build 失败了，人生也失败了",
-                    "依赖下载了一天，还是失败",
-                    "构建成功，头发失败"
-                ],
-                chu: [
-                    "构建之力，觉醒",
-                    "打包完成，世界诞生",
-                    "这是创造的力量"
-                ],
-                fo: [
-                    "成与不成，都是 build",
-                    "构建即空",
-                    "随缘编译"
-                ]
-            },
-            revert: {
-                love: [
-                    "回滚了代码，回滚不了对你的爱",
-                    "revert 是暂时的，想你是永恒的",
-                    "回到过去，只为遇见你",
-                    "代码可以回滚，时间不能"
-                ],
-                sao: [
-                    "revert 一时爽，一直 revert 一直爽",
-                    "回滚了，就当没发生过",
-                    "我 revert 的不是代码，是历史"
-                ],
-                zha: [
-                    "revert 了，白干了",
-                    "回滚代码，回滚人生",
-                    "一天的工作，一键还原"
-                ],
-                chu: [
-                    "时间倒流，世界重置",
-                    "revert 之力，发动",
-                    "回到过去，改变未来"
-                ],
-                fo: [
-                    "回与不回，都是缘分",
-                    "revert 即放下",
-                    "随缘回滚"
-                ]
-            },
-            hotfix: {
-                love: [
-                    "紧急修复，就像紧急想你",
-                    "hotfix 是暂时的，爱是永恒的",
-                    "深夜修复，黎明想你",
-                    "修复的是 bug，思念的是你"
-                ],
-                sao: [
-                    "hotfix 一时爽，一直 hotfix 一直爽",
-                    "紧急修复，日常加班",
-                    "我 fix 的不是 bug，是命运"
-                ],
-                zha: [
-                    "hotfix 完了，天也亮了",
-                    "紧急修复，紧急加班",
-                    "fix 完了，人也废了"
-                ],
-                chu: [
-                    "紧急事态，全力应对",
-                    "hotfix 之力，全开",
-                    "这是最后的防线"
-                ],
-                fo: [
-                    "急与不急，都是 bug",
-                    "hotfix 即空",
-                    "随缘修复"
-                ]
-            }
-        };
-
-        let lastResult = '';
-
-        function generate() {
-            const commitType = document.getElementById('commitType').value;
-            const style = document.getElementById('style').value;
-            const description = document.getElementById('description').value.trim();
-
-            const messages = saoHuaDB[commitType][style];
-            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-
-            let result;
-            if (description) {
-                result = `${commitType}: ${description}\n\n${randomMessage}`;
-            } else {
-                result = `${commitType}: ${randomMessage}`;
+        // ==================== 键盘快捷键 ====================
+        document.addEventListener('keydown', function(e) {
+            // 避免在输入框中触发
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                return;
             }
 
-            lastResult = result;
-            document.getElementById('resultText').textContent = result;
-            document.getElementById('result').classList.add('show');
-            
-            // 保存到历史记录
-            saveToHistory(commitType, style, randomMessage, description);
-        }
-
-        function copyResult() {
-            if (!lastResult) return;
-
-            navigator.clipboard.writeText(lastResult).then(() => {
-                showToast();
-            }).catch(err => {
-                // Fallback for older browsers
-                const textarea = document.createElement('textarea');
-                textarea.value = lastResult;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast();
-            });
-        }
-
-        function regenerate() {
-            generate();
-        }
-
-        function showToast() {
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
-        }
-
-        // 支持回车生成
-        document.getElementById('description').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                generate();
+                generate(true);
+            } else if (e.ctrlKey && e.key === 'c') {
+                copyResult();
+            } else if (e.key === 'r' || e.key === 'R') {
+                randomGenerate();
+            } else if (e.key === 'd' || e.key === 'D') {
+                toggleTheme();
             }
         });
 
-        // 页面加载时渲染历史记录
-        window.addEventListener('DOMContentLoaded', renderHistory);
+        // ==================== 初始化 ====================
+        window.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            loadDailyQuote();
+            renderHistory();
+            updateStatsDisplay();
+            updateAchievementsDisplay();
+        });
     </script>
 </body>
 </html>
