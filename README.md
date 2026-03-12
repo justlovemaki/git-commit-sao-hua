@@ -232,7 +232,25 @@ CI 会执行：
 2. 运行 `npm run check`
 3. 运行 `npm run package` 生成 `.vsix`
 4. 上传 artifact：`git-commit-sao-hua-vsix`
-5. 若为 `v*` tag，还会自动把 `.vsix` 附加到 GitHub Release
+5. 根据触发来源发布到不同的 GitHub Release
+
+#### Release 策略
+
+- **普通 push 到 `main` / `master`**
+  - 继续上传 Actions artifact
+  - 同时自动创建或更新一个固定的 **`dev` 预发布 Release**
+  - Release 会始终保留最新一次主干构建产物，并替换旧的 `.vsix`
+- **推送 `v*` tag（如 `v1.0.0`）**
+  - 继续上传 Actions artifact
+  - 同时沿用正式发布逻辑，把 `.vsix` 附加到对应版本号的 GitHub Release
+
+#### 去哪里下载插件包
+
+- **主干最新开发版（dev release）**：GitHub 仓库的 Releases 页面中 `dev` / `Development Build`
+- **正式版**：对应 `v*` tag 的 GitHub Release
+- **临时构建产物**：对应 workflow run 的 Actions artifact `git-commit-sao-hua-vsix`
+
+安装方式相同：下载 `git-commit-sao-hua.vsix` 后，在 VSCode 中选择“Extensions: Install from VSIX...”即可。
 
 ## 🤝 贡献
 

@@ -55,6 +55,28 @@ jobs:
           path: vscode-extension/git-commit-sao-hua.vsix
           if-no-files-found: error
 
+      - name: Publish VSIX to rolling dev release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: dev
+          name: Development Build
+          body: |
+            自动更新的开发版 VSIX。
+
+            - Branch: `${{ github.ref_name }}`
+            - Commit: `${{ github.sha }}`
+            - Workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            下载下方附件中的 `git-commit-sao-hua.vsix` 即可安装。
+          artifacts: vscode-extension/git-commit-sao-hua.vsix
+          artifactErrorsFailBuild: true
+          allowUpdates: true
+          prerelease: true
+          removeArtifacts: true
+          replacesArtifacts: true
+          commit: ${{ github.sha }}
+
       - name: Attach VSIX to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
