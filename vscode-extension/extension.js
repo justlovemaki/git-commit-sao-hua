@@ -72,6 +72,7 @@ async function showSaoHuaGenerator() {
     const typeItems = commitTypes.map(t => ({
         label: t.label,
         description: t.desc,
+        value: t.value,
         picked: t.value === currentType
     }));
 
@@ -83,10 +84,11 @@ async function showSaoHuaGenerator() {
     if (!selectedType) {
         return;
     }
-    currentType = selectedType.label.split(' ')[0];
+    currentType = selectedType.value;
 
     const styleItems = styles.map(s => ({
         label: `${s.emoji} ${s.label}`,
+        value: s.value,
         picked: s.value === currentStyle
     }));
 
@@ -98,19 +100,14 @@ async function showSaoHuaGenerator() {
     if (!selectedStyle) {
         return;
     }
-    currentStyle = selectedStyle.label.match(/\((.*?)\)/)?.[1] || selectedStyle.label.split(' ')[1];
+    currentStyle = selectedStyle.value;
 
     const description = await vscode.window.showInputBox({
         placeHolder: '输入简短描述（可选）',
         prompt: '例如：用户登录功能'
     });
 
-    const message = generateCommitMessage(currentStyle === '情话模式' ? 'love' : 
-                      currentStyle === '骚话模式' ? 'sao' :
-                      currentStyle === '扎心模式' ? 'zha' :
-                      currentStyle === '中二模式' ? 'chu' : 'fo', 
-                    getStyleKey(selectedStyle.label), 
-                    description);
+    const message = generateCommitMessage(currentType, currentStyle, description);
 
     const result = await vscode.window.showInformationMessage(
         `生成成功！类型: ${currentType}`,
@@ -121,15 +118,6 @@ async function showSaoHuaGenerator() {
     if (result === '插入到 Git') {
         await insertToGitInput(message);
     }
-}
-
-function getStyleKey(styleLabel) {
-    if (styleLabel.includes('情话')) return 'love';
-    if (styleLabel.includes('骚话')) return 'sao';
-    if (styleLabel.includes('扎心')) return 'zha';
-    if (styleLabel.includes('中二')) return 'chu';
-    if (styleLabel.includes('佛系')) return 'fo';
-    return currentStyle;
 }
 
 function getStyleLabel(styleKey) {

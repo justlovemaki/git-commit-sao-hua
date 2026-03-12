@@ -127,6 +127,9 @@ npm run package
 # 打开 VSCode 开发模式
 code .
 
+# 最小验证（命令行）
+node -e "const { generateCommitMessage } = require('./sao-hua-data'); console.log(generateCommitMessage('feat','sao','登录功能'));"
+
 # 按 F5 调试
 ```
 
