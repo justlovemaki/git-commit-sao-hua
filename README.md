@@ -192,6 +192,48 @@ const saoHuaDB = {
 - 不会收集任何个人信息
 - 开源透明，代码可审查
 
+## 🔌 VSCode 插件打包
+
+插件源码位于 `vscode-extension/`。
+
+### 本地打包
+
+```bash
+cd vscode-extension
+npm ci
+npm run check
+npm run package
+```
+
+打包成功后会在 `vscode-extension/` 目录生成：
+
+- `git-commit-sao-hua.vsix`
+
+可本地安装测试：
+
+```bash
+code --install-extension vscode-extension/git-commit-sao-hua.vsix
+```
+
+### GitHub Actions 自动打包
+
+仓库内置工作流：`.github/workflows/vscode-extension-package.yml`
+
+触发方式：
+
+- push 到 `main` / `master`
+- 创建或推送 tag：`v*`（例如 `v1.0.0`）
+- 发起 / 更新 Pull Request（当改动包含 `vscode-extension/**` 或该 workflow 本身时）
+- 手动触发 `workflow_dispatch`
+
+CI 会执行：
+
+1. 安装 `vscode-extension` 依赖
+2. 运行 `npm run check`
+3. 运行 `npm run package` 生成 `.vsix`
+4. 上传 artifact：`git-commit-sao-hua-vsix`
+5. 若为 `v*` tag，还会自动把 `.vsix` 附加到 GitHub Release
+
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request！

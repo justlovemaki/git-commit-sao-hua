@@ -115,14 +115,33 @@ git clone https://github.com/justlovemaki/git-commit-sao-hua.git
 # 进入插件目录
 cd vscode-extension
 
-# 安装依赖（如果需要）
-npm install
+# 安装依赖
+npm ci
+
+# 检查打包所需文件
+npm run check
+
+# 本地打包 VSIX
+npm run package
 
 # 打开 VSCode 开发模式
 code .
 
 # 按 F5 调试
 ```
+
+本地打包产物：
+
+- `git-commit-sao-hua.vsix`
+
+## CI 自动打包
+
+仓库已配置 GitHub Actions 工作流：
+
+- 文件：`.github/workflows/vscode-extension-package.yml`
+- 触发：push 到 `main/master`、`v*` tag、相关 Pull Request、手动触发
+- 产物：artifact `git-commit-sao-hua-vsix`
+- 发布：当推送 `v*` tag 时，会尝试将 `.vsix` 附加到 GitHub Release
 
 ## License
 
