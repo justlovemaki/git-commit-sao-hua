@@ -58,10 +58,29 @@ function activate(context) {
         }
     });
 
+    const openKeybindingsCommand = vscode.commands.registerCommand('gitCommitSaoHua.openKeybindings', async () => {
+        const keybindingsConfig = [
+            '{',
+            '    "key": "ctrl+shift+g",',
+            '    "command": "gitCommitSaoHua.generate",',
+            '    "when": "editorTextFocus"',
+            '}'
+        ].join('\n');
+
+        const doc = await vscode.workspace.openTextDocument({
+            content: `// 在此文件中添加以下配置来自定义快捷键:\n//\n// 示例:\n// ${keybindingsConfig}\n//\n// 可用命令:\n// - gitCommitSaoHua.generate: 生成骚话 Commit\n// - gitCommitSaoHua.generateRandom: 随机生成 Commit\n// - gitCommitSaoHua.selectType: 选择 Commit 类型\n// - gitCommitSaoHua.selectStyle: 选择风格模式\n`,
+            language: 'json'
+        });
+
+        await vscode.window.showTextDocument(doc);
+        vscode.window.showInformationMessage('请在打开的文件中添加快捷键配置，或打开: 文件 > 首选项 > 快捷键 进行设置');
+    });
+
     context.subscriptions.push(generateCommand);
     context.subscriptions.push(generateRandomCommand);
     context.subscriptions.push(selectTypeCommand);
     context.subscriptions.push(selectStyleCommand);
+    context.subscriptions.push(openKeybindingsCommand);
 }
 
 async function showSaoHuaGenerator() {

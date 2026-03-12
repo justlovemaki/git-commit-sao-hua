@@ -43,13 +43,11 @@
         "command": "gitCommitSaoHua.selectStyle",
         "title": "选择风格模式",
         "category": "Git Commit 骚话"
-      }
-    ],
-    "keybindings": [
+      },
       {
-        "command": "gitCommitSaoHua.generate",
-        "key": "ctrl+shift+g",
-        "mac": "cmd+shift+g"
+        "command": "gitCommitSaoHua.openKeybindings",
+        "title": "打开快捷键设置",
+        "category": "Git Commit 骚话"
       }
     ],
     "configuration": {

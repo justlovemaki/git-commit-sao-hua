@@ -29,7 +29,7 @@
 
 ### 方法二：快捷键
 
-按 `Ctrl+Shift+G` (Mac: `Cmd+Shift+G`) 快速生成随机骚话
+按 `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`) → 输入 "打开快捷键设置" → 配置您自己的快捷键
 
 ### 方法三：单独选择
 
@@ -105,6 +105,50 @@ docs: API 文档
 
 - `defaultStyle`: 默认风格 (love/sao/zha/chu/fo)
 - `autoInsert`: 是否自动插入到 Git 输入框
+
+## 自定义快捷键
+
+本插件不再预设默认快捷键，以避免与您现有的快捷键冲突。您可以按照以下方式自定义快捷键：
+
+### 方法一：命令面板
+
+1. 按 `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`)
+2. 输入 "打开快捷键设置"
+3. 在打开的 JSON 文件中添加配置
+
+### 方法二：手动设置
+
+1. 打开 `文件 > 首选项 > 快捷键`
+2. 搜索 "gitCommitSaoHua"
+3. 为需要的命令设置您喜欢的快捷键
+
+### 方法三：直接编辑 keybindings.json
+
+按 `Ctrl+K Ctrl+S` 打开快捷键设置，然后点击右上角的 "打开快捷键(JSON)" 图标，添加以下配置：
+
+```json
+[
+    {
+        "key": "ctrl+shift+g",
+        "command": "gitCommitSaoHua.generate",
+        "when": "editorTextFocus"
+    },
+    {
+        "key": "ctrl+shift+r",
+        "command": "gitCommitSaoHua.generateRandom"
+    }
+]
+```
+
+### 可用命令列表
+
+| 命令 | 说明 |
+|------|------|
+| `gitCommitSaoHua.generate` | 生成骚话 Commit |
+| `gitCommitSaoHua.generateRandom` | 随机生成 Commit |
+| `gitCommitSaoHua.selectType` | 选择 Commit 类型 |
+| `gitCommitSaoHua.selectStyle` | 选择风格模式 |
+| `gitCommitSaoHua.openKeybindings` | 打开快捷键设置 |
 
 ## 开发
 
