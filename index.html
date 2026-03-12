@@ -82,16 +82,25 @@
             background: rgba(255, 255, 255, 0.1);
             border: none;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             cursor: pointer;
             font-size: 1.2em;
             transition: all 0.3s ease;
+            min-height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .theme-toggle:hover {
             transform: rotate(180deg);
             background: rgba(255, 255, 255, 0.2);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.9);
         }
 
         .subtitle {
@@ -628,31 +637,158 @@
 
         @media (max-width: 600px) {
             .container {
-                padding: 25px;
+                padding: 20px;
+                margin: 10px;
             }
 
             h1 {
-                font-size: 1.5em;
+                font-size: 1.4em;
+            }
+
+            .subtitle {
+                font-size: 0.85em;
+            }
+
+            /* 按钮触摸区域最小 48px */
+            .btn, select, input[type="text"], .tab, .theme-toggle {
+                min-height: 48px;
+                touch-action: manipulation;
+            }
+
+            /* 增大按钮点击区域 */
+            .btn {
+                padding: 16px 20px;
+                font-size: 1em;
             }
 
             .btn-group {
                 flex-direction: column;
+                gap: 12px;
             }
 
             .result-actions {
                 flex-direction: column;
-            }
-
-            .stats-bar {
                 gap: 10px;
             }
 
+            .result-actions .btn {
+                padding: 12px;
+            }
+
+            .stats-bar {
+                gap: 8px;
+                flex-wrap: wrap;
+                padding: 12px;
+            }
+
+            .stat-item {
+                min-width: 60px;
+            }
+
             .stat-value {
-                font-size: 1.2em;
+                font-size: 1.1em;
+            }
+
+            .stat-label {
+                font-size: 0.7em;
+            }
+
+            .custom-btn {
+                min-height: 44px;
+                padding: 8px 16px;
+                font-size: 0.85em;
             }
 
             .achievements-grid {
                 grid-template-columns: 1fr;
+            }
+
+            /* 优化移动端字体 */
+            body {
+                font-size: 14px;
+            }
+
+            label {
+                font-size: 0.85em;
+                margin-bottom: 10px;
+            }
+
+            select, input[type="text"] {
+                font-size: 16px; /* 防止 iOS 自动缩放 */
+                padding: 14px;
+            }
+
+            .daily-quote {
+                padding: 12px;
+                font-size: 0.85em;
+            }
+
+            .tabs {
+                gap: 8px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab {
+                padding: 10px 14px;
+                font-size: 0.9em;
+                white-space: nowrap;
+            }
+
+            .keyboard-hints {
+                font-size: 0.7em;
+                margin-top: 12px;
+            }
+
+            .keyboard-hints kbd {
+                padding: 3px 6px;
+                font-size: 0.9em;
+            }
+
+            .history-item, .favorite-item {
+                padding: 14px;
+            }
+
+            .share-content, .achievements-content, .custom-content {
+                width: 95%;
+                padding: 20px;
+            }
+
+            .share-buttons {
+                gap: 12px;
+            }
+
+            .share-btn {
+                padding: 14px;
+                min-height: 48px;
+            }
+        }
+
+        /* 触摸设备优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .btn:hover {
+                transform: none;
+            }
+
+            .btn:active {
+                transform: scale(0.98);
+            }
+
+            .history-item:hover, .favorite-item:hover {
+                transform: none;
+                background: rgba(0, 0, 0, 0.25);
+            }
+
+            .theme-toggle:hover {
+                transform: none;
+            }
+
+            .tab:hover {
+                background: transparent;
+            }
+
+            .tab:active {
+                background: rgba(255, 255, 255, 0.1);
             }
         }
     </style>
@@ -2398,6 +2534,13 @@
         let currentGenerateId = null;
 
         // ==================== 工具函数 ====================
+        // 触摸震动反馈
+        function vibrate(pattern = 10) {
+            if (navigator.vibrate) {
+                navigator.vibrate(pattern);
+            }
+        }
+
         function getStorage(key) {
             try {
                 return JSON.parse(localStorage.getItem(key)) || null;
@@ -2490,6 +2633,7 @@
         }
 
         function showAchievements() {
+            vibrate(15);
             const unlocked = getAchievements();
             const grid = document.getElementById('achievementsGrid');
             
@@ -2505,6 +2649,7 @@
         }
 
         function closeAchievements() {
+            vibrate(10);
             document.getElementById('achievementsModal').classList.remove('show');
         }
 
@@ -2590,6 +2735,7 @@
 
         function clearHistory() {
             if (confirm('确定要清空历史记录吗？')) {
+                vibrate(50);
                 setStorage(STORAGE_KEYS.HISTORY, []);
                 renderHistory();
             }
@@ -2602,6 +2748,7 @@
 
         function toggleFavorite() {
             if (!lastResult || !currentGenerateId) return;
+            vibrate(25);
 
             const favorites = getFavorites();
             const index = favorites.findIndex(f => f.id === currentGenerateId);
@@ -2670,6 +2817,7 @@
         }
 
         function addCustomSaoHua() {
+            vibrate(20);
             const commitType = document.getElementById('customCommitType').value;
             const style = document.getElementById('customStyle').value;
             const text = document.getElementById('customText').value.trim();
@@ -2696,6 +2844,7 @@
 
         function deleteCustomSaoHua(id) {
             if (!confirm('确定要删除这条骚话吗？')) return;
+            vibrate([20, 10, 20]);
 
             let customList = getCustomSaoHua();
             customList = customList.filter(item => item.id !== id);
@@ -2785,11 +2934,13 @@
         }
 
         function showCustomModal() {
+            vibrate(15);
             document.getElementById('customModal').classList.add('show');
             renderCustomList();
         }
 
         function closeCustomModal() {
+            vibrate(10);
             document.getElementById('customModal').classList.remove('show');
         }
 
@@ -2802,6 +2953,7 @@
         }
 
         function toggleTheme() {
+            vibrate(15);
             document.body.classList.toggle('light-theme');
             const isLight = document.body.classList.contains('light-theme');
             setStorage(STORAGE_KEYS.THEME, isLight ? 'light' : 'dark');
@@ -2831,6 +2983,7 @@
 
         // ==================== Tab 切换 ====================
         function switchTab(tab) {
+            vibrate(15);
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
 
@@ -2852,6 +3005,9 @@
 
         // ==================== 核心功能 ====================
         function generate(isKeyboard = false) {
+            if (!isKeyboard) {
+                vibrate(20);
+            }
             const commitType = document.getElementById('commitType').value;
             const style = document.getElementById('style').value;
             const description = document.getElementById('description').value.trim();
@@ -2897,6 +3053,7 @@
         }
 
         function randomGenerate() {
+            vibrate([10, 5, 10]);
             const types = Object.keys(saoHuaDB);
             const styles = ['love', 'sao', 'zha', 'chu', 'fo'];
             
@@ -2919,6 +3076,7 @@
 
         function copyResult() {
             if (!lastResult) return;
+            vibrate(30);
 
             navigator.clipboard.writeText(lastResult).then(() => {
                 showToast();
@@ -2946,14 +3104,17 @@
 
         // ==================== 分享功能 ====================
         function showShare() {
+            vibrate(15);
             document.getElementById('shareModal').classList.add('show');
         }
 
         function closeShare() {
+            vibrate(10);
             document.getElementById('shareModal').classList.remove('show');
         }
 
         function shareToWeChat() {
+            vibrate(30);
             const text = lastResult || 'Git Commit 骚话生成器';
             const url = window.location.href;
             const shareText = encodeURIComponent(`${text}\n\n来自 Git Commit 骚话生成器：${url}`);
