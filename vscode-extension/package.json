@@ -1,0 +1,84 @@
+{
+    "name": "git-commit-sao-hua",
+    "displayName": "Git Commit 骚话生成器",
+    "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
+    "version": "1.0.0",
+    "publisher": "coding-expert",
+    "engines": {
+        "vscode": "^1.70.0"
+    },
+    "categories": [
+        "Other",
+        "Snippets"
+    ],
+    "keywords": [
+        "git",
+        "commit",
+        "骚话",
+        "情话",
+        "commit message"
+    ],
+    "activationEvents": [
+        "onCommand:gitCommitSaoHua.generate"
+    ],
+    "main": "./extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "gitCommitSaoHua.generate",
+                "title": "生成骚话 Commit",
+                "category": "Git Commit 骚话"
+            },
+            {
+                "command": "gitCommitSaoHua.generateRandom",
+                "title": "随机生成 Commit",
+                "category": "Git Commit 骚话"
+            },
+            {
+                "command": "gitCommitSaoHua.selectType",
+                "title": "选择 Commit 类型",
+                "category": "Git Commit 骚话"
+            },
+            {
+                "command": "gitCommitSaoHua.selectStyle",
+                "title": "选择风格模式",
+                "category": "Git Commit 骚话"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "gitCommitSaoHua.generate",
+                "key": "ctrl+shift+g",
+                "mac": "cmd+shift+g"
+            }
+        ],
+        "configuration": {
+            "title": "Git Commit 骚话生成器",
+            "properties": {
+                "gitCommitSaoHua.defaultStyle": {
+                    "type": "string",
+                    "enum": ["love", "sao", "zha", "chu", "fo"],
+                    "default": "sao",
+                    "description": "默认风格：情话(love)/骚话(sao)/扎心(zha)/中二(chu)/佛系(fo)"
+                },
+                "gitCommitSaoHua.autoInsert": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "自动插入到 Git input box"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/justlovemaki/git-commit-sao-hua"
+    },
+    "bugs": {
+        "url": "https://github.com/justlovemaki/git-commit-sao-hua/issues"
+    },
+    "license": "MIT",
+    "icon": "icon.png"
+}

@@ -3071,6 +3071,7 @@
         }
 
         function regenerate() {
+            vibrate(15);
             generate();
         }
 
@@ -3140,6 +3141,7 @@
         }
 
         function shareToWeibo() {
+            vibrate(30);
             const text = lastResult || 'Git Commit 骚话生成器';
             const url = window.location.href;
             const shareUrl = `https://service.weibo.com/share/share.php?title=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
@@ -3148,6 +3150,7 @@
         }
 
         function copyShareLink() {
+            vibrate(20);
             const url = window.location.href;
             navigator.clipboard.writeText(url).then(() => {
                 showToast();
