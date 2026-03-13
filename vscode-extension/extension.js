@@ -178,25 +178,87 @@ async function insertToGitInput(message, tryInsert = true) {
     
     try {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (gitExtension) {
-            const git = gitExtension.exports.getAPI(1);
-            if (git && git.repositories && git.repositories.length > 0) {
-                const repo = git.repositories[0];
-                const inputBox = repo.inputBox;
-                if (inputBox) {
-                    inputBox.value = message;
-                    vscode.window.showInformationMessage('✓ 已插入到 Git 输入框');
-                    return;
-                }
+        if (!gitExtension) {
+            await fallbackToClipboard(message, '未找到 Git 扩展');
+            return;
+        }
+
+        const git = gitExtension.exports.getAPI(1);
+        if (!git || !git.repositories || git.repositories.length === 0) {
+            await fallbackToClipboard(message, '未找到 Git 仓库');
+            return;
+        }
+
+        const repos = git.repositories;
+        let targetRepo = null;
+
+        if (repos.length === 1) {
+            targetRepo = repos[0];
+        } else {
+            const activeEditor = vscode.window.activeTextEditor;
+            const activePath = activeEditor ? activeEditor.document.uri.fsPath : null;
+
+            const matchedRepos = activePath 
+                ? repos.filter(repo => isPathInsideRepo(activePath, repo.root))
+                : [];
+
+            if (matchedRepos.length === 1) {
+                targetRepo = matchedRepos[0];
+            } else if (matchedRepos.length > 1) {
+                targetRepo = await selectRepository(matchedRepos);
+            } else {
+                targetRepo = await selectRepository(repos);
             }
         }
 
-        await vscode.env.clipboard.writeText(message);
-        vscode.window.showInformationMessage('已复制到剪贴板（无法自动插入到 Git）');
+        if (!targetRepo) {
+            await fallbackToClipboard(message, '未选择仓库');
+            return;
+        }
+
+        const inputBox = targetRepo.inputBox;
+        if (inputBox) {
+            inputBox.value = message;
+            vscode.window.showInformationMessage('✓ 已插入到 Git 输入框');
+            return;
+        }
+
+        await fallbackToClipboard(message, '无法获取 Git 输入框');
     } catch (error) {
-        await vscode.env.clipboard.writeText(message);
-        vscode.window.showWarningMessage('已复制到剪贴板（插入失败）');
+        await fallbackToClipboard(message, '插入失败');
     }
+}
+
+async function selectRepository(repos) {
+    const items = repos.map(repo => ({
+        label: getRepoLabel(repo),
+        repo: repo
+    }));
+
+    const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: '选择要插入的 Git 仓库',
+        ignoreFocusOut: true
+    });
+
+    return selected ? selected.repo : null;
+}
+
+function getRepoLabel(repo) {
+    const root = repo.root;
+    const parts = root.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1] || root;
+}
+
+function isPathInsideRepo(filePath, repoRoot) {
+    const normalizedFilePath = filePath.replace(/\\/g, '/').toLowerCase();
+    const normalizedRepoRoot = repoRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+
+    return normalizedFilePath === normalizedRepoRoot || normalizedFilePath.startsWith(`${normalizedRepoRoot}/`);
+}
+
+async function fallbackToClipboard(message, reason) {
+    await vscode.env.clipboard.writeText(message);
+    vscode.window.showInformationMessage(`已复制到剪贴板（${reason}）`);
 }
 
 function deactivate() {}
