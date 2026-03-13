@@ -12,17 +12,27 @@ function activate(context) {
     });
 
     const generateRandomCommand = vscode.commands.registerCommand('gitCommitSaoHua.generateRandom', async () => {
+        const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+        const autoInsert = config.get('autoInsert', true);
+        
         const result = getRandomSaoHua();
         currentType = result.type;
         currentStyle = result.style;
         const message = generateCommitMessage(result.type, result.style);
         
-        await vscode.window.showInformationMessage(`随机生成: ${result.type} (${getStyleLabel(result.style)})`, {
-            modal: true,
-            detail: message
-        });
-        
-        await insertToGitInput(message);
+        if (autoInsert) {
+            await vscode.window.showInformationMessage(`随机生成: ${result.type} (${getStyleLabel(result.style)})`, {
+                modal: true,
+                detail: message
+            });
+            await insertToGitInput(message, true);
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            await vscode.window.showInformationMessage(`已复制到剪贴板！类型: ${result.type} (${getStyleLabel(result.style)})`, {
+                modal: true,
+                detail: message
+            });
+        }
     });
 
     const selectTypeCommand = vscode.commands.registerCommand('gitCommitSaoHua.selectType', async () => {
@@ -86,7 +96,11 @@ function activate(context) {
 async function showSaoHuaGenerator() {
     const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
     const defaultStyle = config.get('defaultStyle', 'sao');
+    const defaultType = config.get('defaultType', 'feat');
+    const autoInsert = config.get('autoInsert', true);
+    
     currentStyle = defaultStyle;
+    currentType = defaultType;
 
     const typeItems = commitTypes.map(t => ({
         label: t.label,
@@ -128,14 +142,25 @@ async function showSaoHuaGenerator() {
 
     const message = generateCommitMessage(currentType, currentStyle, description);
 
-    const result = await vscode.window.showInformationMessage(
-        `生成成功！类型: ${currentType}`,
-        { modal: true, detail: message },
-        '插入到 Git'
-    );
+    if (autoInsert) {
+        const result = await vscode.window.showInformationMessage(
+            `生成成功！类型: ${currentType}`,
+            { modal: true, detail: message },
+            '插入到 Git'
+        );
 
-    if (result === '插入到 Git') {
-        await insertToGitInput(message);
+        if (result === '插入到 Git') {
+            await insertToGitInput(message, true);
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            vscode.window.showInformationMessage('已复制到剪贴板');
+        }
+    } else {
+        await vscode.env.clipboard.writeText(message);
+        await vscode.window.showInformationMessage(
+            `已复制到剪贴板！类型: ${currentType}`,
+            { modal: true, detail: message }
+        );
     }
 }
 
@@ -144,7 +169,13 @@ function getStyleLabel(styleKey) {
     return style ? `${style.emoji} ${style.label}` : styleKey;
 }
 
-async function insertToGitInput(message) {
+async function insertToGitInput(message, tryInsert = true) {
+    if (!tryInsert) {
+        await vscode.env.clipboard.writeText(message);
+        vscode.window.showInformationMessage('已复制到剪贴板');
+        return;
+    }
+    
     try {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (gitExtension) {
@@ -154,17 +185,17 @@ async function insertToGitInput(message) {
                 const inputBox = repo.inputBox;
                 if (inputBox) {
                     inputBox.value = message;
-                    vscode.window.showInformationMessage('已插入到 Git 输入框');
+                    vscode.window.showInformationMessage('✓ 已插入到 Git 输入框');
                     return;
                 }
             }
         }
 
         await vscode.env.clipboard.writeText(message);
-        vscode.window.showInformationMessage('已复制到剪贴板，请手动粘贴到 Git 输入框');
+        vscode.window.showInformationMessage('已复制到剪贴板（无法自动插入到 Git）');
     } catch (error) {
         await vscode.env.clipboard.writeText(message);
-        vscode.window.showWarningMessage('复制到剪贴板（自动插入失败）');
+        vscode.window.showWarningMessage('已复制到剪贴板（插入失败）');
     }
 }
 

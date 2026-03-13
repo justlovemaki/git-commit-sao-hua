@@ -97,14 +97,23 @@ docs: API 文档
 ```json
 {
     "gitCommitSaoHua.defaultStyle": "sao",
+    "gitCommitSaoHua.defaultType": "feat",
     "gitCommitSaoHua.autoInsert": true
 }
 ```
 
 ### 配置项说明
 
-- `defaultStyle`: 默认风格 (love/sao/zha/chu/fo)
-- `autoInsert`: 是否自动插入到 Git 输入框
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `defaultStyle` | string | `sao` | 默认风格 (love/sao/zha/chu/fo) |
+| `defaultType` | string | `feat` | 默认 Commit 类型 |
+| `autoInsert` | boolean | `true` | 是否自动插入到 Git 输入框 |
+
+### autoInsert 配置说明
+
+- `true` (默认): 优先尝试插入 Git input box，如果失败则复制到剪贴板
+- `false`: 直接复制到剪贴板，不尝试插入 Git（适用于无法自动插入的场景）
 
 ## 自定义快捷键
 

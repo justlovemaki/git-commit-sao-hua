@@ -2,7 +2,7 @@
   "name": "git-commit-sao-hua",
   "displayName": "Git Commit 骚话生成器",
   "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "coding-expert",
   "engines": {
     "vscode": "^1.70.0"
@@ -64,6 +64,25 @@
           ],
           "default": "sao",
           "description": "默认风格：情话(love)/骚话(sao)/扎心(zha)/中二(chu)/佛系(fo)"
+        },
+        "gitCommitSaoHua.defaultType": {
+          "type": "string",
+          "enum": [
+            "fix",
+            "feat",
+            "chore",
+            "docs",
+            "refactor",
+            "style",
+            "test",
+            "perf",
+            "ci",
+            "build",
+            "revert",
+            "hotfix"
+          ],
+          "default": "feat",
+          "description": "默认 Commit 类型"
         },
         "gitCommitSaoHua.autoInsert": {
           "type": "boolean",
