@@ -99,14 +99,14 @@ async function showSaoHuaGenerator() {
     const defaultType = config.get('defaultType', 'feat');
     const autoInsert = config.get('autoInsert', true);
     
-    currentStyle = defaultStyle;
-    currentType = defaultType;
+    const initialType = currentType || defaultType;
+    const initialStyle = currentStyle || defaultStyle;
 
     const typeItems = commitTypes.map(t => ({
         label: t.label,
         description: t.desc,
         value: t.value,
-        picked: t.value === currentType
+        picked: t.value === initialType
     }));
 
     const selectedType = await vscode.window.showQuickPick(typeItems, {
@@ -122,7 +122,7 @@ async function showSaoHuaGenerator() {
     const styleItems = styles.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value,
-        picked: s.value === currentStyle
+        picked: s.value === initialStyle
     }));
 
     const selectedStyle = await vscode.window.showQuickPick(styleItems, {

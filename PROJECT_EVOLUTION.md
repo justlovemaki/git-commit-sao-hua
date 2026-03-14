@@ -4,7 +4,7 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.0.2 (VSCode 插件)
+- **当前版本**: v1.0.3 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
@@ -68,6 +68,11 @@
 - ✅ **activationEvents 补全** - 所有5个命令都正确注册激活事件
 - ✅ **Git 扩展激活优化** - 主动等待内置 Git 扩展激活后再获取 API，减少回退剪贴板的情况
 - ✅ **多仓库选择信息增强** - 显示仓库名称、父路径和当前分支，方便区分同名仓库
+
+### v1.0.3 - 会话状态保持优化 💾
+- ✅ **修复选择覆盖问题** - 修复 selectType/selectStyle 设置的类型/风格在执行 generate 时被默认配置覆盖的 bug
+- ✅ **会话内状态保持** - 用户通过 selectType/selectStyle 手动选择后，该选择在本次 VSCode 会话内持续生效
+- ✅ **默认配置保留** - defaultType/defaultStyle 仍作为初始值和兜底配置
 
 ---
 
@@ -244,16 +249,17 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.0.2)
-- **改进内容**: VSCode 插件可靠性优化
-  - 修复 activationEvents 与命令声明不一致
-  - 改进 Git 扩展激活处理机制
-  - 增强多仓库选择时的信息展示
-- **风险等级**: 低风险（仅修复配置和增强健壮性）
-- **收益**: 显著提升插件激活可靠性，减少回退剪贴板的情况
+### 本轮迭代 (v1.0.3)
+- **改进内容**: 会话状态保持优化
+  - 修复 selectType/selectStyle 设置被默认配置覆盖的问题
+  - 用户手动选择后，类型/风格在会话内持续生效
+  - defaultType/defaultStyle 作为初始值和兜底保留
+- **风险等级**: 低风险（逻辑优化，无破坏性变更）
+- **收益**: 显著提升用户体验，separate select 和 generate 的使用场景
 
 ### 当前状态
 - ✅ VSCode 插件功能完善
+- ✅ selectType/selectStyle 会话状态保持
 - ✅ activationEvents 完整注册所有命令
 - ✅ Git 扩展激活处理优化
 - ✅ 多仓库智能匹配与选择器优化
