@@ -183,6 +183,15 @@ async function insertToGitInput(message, tryInsert = true) {
             return;
         }
 
+        if (!gitExtension.isActive) {
+            try {
+                await gitExtension.activate();
+            } catch (e) {
+                await fallbackToClipboard(message, 'Git 扩展激活失败');
+                return;
+            }
+        }
+
         const git = gitExtension.exports.getAPI(1);
         if (!git || !git.repositories || git.repositories.length === 0) {
             await fallbackToClipboard(message, '未找到 Git 仓库');
@@ -230,10 +239,19 @@ async function insertToGitInput(message, tryInsert = true) {
 }
 
 async function selectRepository(repos) {
-    const items = repos.map(repo => ({
-        label: getRepoLabel(repo),
-        repo: repo
-    }));
+    const items = repos.map(repo => {
+        const root = repo.root;
+        const parts = root.replace(/\\/g, '/').split('/');
+        const name = parts[parts.length - 1] || root;
+        const parentPath = parts.slice(0, -1).join('/');
+        const branch = repo.state.HEAD ? repo.state.HEAD.name : 'unknown';
+        
+        return {
+            label: parentPath ? `${name} (${parentPath})` : name,
+            description: `分支: ${branch}`,
+            repo: repo
+        };
+    });
 
     const selected = await vscode.window.showQuickPick(items, {
         placeHolder: '选择要插入的 Git 仓库',
@@ -246,7 +264,9 @@ async function selectRepository(repos) {
 function getRepoLabel(repo) {
     const root = repo.root;
     const parts = root.replace(/\\/g, '/').split('/');
-    return parts[parts.length - 1] || root;
+    const name = parts[parts.length - 1] || root;
+    const parentPath = parts.slice(0, -1).join('/');
+    return parentPath ? `${name} (${parentPath})` : name;
 }
 
 function isPathInsideRepo(filePath, repoRoot) {
