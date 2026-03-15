@@ -1,11 +1,20 @@
 const vscode = require('vscode');
-const { saoHuaData, commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
+const { commitTypes, styles, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
+
+const STATE_KEYS = {
+    type: 'gitCommitSaoHua.currentType',
+    style: 'gitCommitSaoHua.currentStyle'
+};
 
 let currentType = 'feat';
 let currentStyle = 'sao';
+let extensionContext = null;
 
 function activate(context) {
     console.log('Git Commit 骚话生成器 已激活!');
+
+    extensionContext = context;
+    restorePreferences();
 
     const generateCommand = vscode.commands.registerCommand('gitCommitSaoHua.generate', async () => {
         await showSaoHuaGenerator();
@@ -14,12 +23,14 @@ function activate(context) {
     const generateRandomCommand = vscode.commands.registerCommand('gitCommitSaoHua.generateRandom', async () => {
         const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
         const autoInsert = config.get('autoInsert', true);
-        
+
         const result = getRandomSaoHua();
         currentType = result.type;
         currentStyle = result.style;
+        await persistPreferences();
+
         const message = generateCommitMessage(result.type, result.style);
-        
+
         if (autoInsert) {
             await vscode.window.showInformationMessage(`随机生成: ${result.type} (${getStyleLabel(result.style)})`, {
                 modal: true,
@@ -41,13 +52,14 @@ function activate(context) {
             description: t.desc,
             value: t.value
         }));
-        
+
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: '选择 Commit 类型'
         });
-        
+
         if (selected) {
             currentType = selected.value;
+            await persistPreferences();
             vscode.window.showInformationMessage(`已选择类型: ${selected.label}`);
         }
     });
@@ -57,15 +69,22 @@ function activate(context) {
             label: `${s.emoji} ${s.label}`,
             value: s.value
         }));
-        
+
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: '选择风格模式'
         });
-        
+
         if (selected) {
             currentStyle = selected.value;
+            await persistPreferences();
             vscode.window.showInformationMessage(`已选择风格: ${selected.label}`);
         }
+    });
+
+    const resetPreferencesCommand = vscode.commands.registerCommand('gitCommitSaoHua.resetPreferences', async () => {
+        resetPreferencesToConfig();
+        await clearPersistedPreferences();
+        vscode.window.showInformationMessage(`已重置偏好：${currentType} / ${getStyleLabel(currentStyle)}`);
     });
 
     const openKeybindingsCommand = vscode.commands.registerCommand('gitCommitSaoHua.openKeybindings', async () => {
@@ -78,7 +97,7 @@ function activate(context) {
         ].join('\n');
 
         const doc = await vscode.workspace.openTextDocument({
-            content: `// 在此文件中添加以下配置来自定义快捷键:\n//\n// 示例:\n// ${keybindingsConfig}\n//\n// 可用命令:\n// - gitCommitSaoHua.generate: 生成骚话 Commit\n// - gitCommitSaoHua.generateRandom: 随机生成 Commit\n// - gitCommitSaoHua.selectType: 选择 Commit 类型\n// - gitCommitSaoHua.selectStyle: 选择风格模式\n`,
+            content: `// 在此文件中添加以下配置来自定义快捷键:\n//\n// 示例:\n// ${keybindingsConfig}\n//\n// 可用命令:\n// - gitCommitSaoHua.generate: 生成骚话 Commit\n// - gitCommitSaoHua.generateRandom: 随机生成 Commit\n// - gitCommitSaoHua.selectType: 选择 Commit 类型\n// - gitCommitSaoHua.selectStyle: 选择风格模式\n// - gitCommitSaoHua.resetPreferences: 重置类型/风格偏好\n`,
             language: 'json'
         });
 
@@ -90,6 +109,7 @@ function activate(context) {
     context.subscriptions.push(generateRandomCommand);
     context.subscriptions.push(selectTypeCommand);
     context.subscriptions.push(selectStyleCommand);
+    context.subscriptions.push(resetPreferencesCommand);
     context.subscriptions.push(openKeybindingsCommand);
 }
 
@@ -98,7 +118,7 @@ async function showSaoHuaGenerator() {
     const defaultStyle = config.get('defaultStyle', 'sao');
     const defaultType = config.get('defaultType', 'feat');
     const autoInsert = config.get('autoInsert', true);
-    
+
     const initialType = currentType || defaultType;
     const initialStyle = currentStyle || defaultStyle;
 
@@ -118,6 +138,7 @@ async function showSaoHuaGenerator() {
         return;
     }
     currentType = selectedType.value;
+    await persistPreferences();
 
     const styleItems = styles.map(s => ({
         label: `${s.emoji} ${s.label}`,
@@ -134,6 +155,7 @@ async function showSaoHuaGenerator() {
         return;
     }
     currentStyle = selectedStyle.value;
+    await persistPreferences();
 
     const description = await vscode.window.showInputBox({
         placeHolder: '输入简短描述（可选）',
@@ -164,6 +186,50 @@ async function showSaoHuaGenerator() {
     }
 }
 
+function restorePreferences() {
+    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+    const defaultType = config.get('defaultType', 'feat');
+    const defaultStyle = config.get('defaultStyle', 'sao');
+
+    const savedType = extensionContext?.workspaceState.get(STATE_KEYS.type);
+    const savedStyle = extensionContext?.workspaceState.get(STATE_KEYS.style);
+
+    currentType = isValidType(savedType) ? savedType : defaultType;
+    currentStyle = isValidStyle(savedStyle) ? savedStyle : defaultStyle;
+}
+
+function resetPreferencesToConfig() {
+    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+    currentType = config.get('defaultType', 'feat');
+    currentStyle = config.get('defaultStyle', 'sao');
+}
+
+async function persistPreferences() {
+    if (!extensionContext) {
+        return;
+    }
+
+    await extensionContext.workspaceState.update(STATE_KEYS.type, currentType);
+    await extensionContext.workspaceState.update(STATE_KEYS.style, currentStyle);
+}
+
+async function clearPersistedPreferences() {
+    if (!extensionContext) {
+        return;
+    }
+
+    await extensionContext.workspaceState.update(STATE_KEYS.type, undefined);
+    await extensionContext.workspaceState.update(STATE_KEYS.style, undefined);
+}
+
+function isValidType(type) {
+    return commitTypes.some(item => item.value === type);
+}
+
+function isValidStyle(styleKey) {
+    return styles.some(item => item.value === styleKey);
+}
+
 function getStyleLabel(styleKey) {
     const style = styles.find(s => s.value === styleKey);
     return style ? `${style.emoji} ${style.label}` : styleKey;
@@ -175,7 +241,7 @@ async function insertToGitInput(message, tryInsert = true) {
         vscode.window.showInformationMessage('已复制到剪贴板');
         return;
     }
-    
+
     try {
         const gitExtension = vscode.extensions.getExtension('vscode.git');
         if (!gitExtension) {
@@ -207,7 +273,7 @@ async function insertToGitInput(message, tryInsert = true) {
             const activeEditor = vscode.window.activeTextEditor;
             const activePath = activeEditor ? activeEditor.document.uri.fsPath : null;
 
-            const matchedRepos = activePath 
+            const matchedRepos = activePath
                 ? repos.filter(repo => isPathInsideRepo(activePath, repo.root))
                 : [];
 
@@ -245,7 +311,7 @@ async function selectRepository(repos) {
         const name = parts[parts.length - 1] || root;
         const parentPath = parts.slice(0, -1).join('/');
         const branch = repo.state.HEAD ? repo.state.HEAD.name : 'unknown';
-        
+
         return {
             label: parentPath ? `${name} (${parentPath})` : name,
             description: `分支: ${branch}`,
@@ -259,14 +325,6 @@ async function selectRepository(repos) {
     });
 
     return selected ? selected.repo : null;
-}
-
-function getRepoLabel(repo) {
-    const root = repo.root;
-    const parts = root.replace(/\\/g, '/').split('/');
-    const name = parts[parts.length - 1] || root;
-    const parentPath = parts.slice(0, -1).join('/');
-    return parentPath ? `${name} (${parentPath})` : name;
 }
 
 function isPathInsideRepo(filePath, repoRoot) {

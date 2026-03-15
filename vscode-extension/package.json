@@ -2,7 +2,7 @@
   "name": "git-commit-sao-hua",
   "displayName": "Git Commit 骚话生成器",
   "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "coding-expert",
   "engines": {
     "vscode": "^1.70.0"
@@ -23,6 +23,7 @@
     "onCommand:gitCommitSaoHua.generateRandom",
     "onCommand:gitCommitSaoHua.selectType",
     "onCommand:gitCommitSaoHua.selectStyle",
+    "onCommand:gitCommitSaoHua.resetPreferences",
     "onCommand:gitCommitSaoHua.openKeybindings"
   ],
   "main": "./extension.js",
@@ -46,6 +47,11 @@
       {
         "command": "gitCommitSaoHua.selectStyle",
         "title": "选择风格模式",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.resetPreferences",
+        "title": "重置类型/风格偏好",
         "category": "Git Commit 骚话"
       },
       {

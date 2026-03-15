@@ -4,7 +4,7 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.0.3 (VSCode 插件)
+- **当前版本**: v1.0.4 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
@@ -73,6 +73,12 @@
 - ✅ **修复选择覆盖问题** - 修复 selectType/selectStyle 设置的类型/风格在执行 generate 时被默认配置覆盖的 bug
 - ✅ **会话内状态保持** - 用户通过 selectType/selectStyle 手动选择后，该选择在本次 VSCode 会话内持续生效
 - ✅ **默认配置保留** - defaultType/defaultStyle 仍作为初始值和兜底配置
+
+### v1.0.4 - 工作区偏好持久化 🧠
+- ✅ **工作区级偏好记忆** - 最近一次使用的 Commit 类型和风格会保存到 workspaceState，重启窗口后仍可恢复
+- ✅ **生成链路同步保存** - selectType/selectStyle、generate、generateRandom 都会同步更新偏好
+- ✅ **一键重置偏好** - 新增 `重置类型/风格偏好` 命令，清空工作区记忆并恢复为默认配置
+- ✅ **文档同步更新** - README 与插件文档补充偏好记忆与重置说明
 
 ---
 
@@ -249,25 +255,27 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.0.3)
-- **改进内容**: 会话状态保持优化
-  - 修复 selectType/selectStyle 设置被默认配置覆盖的问题
-  - 用户手动选择后，类型/风格在会话内持续生效
-  - defaultType/defaultStyle 作为初始值和兜底保留
-- **风险等级**: 低风险（逻辑优化，无破坏性变更）
-- **收益**: 显著提升用户体验，separate select 和 generate 的使用场景
+### 本轮迭代 (v1.0.4)
+- **改进内容**: 工作区偏好持久化 + 偏好重置入口
+  - 将类型/风格记忆从进程内变量升级为 workspaceState 持久化
+  - selectType/selectStyle、generate、generateRandom 全链路同步保存偏好
+  - 新增 resetPreferences 命令，允许一键恢复默认配置
+- **风险等级**: 低风险（仅插件状态管理增强，无骚话数据结构变更）
+- **收益**: 显著优化高频使用链路，减少每次重启 VSCode 后重复选择类型/风格的摩擦
 
 ### 当前状态
 - ✅ VSCode 插件功能完善
-- ✅ selectType/selectStyle 会话状态保持
+- ✅ selectType/selectStyle 工作区持久记忆
+- ✅ generate/generateRandom 自动同步偏好
+- ✅ resetPreferences 重置入口已补齐
 - ✅ activationEvents 完整注册所有命令
 - ✅ Git 扩展激活处理优化
 - ✅ 多仓库智能匹配与选择器优化
 - ✅ 文档已更新
 
 ### 下一步建议
-1. **短期**: 考虑添加仓库快捷键绑定功能
-2. **中期**: 添加更多骚话风格模板
+1. **短期**: 为最近使用的 description 提供可选历史/快捷复用
+2. **中期**: 添加更多骚话风格模板或团队自定义词库
 3. **长期**: AI 生成个性化骚话、团队骚话库
 
 ---

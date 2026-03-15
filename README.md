@@ -196,6 +196,15 @@ const saoHuaDB = {
 
 插件源码位于 `vscode-extension/`。
 
+### 插件偏好记忆
+
+VSCode 插件当前会在**工作区维度**记住最近一次使用的 Commit 类型和风格：
+
+- 执行 `选择 Commit 类型` / `选择风格模式` 后会立即保存偏好
+- 执行 `生成骚话 Commit` / `随机生成 Commit` 后也会同步更新偏好
+- 如果想恢复为 `gitCommitSaoHua.defaultType` 和 `gitCommitSaoHua.defaultStyle`，可执行命令：`重置类型/风格偏好`
+
+
 ### 本地打包
 
 ```bash

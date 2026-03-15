@@ -2,7 +2,7 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
-> **当前版本**: v1.0.3
+> **当前版本**: v1.0.4
 
 ## 功能特点
 
@@ -35,8 +35,9 @@
 
 ### 方法三：单独选择
 
-- `Ctrl+Shift+P` → "选择 Commit 类型" - 单独选择类型
-- `Ctrl+Shift+P` → "选择风格模式" - 单独选择风格
+- `Ctrl+Shift+P` → "选择 Commit 类型" - 单独选择类型（会记住到当前工作区）
+- `Ctrl+Shift+P` → "选择风格模式" - 单独选择风格（会记住到当前工作区）
+- `Ctrl+Shift+P` → "重置类型/风格偏好" - 清空工作区记忆并恢复为配置默认值
 
 ## 使用示例
 
@@ -108,9 +109,15 @@ docs: API 文档
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `defaultStyle` | string | `sao` | 默认风格 (love/sao/zha/chu/fo) |
-| `defaultType` | string | `feat` | 默认 Commit 类型 |
+| `defaultStyle` | string | `sao` | 默认风格 (love/sao/zha/chu/fo)，也是重置偏好后的回退值 |
+| `defaultType` | string | `feat` | 默认 Commit 类型，也是重置偏好后的回退值 |
 | `autoInsert` | boolean | `true` | 是否自动插入到 Git 输入框 |
+
+### 偏好记忆说明
+
+- 插件会把最近一次使用/选择的 Commit 类型和风格保存到 **当前工作区**。
+- `选择 Commit 类型`、`选择风格模式`、`生成骚话 Commit`、`随机生成 Commit` 都会同步更新这份偏好。
+- 如果想回到配置中的默认值，可执行 `重置类型/风格偏好` 命令。
 
 ### autoInsert 配置说明
 
@@ -168,6 +175,7 @@ docs: API 文档
 | `gitCommitSaoHua.generateRandom` | 随机生成 Commit |
 | `gitCommitSaoHua.selectType` | 选择 Commit 类型 |
 | `gitCommitSaoHua.selectStyle` | 选择风格模式 |
+| `gitCommitSaoHua.resetPreferences` | 重置类型/风格偏好 |
 | `gitCommitSaoHua.openKeybindings` | 打开快捷键设置 |
 
 ## 开发
