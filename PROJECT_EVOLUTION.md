@@ -4,7 +4,7 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.0.4 (VSCode 插件)
+- **当前版本**: v1.1.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
@@ -79,6 +79,14 @@
 - ✅ **生成链路同步保存** - selectType/selectStyle、generate、generateRandom 都会同步更新偏好
 - ✅ **一键重置偏好** - 新增 `重置类型/风格偏好` 命令，清空工作区记忆并恢复为默认配置
 - ✅ **文档同步更新** - README 与插件文档补充偏好记忆与重置说明
+
+### v1.1.0 - 描述历史记录 📝 (当前版本)
+- ✅ **描述历史记录** - 使用 workspaceState 存储最近使用的 description（最多 10 条）
+- ✅ **智能选择 UI** - 生成 Commit 时先显示历史记录 QuickPick 供选择
+- ✅ **双模式输入** - 提供"选择最近使用的描述..."和"输入新描述..."选项
+- ✅ **自动记忆** - 使用过的描述会自动保存，最新优先，最多保留 10 条
+- ✅ **清空历史** - 新增 `清空描述历史` 命令用于清空所有历史记录
+- ✅ **文档同步更新** - README 补充描述历史功能说明
 
 ---
 
@@ -255,26 +263,29 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.0.4)
-- **改进内容**: 工作区偏好持久化 + 偏好重置入口
-  - 将类型/风格记忆从进程内变量升级为 workspaceState 持久化
-  - selectType/selectStyle、generate、generateRandom 全链路同步保存偏好
-  - 新增 resetPreferences 命令，允许一键恢复默认配置
+### 本轮迭代 (v1.1.0)
+- **改进内容**: 描述历史记录功能
+  - 使用 workspaceState 存储最近使用的 description（最多 10 条）
+  - 生成 Commit 时先显示历史记录 QuickPick 供选择
+  - 提供"选择最近使用的描述..."和"输入新描述..."双模式
+  - 新增 clearDescriptionHistory 命令用于清空历史记录
 - **风险等级**: 低风险（仅插件状态管理增强，无骚话数据结构变更）
-- **收益**: 显著优化高频使用链路，减少每次重启 VSCode 后重复选择类型/风格的摩擦
+- **收益**: 减少重复输入常用描述的摩擦，提升高频使用场景的效率
 
 ### 当前状态
 - ✅ VSCode 插件功能完善
 - ✅ selectType/selectStyle 工作区持久记忆
 - ✅ generate/generateRandom 自动同步偏好
 - ✅ resetPreferences 重置入口已补齐
+- ✅ descriptionHistory 描述历史记录（最多 10 条）
+- ✅ clearDescriptionHistory 清空历史命令
 - ✅ activationEvents 完整注册所有命令
 - ✅ Git 扩展激活处理优化
 - ✅ 多仓库智能匹配与选择器优化
 - ✅ 文档已更新
 
 ### 下一步建议
-1. **短期**: 为最近使用的 description 提供可选历史/快捷复用
+1. **短期**: 添加音效系统（生成/复制/成就解锁时的提示音）
 2. **中期**: 添加更多骚话风格模板或团队自定义词库
 3. **长期**: AI 生成个性化骚话、团队骚话库
 
