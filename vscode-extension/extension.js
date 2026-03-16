@@ -13,6 +13,61 @@ let currentType = 'feat';
 let currentStyle = 'sao';
 let extensionContext = null;
 
+/**
+ * 播放音效反馈
+ * 由于 VSCode 扩展无法直接播放音频，使用以下替代方案：
+ * - 状态栏消息 + emoji 动画作为视觉反馈
+ * - 不同通知级别触发系统通知音
+ * @param {'generate' | 'copy' | 'success'} type 音效类型
+ */
+function playSoundEffect(type) {
+    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+    const enableSoundEffects = config.get('enableSoundEffects', true);
+
+    if (!enableSoundEffects) {
+        return;
+    }
+
+    const emojiAnimations = {
+        generate: ['🎯', '🎯', '✨'],
+        copy: ['📋', '📋', '✅'],
+        success: ['🎉', '🎉', '🎊']
+    };
+
+    const statusMessages = {
+        generate: '正在生成骚话...',
+        copy: '已复制到剪贴板',
+        success: '生成成功！'
+    };
+
+    const notificationLevels = {
+        generate: vscode.window.showInformationMessage,
+        copy: vscode.window.showInformationMessage,
+        success: vscode.window.showInformationMessage
+    };
+
+    const emojis = emojiAnimations[type] || ['✨'];
+    const statusMsg = statusMessages[type] || '完成';
+
+    let index = 0;
+    const animation = setInterval(() => {
+        if (index >= emojis.length) {
+            clearInterval(animation);
+            vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[emojis.length - 1]}`, 3000);
+            return;
+        }
+        vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[index]}`, 500);
+        index++;
+    }, 300);
+
+    const notifyFn = notificationLevels[type];
+    if (type === 'success') {
+        notifyFn('✨ 骚话生成成功！', { modal: false });
+    } else if (type === 'copy') {
+        notifyFn('📋 已复制到剪贴板', { modal: false });
+    }
+}
+
 function activate(context) {
     console.log('Git Commit 骚话生成器 已激活!');
 
@@ -39,9 +94,11 @@ function activate(context) {
                 modal: true,
                 detail: message
             });
+            playSoundEffect('success');
             await insertToGitInput(message, true);
         } else {
             await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
             await vscode.window.showInformationMessage(`已复制到剪贴板！类型: ${result.type} (${getStyleLabel(result.style)})`, {
                 modal: true,
                 detail: message
@@ -170,6 +227,8 @@ async function showSaoHuaGenerator() {
 
     const message = generateCommitMessage(currentType, currentStyle, description);
 
+    playSoundEffect('generate');
+
     if (autoInsert) {
         const result = await vscode.window.showInformationMessage(
             `生成成功！类型: ${currentType}`,
@@ -181,10 +240,12 @@ async function showSaoHuaGenerator() {
             await insertToGitInput(message, true);
         } else {
             await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
             vscode.window.showInformationMessage('已复制到剪贴板');
         }
     } else {
         await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
         await vscode.window.showInformationMessage(
             `已复制到剪贴板！类型: ${currentType}`,
             { modal: true, detail: message }
@@ -325,6 +386,7 @@ async function clearDescriptionHistory() {
 async function insertToGitInput(message, tryInsert = true) {
     if (!tryInsert) {
         await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
         vscode.window.showInformationMessage('已复制到剪贴板');
         return;
     }
@@ -381,6 +443,7 @@ async function insertToGitInput(message, tryInsert = true) {
         const inputBox = targetRepo.inputBox;
         if (inputBox) {
             inputBox.value = message;
+            playSoundEffect('success');
             vscode.window.showInformationMessage('✓ 已插入到 Git 输入框');
             return;
         }
@@ -423,6 +486,7 @@ function isPathInsideRepo(filePath, repoRoot) {
 
 async function fallbackToClipboard(message, reason) {
     await vscode.env.clipboard.writeText(message);
+    playSoundEffect('copy');
     vscode.window.showInformationMessage(`已复制到剪贴板（${reason}）`);
 }
 

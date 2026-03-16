@@ -104,6 +104,11 @@
           "type": "boolean",
           "default": true,
           "description": "自动插入到 Git input box"
+        },
+        "gitCommitSaoHua.enableSoundEffects": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用音效反馈（通过状态栏消息和通知实现）"
         }
       }
     }
