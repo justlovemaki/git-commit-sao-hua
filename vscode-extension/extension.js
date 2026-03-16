@@ -3,8 +3,11 @@ const { commitTypes, styles, getRandomSaoHua, generateCommitMessage } = require(
 
 const STATE_KEYS = {
     type: 'gitCommitSaoHua.currentType',
-    style: 'gitCommitSaoHua.currentStyle'
+    style: 'gitCommitSaoHua.currentStyle',
+    descriptionHistory: 'gitCommitSaoHua.descriptionHistory'
 };
+
+const MAX_HISTORY_COUNT = 10;
 
 let currentType = 'feat';
 let currentStyle = 'sao';
@@ -87,6 +90,11 @@ function activate(context) {
         vscode.window.showInformationMessage(`已重置偏好：${currentType} / ${getStyleLabel(currentStyle)}`);
     });
 
+    const clearDescriptionHistoryCommand = vscode.commands.registerCommand('gitCommitSaoHua.clearDescriptionHistory', async () => {
+        await clearDescriptionHistory();
+        vscode.window.showInformationMessage('已清空描述历史记录');
+    });
+
     const openKeybindingsCommand = vscode.commands.registerCommand('gitCommitSaoHua.openKeybindings', async () => {
         const keybindingsConfig = [
             '{',
@@ -110,6 +118,7 @@ function activate(context) {
     context.subscriptions.push(selectTypeCommand);
     context.subscriptions.push(selectStyleCommand);
     context.subscriptions.push(resetPreferencesCommand);
+    context.subscriptions.push(clearDescriptionHistoryCommand);
     context.subscriptions.push(openKeybindingsCommand);
 }
 
@@ -157,10 +166,7 @@ async function showSaoHuaGenerator() {
     currentStyle = selectedStyle.value;
     await persistPreferences();
 
-    const description = await vscode.window.showInputBox({
-        placeHolder: '输入简短描述（可选）',
-        prompt: '例如：用户登录功能'
-    });
+    let description = await getDescriptionWithHistory();
 
     const message = generateCommitMessage(currentType, currentStyle, description);
 
@@ -233,6 +239,87 @@ function isValidStyle(styleKey) {
 function getStyleLabel(styleKey) {
     const style = styles.find(s => s.value === styleKey);
     return style ? `${style.emoji} ${style.label}` : styleKey;
+}
+
+async function getDescriptionWithHistory() {
+    const history = getDescriptionHistory();
+
+    if (history.length === 0) {
+        return await vscode.window.showInputBox({
+            placeHolder: '输入简短描述（可选）',
+            prompt: '例如：用户登录功能'
+        });
+    }
+
+    const historyItems = history.map((desc, index) => ({
+        label: desc,
+        description: `最近使用 #${index + 1}`
+    }));
+
+    const options = [
+        { label: '$(history) 选择最近使用的描述...', kind: 'history' },
+        { label: '$(add) 输入新描述...', kind: 'new' }
+    ];
+
+    const selected = await vscode.window.showQuickPick(options, {
+        placeHolder: '选择或输入描述',
+        ignoreFocusOut: true
+    });
+
+    if (!selected) {
+        return undefined;
+    }
+
+    if (selected.kind === 'history') {
+        const pickedDesc = await vscode.window.showQuickPick(historyItems, {
+            placeHolder: '选择最近使用的描述',
+            ignoreFocusOut: true
+        });
+
+        if (pickedDesc) {
+            return pickedDesc.label;
+        }
+        return undefined;
+    }
+
+    const newDescription = await vscode.window.showInputBox({
+        placeHolder: '输入简短描述（可选）',
+        prompt: '例如：用户登录功能'
+    });
+
+    if (newDescription) {
+        await saveDescriptionToHistory(newDescription);
+    }
+
+    return newDescription;
+}
+
+function getDescriptionHistory() {
+    return extensionContext?.workspaceState.get(STATE_KEYS.descriptionHistory) || [];
+}
+
+async function saveDescriptionToHistory(description) {
+    if (!extensionContext || !description) {
+        return;
+    }
+
+    let history = getDescriptionHistory();
+    history = history.filter(d => d !== description);
+    history.unshift(description);
+
+    if (history.length > MAX_HISTORY_COUNT) {
+        history = history.slice(0, MAX_HISTORY_COUNT);
+    }
+
+    await extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, history);
+}
+
+async function clearDescriptionHistory() {
+    if (!extensionContext) {
+        return;
+    }
+
+    await extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, []);
 }
 
 async function insertToGitInput(message, tryInsert = true) {
