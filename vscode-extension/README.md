@@ -2,7 +2,7 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
-> **当前版本**: v1.1.0
+> **当前版本**: v1.4.0
 
 ## 功能特点
 
@@ -12,6 +12,7 @@
 - **自动插入**: 自动插入到 Git 输入框
 - **描述历史**: 记住最近使用的描述，最多 10 条
 - **快捷键支持**: `Ctrl+Shift+G` (Mac: `Cmd+Shift+G`)
+- **智能检测**: 基于文件和 diff 内容智能分析推荐 Commit 类型
 
 ## 安装
 
@@ -94,6 +95,40 @@ docs: API 文档
 | `build` | 构建 |
 | `revert` | 回滚 |
 | `hotfix` | 紧急修复 |
+
+## 智能检测功能
+
+插件支持基于文件和 diff 内容的智能分析，自动推荐合适的 Commit 类型。
+
+### 检测逻辑
+
+1. **文件类型分析**: 根据变更文件的扩展名和名称判断类型
+   - `.css/.scss/.less/.sass` → `style`
+   - `.test.js/.spec.js/test_*.js` → `test`
+   - `.md/.txt` → `docs`
+   - `package.json/package-lock.json` → `build`
+   - `.github/`、`.gitlab-ci.yml` → `ci`
+
+2. **Diff 内容分析**: 分析 git diff 中的关键词
+   - **fix 关键词**: fix, bug, issue, error, crash, resolve, patch
+   - **feat 关键词**: add, new, create, implement, feature, support
+
+3. **综合判断**: Diff 分析结果优先于文件分析，高置信度（3个以上关键词）直接采用
+
+### 置信度等级
+
+| 等级 | 说明 |
+|------|------|
+| 🎯 high | 高置信度，diff 中检测到 3 个以上相关关键词 |
+| ✨ medium | 中等置信度，diff 中检测到 1-2 个相关关键词 |
+| 💡 low | 低置信度，仅基于文件类型判断 |
+
+### 使用智能检测
+
+选择"智能检测"模式时，插件会自动分析并显示：
+- 推荐的 Commit 类型
+- 置信度等级
+- 分析依据（检测到的关键词）
 
 ## 配置
 
