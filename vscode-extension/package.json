@@ -21,6 +21,7 @@
   "activationEvents": [
     "onCommand:gitCommitSaoHua.generate",
     "onCommand:gitCommitSaoHua.generateRandom",
+    "onCommand:gitCommitSaoHua.generateSmart",
     "onCommand:gitCommitSaoHua.selectType",
     "onCommand:gitCommitSaoHua.selectStyle",
     "onCommand:gitCommitSaoHua.resetPreferences",
@@ -38,6 +39,11 @@
       {
         "command": "gitCommitSaoHua.generateRandom",
         "title": "随机生成 Commit",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.generateSmart",
+        "title": "智能检测生成 Commit",
         "category": "Git Commit 骚话"
       },
       {
