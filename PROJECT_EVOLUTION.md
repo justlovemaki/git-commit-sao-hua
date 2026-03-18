@@ -4,7 +4,7 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.2.0 (VSCode 插件)
+- **当前版本**: v1.6.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
@@ -111,7 +111,7 @@
 - ✅ **详细信息展示** - 智能检测时显示类型、置信度、分析依据和匹配关键词
 - ✅ **文档更新** - README.md 补充智能检测功能说明和置信度等级表格
 
-### v1.5.0 - 自定义骚话管理功能 ✨ (本次进化)
+### v1.5.0 - 自定义骚话管理功能 ✨
 - ✅ **自定义骚话管理命令** - 新增 `manageCustomSaoHua`/`addCustomSaoHua`/`clearCustomSaoHua` 命令
 - ✅ **管理界面** - 支持添加、查看、删除、导入、导出自定义骚话
 - ✅ **30% 概率触发** - 生成时有 30% 概率使用自定义骚话（如果存在）
@@ -120,6 +120,16 @@
 - ✅ **使用标记** - 使用自定义骚话时显示 ✨ 标记和 "(自定义)" 标签
 - ✅ **JSON 导入导出** - 支持批量导入导出，方便分享个人骚话库
 - ✅ **文档同步更新** - README.md 补充自定义骚话功能说明和使用指南
+
+### v1.6.0 - 使用统计功能 📊 (本次进化)
+- ✅ **统计功能核心** - 新增 `getStatistics`/`recordGeneration`/`resetStatistics`/`showStatistics` 函数
+- ✅ **统计内容** - 记录总生成次数、每种 Commit 类型使用次数、每种风格使用次数、最近生成时间
+- ✅ **workspaceState 存储** - `gitCommitSaoHua.statistics` 永久保存在工作区
+- ✅ **统计面板** - 使用 QuickPick 展示总次数、Top 3 类型、Top 3 风格、最近生成时间
+- ✅ **重置功能** - 支持一键清空所有统计数据
+- ✅ **三入口集成** - 在 generateSmart/generateRandom/generate 三个生成入口自动记录统计
+- ✅ **新命令注册** - 新增 `gitCommitSaoHua.showStatistics` 命令（查看使用统计）
+- ✅ **文档同步更新** - README.md 补充统计功能说明，PROJECT_EVOLUTION.md 版本更新至 v1.6.0
 
 ---
 
@@ -297,7 +307,18 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.5.0)
+### 本轮迭代 (v1.6.0)
+- **改进内容**: 使用统计功能
+  - 新增 `getStatistics`/`recordGeneration`/`resetStatistics`/`showStatistics` 函数
+  - 记录总生成次数、每种 Commit 类型使用次数、每种风格使用次数、最近生成时间
+  - 使用 QuickPick 展示统计面板（总次数、Top 3 类型、Top 3 风格、最近生成时间）
+  - 支持一键重置统计数据
+  - 在三个生成入口（generate/generateRandom/generateSmart）自动记录统计
+  - 新增 `gitCommitSaoHua.showStatistics` 命令（查看使用统计）
+- **风险等级**: 低风险（仅状态管理增强，无核心逻辑变更）
+- **收益**: 让用户了解自己的使用习惯，增加趣味性和粘性，类似 Web 版本的统计面板
+
+### 上轮迭代 (v1.5.0)
 - **改进内容**: 自定义骚话管理功能
   - 新增 `manageCustomSaoHua`/`addCustomSaoHua`/`clearCustomSaoHua` 三个命令
   - 支持添加、查看、删除、导入、导出自定义骚话
@@ -329,15 +350,19 @@ php -S localhost:8000
 - ✅ customSaoHua 自定义骚话管理（v1.5.0）
 - ✅ 30% 概率触发机制
 - ✅ JSON 导入导出支持
+- ✅ statistics 使用统计功能（v1.6.0）
+- ✅ 统计面板展示（总次数、Top 3 类型、Top 3 风格、最近生成时间）
+- ✅ 一键重置统计
 
 ### 下一步建议
 1. **短期**: 
    - 优化 diff 分析算法（支持更多语言特定的关键词）
-   - 添加骚话使用统计（最受欢迎的类型/风格）
+   - ~~添加骚话使用统计（最受欢迎的类型/风格）~~ ✅ 已在 v1.6.0 实现
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本
    - 智能检测准确率提升（集成简单 AST 分析）
+   - 添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）
 3. **长期**: 
    - AI 生成个性化骚话
    - 团队骚话库（云同步）

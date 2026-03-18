@@ -29,7 +29,8 @@
     "onCommand:gitCommitSaoHua.openKeybindings",
     "onCommand:gitCommitSaoHua.manageCustomSaoHua",
     "onCommand:gitCommitSaoHua.addCustomSaoHua",
-    "onCommand:gitCommitSaoHua.clearCustomSaoHua"
+    "onCommand:gitCommitSaoHua.clearCustomSaoHua",
+    "onCommand:gitCommitSaoHua.showStatistics"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -87,6 +88,11 @@
       {
         "command": "gitCommitSaoHua.clearCustomSaoHua",
         "title": "清空自定义骚话",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.showStatistics",
+        "title": "查看使用统计",
         "category": "Git Commit 骚话"
       }
     ],

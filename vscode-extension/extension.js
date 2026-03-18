@@ -8,7 +8,8 @@ const STATE_KEYS = {
     type: 'gitCommitSaoHua.currentType',
     style: 'gitCommitSaoHua.currentStyle',
     descriptionHistory: 'gitCommitSaoHua.descriptionHistory',
-    customSaoHua: 'gitCommitSaoHua.customSaoHua'
+    customSaoHua: 'gitCommitSaoHua.customSaoHua',
+    statistics: 'gitCommitSaoHua.statistics'
 };
 
 const CUSTOM_SAO_HUA_PROBABILITY = 0.3;
@@ -18,6 +19,175 @@ const MAX_HISTORY_COUNT = 10;
 let currentType = 'feat';
 let currentStyle = 'sao';
 let extensionContext = null;
+
+function getStatistics() {
+    return extensionContext?.workspaceState.get(STATE_KEYS.statistics) || {
+        totalCount: 0,
+        typeUsage: {},
+        styleUsage: {},
+        lastGeneratedAt: null
+    };
+}
+
+async function saveStatistics(stats) {
+    if (!extensionContext) {
+        return;
+    }
+    await extensionContext.workspaceState.update(STATE_KEYS.statistics, stats);
+}
+
+async function recordGeneration(type, style) {
+    const stats = getStatistics();
+    stats.totalCount += 1;
+    stats.typeUsage[type] = (stats.typeUsage[type] || 0) + 1;
+    stats.styleUsage[style] = (stats.styleUsage[style] || 0) + 1;
+    stats.lastGeneratedAt = Date.now();
+    await saveStatistics(stats);
+}
+
+async function resetStatistics() {
+    await saveStatistics({
+        totalCount: 0,
+        typeUsage: {},
+        styleUsage: {},
+        lastGeneratedAt: null
+    });
+}
+
+function getTopItems(usageObj, count = 3) {
+    return Object.entries(usageObj)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, count);
+}
+
+function formatLastGeneratedTime(timestamp) {
+    if (!timestamp) {
+        return '暂无记录';
+    }
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) {
+        return '刚刚';
+    } else if (diffMins < 60) {
+        return `${diffMins} 分钟前`;
+    } else if (diffHours < 24) {
+        return `${diffHours} 小时前`;
+    } else if (diffDays < 7) {
+        return `${diffDays} 天前`;
+    } else {
+        return date.toLocaleString('zh-CN');
+    }
+}
+
+async function showStatistics() {
+    const stats = getStatistics();
+    const totalCount = stats.totalCount || 0;
+    const topTypes = getTopItems(stats.typeUsage, 3);
+    const topStyles = getTopItems(stats.styleUsage, 3);
+    const lastTime = formatLastGeneratedTime(stats.lastGeneratedAt);
+
+    const typeLabels = {};
+    for (const t of commitTypes) {
+        typeLabels[t.value] = t.label;
+    }
+    const styleLabels = {};
+    for (const s of styles) {
+        styleLabels[s.value] = `${s.emoji} ${s.label}`;
+    }
+
+    const statsItems = [
+        {
+            label: `$(number) 总生成次数: ${totalCount}`,
+            kind: vscode.QuickPickItemKind.Separator
+        },
+        {
+            label: `📊 总生成次数`,
+            description: `${totalCount} 次`,
+            kind: vscode.QuickPickItemKind.Default
+        }
+    ];
+
+    if (topTypes.length > 0) {
+        statsItems.push({
+            label: '',
+            kind: vscode.QuickPickItemKind.Separator
+        });
+        statsItems.push({
+            label: `🔥 最常用的 Commit 类型 (Top 3)`,
+            kind: vscode.QuickPickItemKind.Default
+        });
+        for (const [type, count] of topTypes) {
+            statsItems.push({
+                label: `   ${typeLabels[type] || type}`,
+                description: `${count} 次`,
+                kind: vscode.QuickPickItemKind.Default
+            });
+        }
+    }
+
+    if (topStyles.length > 0) {
+        statsItems.push({
+            label: '',
+            kind: vscode.QuickPickItemKind.Separator
+        });
+        statsItems.push({
+            label: `✨ 最常用的风格 (Top 3)`,
+            kind: vscode.QuickPickItemKind.Default
+        });
+        for (const [style, count] of topStyles) {
+            statsItems.push({
+                label: `   ${styleLabels[style] || style}`,
+                description: `${count} 次`,
+                kind: vscode.QuickPickItemKind.Default
+            });
+        }
+    }
+
+    statsItems.push({
+        label: '',
+        kind: vscode.QuickPickItemKind.Separator
+    });
+    statsItems.push({
+        label: `🕐 最近生成时间`,
+        description: lastTime,
+        kind: vscode.QuickPickItemKind.Default
+    });
+
+    statsItems.push({
+        label: '',
+        kind: vscode.QuickPickItemKind.Separator
+    });
+    statsItems.push({
+        label: `$(trash) 重置统计`,
+        description: '清空所有统计数据',
+        value: 'reset',
+        kind: vscode.QuickPickItemKind.Default
+    });
+
+    const selected = await vscode.window.showQuickPick(statsItems, {
+        placeHolder: '查看使用统计',
+        ignoreFocusOut: true
+    });
+
+    if (selected && selected.value === 'reset') {
+        const confirmResult = await vscode.window.showWarningMessage(
+            '确定要重置所有统计数据吗？',
+            { modal: true },
+            '确定重置',
+            '取消'
+        );
+
+        if (confirmResult === '确定重置') {
+            await resetStatistics();
+            vscode.window.showInformationMessage('已重置所有统计数据');
+        }
+    }
+}
 
 /**
  * 获取 Git 变更文件列表
@@ -439,6 +609,8 @@ async function generateSmartCommit() {
             { modal: true, detail: message }
         );
     }
+
+    await recordGeneration(currentType, currentStyle);
 }
 
 /**
@@ -558,6 +730,10 @@ function activate(context) {
                 detail: message
             });
         }
+
+        if (result) {
+            await recordGeneration(result.type, result.style);
+        }
     });
 
     const selectTypeCommand = vscode.commands.registerCommand('gitCommitSaoHua.selectType', async () => {
@@ -654,6 +830,10 @@ function activate(context) {
         }
     });
 
+    const showStatisticsCommand = vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', async () => {
+        await showStatistics();
+    });
+
     context.subscriptions.push(generateCommand);
     context.subscriptions.push(generateSmartCommand);
     context.subscriptions.push(generateRandomCommand);
@@ -665,6 +845,7 @@ function activate(context) {
     context.subscriptions.push(manageCustomSaoHuaCommand);
     context.subscriptions.push(addCustomSaoHuaCommand);
     context.subscriptions.push(clearCustomSaoHuaCommand);
+    context.subscriptions.push(showStatisticsCommand);
 }
 
 async function showSaoHuaGenerator() {
@@ -775,6 +956,8 @@ async function showSaoHuaGenerator() {
             { modal: true, detail: message }
         );
     }
+
+    await recordGeneration(currentType, currentStyle);
 }
 
 function restorePreferences() {
