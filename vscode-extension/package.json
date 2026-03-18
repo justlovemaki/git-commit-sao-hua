@@ -26,7 +26,10 @@
     "onCommand:gitCommitSaoHua.selectStyle",
     "onCommand:gitCommitSaoHua.resetPreferences",
     "onCommand:gitCommitSaoHua.clearDescriptionHistory",
-    "onCommand:gitCommitSaoHua.openKeybindings"
+    "onCommand:gitCommitSaoHua.openKeybindings",
+    "onCommand:gitCommitSaoHua.manageCustomSaoHua",
+    "onCommand:gitCommitSaoHua.addCustomSaoHua",
+    "onCommand:gitCommitSaoHua.clearCustomSaoHua"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -69,6 +72,21 @@
       {
         "command": "gitCommitSaoHua.openKeybindings",
         "title": "打开快捷键设置",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.manageCustomSaoHua",
+        "title": "管理自定义骚话",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.addCustomSaoHua",
+        "title": "添加自定义骚话",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.clearCustomSaoHua",
+        "title": "清空自定义骚话",
         "category": "Git Commit 骚话"
       }
     ],

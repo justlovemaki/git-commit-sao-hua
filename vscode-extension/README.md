@@ -13,6 +13,7 @@
 - **描述历史**: 记住最近使用的描述，最多 10 条
 - **快捷键支持**: `Ctrl+Shift+G` (Mac: `Cmd+Shift+G`)
 - **智能检测**: 基于文件和 diff 内容智能分析推荐 Commit 类型
+- **自定义骚话**: 添加、管理个人专属骚话，生成时有 30% 概率使用
 
 ## 安装
 
@@ -130,6 +131,70 @@ docs: API 文档
 - 置信度等级
 - 分析依据（检测到的关键词）
 
+## 自定义骚话功能
+
+插件支持添加和管理个人专属的自定义骚话，生成时有 **30% 概率**使用自定义骚话（如果存在）。
+
+### 数据结构
+
+每条自定义骚话包含：
+- `type`: Commit 类型 (fix/feat/chore 等)
+- `style`: 风格模式 (love/sao/zha/chu/fo)
+- `content`: 骚话内容
+- `addedAt`: 添加时间
+
+数据存储在 VSCode workspaceState 中，保存在当前工作区。
+
+### 使用方法
+
+通过命令面板管理自定义骚话：
+
+1. 按 `Ctrl+Shift+P` (Mac: `Cmd+Shift+P`)
+2. 输入 "管理自定义骚话" 或相关命令
+
+#### 可用命令
+
+| 命令 | 说明 |
+|------|------|
+| `gitCommitSaoHua.manageCustomSaoHua` | 打开自定义骚话管理界面（添加/查看/导入/导出/清空） |
+| `gitCommitSaoHua.addCustomSaoHua` | 添加单条自定义骚话 |
+| `gitCommitSaoHua.clearCustomSaoHua` | 清空所有自定义骚话 |
+
+### 管理界面功能
+
+- **添加自定义骚话**: 选择 Commit 类型、风格模式，输入骚话内容
+- **查看自定义骚话**: 列表显示所有已添加的骚话，支持删除
+- **导入自定义骚话**: 从 JSON 文件批量导入
+- **导出自定义骚话**: 导出为 JSON 文件
+- **清空所有**: 删除所有自定义骚话
+
+### 导入格式
+
+导入的 JSON 文件格式如下：
+
+```json
+[
+    {
+        "type": "fix",
+        "style": "love",
+        "content": "这是我为你修复的专属 bug"
+    },
+    {
+        "type": "feat",
+        "style": "sao",
+        "content": "新功能来了，想你想得睡不着"
+    }
+]
+```
+
+### 使用概率说明
+
+- 有自定义骚话时，每次生成有 30% 概率使用自定义骚话
+- 70% 概率使用内置预设骚话
+- 如果没有自定义骚话，则 100% 使用内置预设
+
+当使用自定义骚话时，成功提示会显示 `✨` 标记和 "(自定义)" 标签。
+
 ## 配置
 
 可在 VSCode 设置中配置：
@@ -224,6 +289,9 @@ docs: API 文档
 | `gitCommitSaoHua.resetPreferences` | 重置类型/风格偏好 |
 | `gitCommitSaoHua.clearDescriptionHistory` | 清空描述历史 |
 | `gitCommitSaoHua.openKeybindings` | 打开快捷键设置 |
+| `gitCommitSaoHua.manageCustomSaoHua` | 管理自定义骚话 |
+| `gitCommitSaoHua.addCustomSaoHua` | 添加单条自定义骚话 |
+| `gitCommitSaoHua.clearCustomSaoHua` | 清空所有自定义骚话 |
 
 ## 开发
 

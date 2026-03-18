@@ -7,8 +7,11 @@ const FEAT_KEYWORDS = ['add', 'new', 'create', 'implement', 'feature', 'support'
 const STATE_KEYS = {
     type: 'gitCommitSaoHua.currentType',
     style: 'gitCommitSaoHua.currentStyle',
-    descriptionHistory: 'gitCommitSaoHua.descriptionHistory'
+    descriptionHistory: 'gitCommitSaoHua.descriptionHistory',
+    customSaoHua: 'gitCommitSaoHua.customSaoHua'
 };
+
+const CUSTOM_SAO_HUA_PROBABILITY = 0.3;
 
 const MAX_HISTORY_COUNT = 10;
 
@@ -394,13 +397,27 @@ async function generateSmartCommit() {
 
     let description = await getDescriptionWithHistory();
 
-    const message = generateCommitMessage(currentType, currentStyle, description);
+    let message;
+    let usedCustom = false;
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            message = customMessage;
+            usedCustom = true;
+        }
+    }
+    if (!message) {
+        message = generateCommitMessage(currentType, currentStyle, description);
+    }
+
+    const customLabel = usedCustom ? ' (自定义)' : '';
+    const customEmoji = usedCustom ? '✨ ' : '';
 
     if (autoInsert) {
         const confidenceEmoji = analysisResult.confidence === 'high' ? '🎯' : 
                                analysisResult.confidence === 'medium' ? '✨' : '💡';
         const result = await vscode.window.showInformationMessage(
-            `生成成功！类型: ${currentType} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
+            `${customEmoji}生成成功！类型: ${currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
             { modal: true, detail: message },
             '插入到 Git'
         );
@@ -418,7 +435,7 @@ async function generateSmartCommit() {
         const confidenceEmoji = analysisResult.confidence === 'high' ? '🎯' : 
                                analysisResult.confidence === 'medium' ? '✨' : '💡';
         await vscode.window.showInformationMessage(
-            `已复制到剪贴板！类型: ${currentType} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
+            `${customEmoji}已复制到剪贴板！类型: ${currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
             { modal: true, detail: message }
         );
     }
@@ -496,15 +513,38 @@ function activate(context) {
         const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
         const autoInsert = config.get('autoInsert', true);
 
-        const result = getRandomSaoHua();
-        currentType = result.type;
-        currentStyle = result.style;
-        await persistPreferences();
+        let message;
+        let usedCustom = false;
+        let result;
 
-        const message = generateCommitMessage(result.type, result.style);
+        if (shouldUseCustomSaoHua()) {
+            const customMessage = generateCustomSaoHuaMessage();
+            if (customMessage) {
+                message = customMessage;
+                usedCustom = true;
+                const customSaoHua = getRandomCustomSaoHua();
+                if (customSaoHua) {
+                    currentType = customSaoHua.type;
+                    currentStyle = customSaoHua.style;
+                    result = { type: customSaoHua.type, style: customSaoHua.style };
+                }
+            }
+        }
+
+        if (!message) {
+            result = getRandomSaoHua();
+            currentType = result.type;
+            currentStyle = result.style;
+            await persistPreferences();
+            message = generateCommitMessage(result.type, result.style);
+        } else {
+            await persistPreferences();
+        }
+
+        const typeLabel = usedCustom ? `${result.type} (自定义)` : `${result.type}`;
 
         if (autoInsert) {
-            await vscode.window.showInformationMessage(`随机生成: ${result.type} (${getStyleLabel(result.style)})`, {
+            await vscode.window.showInformationMessage(`随机生成: ${typeLabel} ${usedCustom ? '✨' : ''}`, {
                 modal: true,
                 detail: message
             });
@@ -513,7 +553,7 @@ function activate(context) {
         } else {
             await vscode.env.clipboard.writeText(message);
             playSoundEffect('copy');
-            await vscode.window.showInformationMessage(`已复制到剪贴板！类型: ${result.type} (${getStyleLabel(result.style)})`, {
+            await vscode.window.showInformationMessage(`已复制到剪贴板！类型: ${typeLabel} ${usedCustom ? '✨' : ''}`, {
                 modal: true,
                 detail: message
             });
@@ -586,6 +626,34 @@ function activate(context) {
         vscode.window.showInformationMessage('请在打开的文件中添加快捷键配置，或打开: 文件 > 首选项 > 快捷键 进行设置');
     });
 
+    const manageCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.manageCustomSaoHua', async () => {
+        await showCustomSaoHuaManager();
+    });
+
+    const addCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.addCustomSaoHua', async () => {
+        await addSingleCustomSaoHua();
+    });
+
+    const clearCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.clearCustomSaoHua', async () => {
+        const list = getCustomSaoHuaList();
+        if (list.length === 0) {
+            vscode.window.showInformationMessage('暂无自定义骚话');
+            return;
+        }
+
+        const result = await vscode.window.showWarningMessage(
+            `确定要清空所有 ${list.length} 条自定义骚话吗？`,
+            { modal: true },
+            '确定清空',
+            '取消'
+        );
+
+        if (result === '确定清空') {
+            await clearAllCustomSaoHua();
+            vscode.window.showInformationMessage('已清空所有自定义骚话');
+        }
+    });
+
     context.subscriptions.push(generateCommand);
     context.subscriptions.push(generateSmartCommand);
     context.subscriptions.push(generateRandomCommand);
@@ -594,6 +662,9 @@ function activate(context) {
     context.subscriptions.push(resetPreferencesCommand);
     context.subscriptions.push(clearDescriptionHistoryCommand);
     context.subscriptions.push(openKeybindingsCommand);
+    context.subscriptions.push(manageCustomSaoHuaCommand);
+    context.subscriptions.push(addCustomSaoHuaCommand);
+    context.subscriptions.push(clearCustomSaoHuaCommand);
 }
 
 async function showSaoHuaGenerator() {
@@ -664,13 +735,27 @@ async function showSaoHuaGenerator() {
 
     let description = await getDescriptionWithHistory();
 
-    const message = generateCommitMessage(currentType, currentStyle, description);
+    let message;
+    let usedCustom = false;
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            message = customMessage;
+            usedCustom = true;
+        }
+    }
+    if (!message) {
+        message = generateCommitMessage(currentType, currentStyle, description);
+    }
+
+    const customLabel = usedCustom ? ' (自定义)' : '';
+    const customEmoji = usedCustom ? '✨ ' : '';
 
     playSoundEffect('generate');
 
     if (autoInsert) {
         const result = await vscode.window.showInformationMessage(
-            `生成成功！类型: ${currentType}`,
+            `${customEmoji}生成成功！类型: ${currentType}${customLabel}`,
             { modal: true, detail: message },
             '插入到 Git'
         );
@@ -686,7 +771,7 @@ async function showSaoHuaGenerator() {
         await vscode.env.clipboard.writeText(message);
         playSoundEffect('copy');
         await vscode.window.showInformationMessage(
-            `已复制到剪贴板！类型: ${currentType}`,
+            `${customEmoji}已复制到剪贴板！类型: ${currentType}${customLabel}`,
             { modal: true, detail: message }
         );
     }
@@ -739,6 +824,138 @@ function isValidStyle(styleKey) {
 function getStyleLabel(styleKey) {
     const style = styles.find(s => s.value === styleKey);
     return style ? `${style.emoji} ${style.label}` : styleKey;
+}
+
+/**
+ * 获取自定义骚话列表
+ * @returns {Array<{type: string, style: string, content: string}>} 自定义骚话列表
+ */
+function getCustomSaoHuaList() {
+    return extensionContext?.workspaceState.get(STATE_KEYS.customSaoHua) || [];
+}
+
+/**
+ * 保存自定义骚话列表
+ * @param {Array} list 自定义骚话列表
+ */
+async function saveCustomSaoHuaList(list) {
+    if (!extensionContext) {
+        return;
+    }
+    await extensionContext.workspaceState.update(STATE_KEYS.customSaoHua, list);
+}
+
+/**
+ * 添加单条自定义骚话
+ * @param {string} type Commit 类型
+ * @param {string} style 风格
+ * @param {string} content 骚话内容
+ */
+async function addCustomSaoHua(type, style, content) {
+    const list = getCustomSaoHuaList();
+    list.push({
+        type,
+        style,
+        content,
+        addedAt: Date.now()
+    });
+    await saveCustomSaoHuaList(list);
+}
+
+/**
+ * 删除自定义骚话
+ * @param {number} index 要删除的索引
+ */
+async function deleteCustomSaoHua(index) {
+    const list = getCustomSaoHuaList();
+    if (index >= 0 && index < list.length) {
+        list.splice(index, 1);
+        await saveCustomSaoHuaList(list);
+    }
+}
+
+/**
+ * 清空所有自定义骚话
+ */
+async function clearAllCustomSaoHua() {
+    await saveCustomSaoHuaList([]);
+}
+
+/**
+ * 导出自定义骚话
+ * @returns {string} JSON 格式的导出数据
+ */
+function exportCustomSaoHua() {
+    const list = getCustomSaoHuaList();
+    return JSON.stringify(list, null, 2);
+}
+
+/**
+ * 导入自定义骚话
+ * @param {string} jsonData JSON 格式的导入数据
+ * @returns {{success: boolean, count: number, message: string}} 导入结果
+ */
+async function importCustomSaoHua(jsonData) {
+    try {
+        const importedList = JSON.parse(jsonData);
+        if (!Array.isArray(importedList)) {
+            return { success: false, count: 0, message: '数据格式错误：不是数组' };
+        }
+
+        const validItems = importedList.filter(item => 
+            item.type && item.style && item.content && 
+            commitTypes.some(t => t.value === item.type) &&
+            styles.some(s => s.value === item.style)
+        );
+
+        const existingList = getCustomSaoHuaList();
+        const newList = [...existingList, ...validItems];
+        await saveCustomSaoHuaList(newList);
+
+        return { 
+            success: true, 
+            count: validItems.length, 
+            message: `成功导入 ${validItems.length} 条自定义骚话` 
+        };
+    } catch (error) {
+        return { success: false, count: 0, message: `导入失败: ${error.message}` };
+    }
+}
+
+/**
+ * 随机获取自定义骚话
+ * @returns {{type: string, style: string, content: string}|null} 随机自定义骚话或 null
+ */
+function getRandomCustomSaoHua() {
+    const list = getCustomSaoHuaList();
+    if (list.length === 0) {
+        return null;
+    }
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+/**
+ * 生成自定义骚话 Commit 消息
+ * @returns {string} Commit 消息
+ */
+function generateCustomSaoHuaMessage() {
+    const customSaoHua = getRandomCustomSaoHua();
+    if (!customSaoHua) {
+        return null;
+    }
+    return generateCommitMessage(customSaoHua.type, customSaoHua.style, customSaoHua.content);
+}
+
+/**
+ * 检查是否应使用自定义骚话（30% 概率）
+ * @returns {boolean} 是否使用自定义骚话
+ */
+function shouldUseCustomSaoHua() {
+    const list = getCustomSaoHuaList();
+    if (list.length === 0) {
+        return false;
+    }
+    return Math.random() < CUSTOM_SAO_HUA_PROBABILITY;
 }
 
 async function getDescriptionWithHistory() {
@@ -927,6 +1144,234 @@ async function fallbackToClipboard(message, reason) {
     await vscode.env.clipboard.writeText(message);
     playSoundEffect('copy');
     vscode.window.showInformationMessage(`已复制到剪贴板（${reason}）`);
+}
+
+/**
+ * 显示自定义骚话管理界面
+ */
+async function showCustomSaoHuaManager() {
+    const list = getCustomSaoHuaList();
+    
+    const actionItems = [
+        { label: '$(add) 添加自定义骚话', description: '添加新的自定义骚话', value: 'add' },
+        { label: '$(list) 查看自定义骚话', description: `查看已添加的 ${list.length} 条骚话`, value: 'view' },
+        { label: '$(arrow-down) 导入自定义骚话', description: '从 JSON 文件导入', value: 'import' },
+        { label: '$(arrow-up) 导出自定义骚话', description: '导出为 JSON 文件', value: 'export' },
+        { label: '$(trash) 清空所有自定义骚话', description: `删除全部 ${list.length} 条记录`, value: 'clear' }
+    ];
+
+    const selected = await vscode.window.showQuickPick(actionItems, {
+        placeHolder: '选择操作',
+        ignoreFocusOut: true
+    });
+
+    if (!selected) {
+        return;
+    }
+
+    switch (selected.value) {
+        case 'add':
+            await addSingleCustomSaoHua();
+            break;
+        case 'view':
+            await viewCustomSaoHuaList();
+            break;
+        case 'import':
+            await importCustomSaoHuaFromFile();
+            break;
+        case 'export':
+            await exportCustomSaoHuaToFile();
+            break;
+        case 'clear':
+            const confirmResult = await vscode.window.showWarningMessage(
+                `确定要清空所有 ${list.length} 条自定义骚话吗？`,
+                { modal: true },
+                '确定清空',
+                '取消'
+            );
+            if (confirmResult === '确定清空') {
+                await clearAllCustomSaoHua();
+                vscode.window.showInformationMessage('已清空所有自定义骚话');
+            }
+            break;
+    }
+}
+
+/**
+ * 添加单条自定义骚话
+ */
+async function addSingleCustomSaoHua() {
+    const typeItems = commitTypes.map(t => ({
+        label: t.label,
+        description: t.desc,
+        value: t.value
+    }));
+
+    const selectedType = await vscode.window.showQuickPick(typeItems, {
+        placeHolder: '选择 Commit 类型',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedType) {
+        return;
+    }
+
+    const styleItems = styles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value
+    }));
+
+    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
+        placeHolder: '选择风格模式',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedStyle) {
+        return;
+    }
+
+    const content = await vscode.window.showInputBox({
+        placeHolder: '输入自定义骚话内容',
+        prompt: '例如：这是我为你写的专属骚话',
+        validateInput: (value) => {
+            if (!value || value.trim().length === 0) {
+                return '请输入内容';
+            }
+            if (value.length > 100) {
+                return '内容不能超过 100 个字符';
+            }
+            return null;
+        }
+    });
+
+    if (!content) {
+        return;
+    }
+
+    await addCustomSaoHua(selectedType.value, selectedStyle.value, content.trim());
+    vscode.window.showInformationMessage(`已添加自定义骚话: ${selectedType.value}/${selectedStyle.value}`);
+}
+
+/**
+ * 查看自定义骚话列表
+ */
+async function viewCustomSaoHuaList() {
+    const list = getCustomSaoHuaList();
+    
+    if (list.length === 0) {
+        vscode.window.showInformationMessage('暂无自定义骚话，请先添加');
+        return;
+    }
+
+    const items = list.map((item, index) => ({
+        label: `${index + 1}. ${item.type}/${item.style}`,
+        description: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''),
+        detail: `添加时间: ${new Date(item.addedAt).toLocaleString()}`,
+        value: index
+    }));
+
+    const viewOrDelete = await vscode.window.showQuickPick([
+        { label: '$(eye) 查看/删除', description: '查看列表并删除', value: 'view' },
+        { label: '$(clippy) 复制全部', description: '复制所有自定义骚话为 JSON', value: 'copy' }
+    ], {
+        placeHolder: '选择操作',
+        ignoreFocusOut: true
+    });
+
+    if (!viewOrDelete) {
+        return;
+    }
+
+    if (viewOrDelete.value === 'view') {
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: '选择要删除的骚话',
+            ignoreFocusOut: true
+        });
+
+        if (selected) {
+            const deleteConfirm = await vscode.window.showWarningMessage(
+                '确定要删除这条自定义骚话吗？',
+                { modal: true },
+                '删除',
+                '取消'
+            );
+
+            if (deleteConfirm === '删除') {
+                await deleteCustomSaoHua(selected.value);
+                vscode.window.showInformationMessage('已删除自定义骚话');
+            }
+        }
+    } else if (viewOrDelete.value === 'copy') {
+        const jsonContent = exportCustomSaoHua();
+        await vscode.env.clipboard.writeText(jsonContent);
+        vscode.window.showInformationMessage(`已复制 ${list.length} 条自定义骚话到剪贴板`);
+    }
+}
+
+/**
+ * 从文件导入自定义骚话
+ */
+async function importCustomSaoHuaFromFile() {
+    const options = {
+        canSelectMany: false,
+        filters: { 'JSON Files': ['json'] },
+        title: '选择要导入的 JSON 文件'
+    };
+
+    const fileUri = await vscode.window.showOpenDialog(options);
+
+    if (!fileUri || fileUri.length === 0) {
+        return;
+    }
+
+    try {
+        const doc = await vscode.workspace.openTextDocument(fileUri[0]);
+        const jsonContent = doc.getText();
+        const result = await importCustomSaoHua(jsonContent);
+        
+        if (result.success) {
+            vscode.window.showInformationMessage(result.message);
+        } else {
+            vscode.window.showErrorMessage(result.message);
+        }
+    } catch (error) {
+        vscode.window.showErrorMessage(`导入失败: ${error.message}`);
+    }
+}
+
+/**
+ * 导出自定义骚话到文件
+ */
+async function exportCustomSaoHuaToFile() {
+    const list = getCustomSaoHuaList();
+    
+    if (list.length === 0) {
+        vscode.window.showInformationMessage('暂无自定义骚话可导出');
+        return;
+    }
+
+    const defaultPath = `custom-sao-hua-${Date.now()}.json`;
+    
+    const options = {
+        defaultUri: vscode.Uri.file(defaultPath),
+        filters: { 'JSON Files': ['json'] },
+        title: '保存自定义骚话'
+    };
+
+    const fileUri = await vscode.window.showSaveDialog(options);
+
+    if (!fileUri) {
+        return;
+    }
+
+    try {
+        const jsonContent = exportCustomSaoHua();
+        const writeData = Buffer.from(jsonContent, 'utf8');
+        await vscode.workspace.fs.writeFile(fileUri, writeData);
+        vscode.window.showInformationMessage(`已导出 ${list.length} 条自定义骚话到 ${fileUri.fsPath}`);
+    } catch (error) {
+        vscode.window.showErrorMessage(`导出失败: ${error.message}`);
+    }
 }
 
 function deactivate() {}
