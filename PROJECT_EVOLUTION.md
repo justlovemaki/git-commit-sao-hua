@@ -4,12 +4,23 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.7.0 (VSCode 插件)
+- **当前版本**: v1.8.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
+
+### v1.8.0 - AST 代码结构分析增强 🧠
+- ✅ **AST 代码结构分析** - 新增 `analyzeASTChange` 函数，通过正则匹配识别代码结构变更
+- ✅ **7 种函数定义模式检测** - `function xxx(`, `const xxx = (`, `async function`, 箭头函数等
+- ✅ **4 种类/组件定义模式检测** - `class xxx`, `export default function`, React Component 等
+- ✅ **12 种 CSS 属性检测** - color, margin, padding, display, width, height, font-size 等
+- ✅ **智能检测优先级优化** - AST 分析 > Diff 关键词 > 文件类型
+- ✅ **置信度评估增强** - AST 高置信度结果优先，提升检测准确率
+- ✅ **详情展示优化** - 智能检测结果显示 AST 分析依据和特征
+- ✅ **返回值扩展** - `analyzeCommitType` 新增 `astFeatures` 字段
+- ✅ **文档同步更新** - README.md 补充 AST 智能检测功能说明
 
 ### v1.7.0 - 快捷键绑定功能 🎹
 - ✅ **查看统计快捷键** - 为 `gitCommitSaoHua.showStatistics` 命令添加 `Ctrl+Shift+S` 快捷键
@@ -313,7 +324,20 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.7.0)
+### 本轮迭代 (v1.8.0)
+- **改进内容**: AST 代码结构分析增强
+  - 新增 `analyzeASTChange` 函数，通过正则匹配识别代码结构变更
+  - 支持 7 种函数定义模式检测（`function xxx(`, `const xxx = (`, `async function`, 箭头函数等）
+  - 支持 4 种类/组件定义模式检测（`class xxx`, `export default function`, React Component 等）
+  - 支持 12 种 CSS 属性检测（color, margin, padding, display, width, height 等）
+  - 优化智能检测优先级：AST 分析 > Diff 关键词 > 文件类型
+  - 置信度评估增强：AST 高置信度结果优先，提升检测准确率
+  - 智能检测结果显示 AST 分析依据和特征
+  - `analyzeCommitType` 返回值新增 `astFeatures` 字段
+- **风险等级**: 低风险（仅分析逻辑增强，无核心逻辑变更）
+- **收益**: 显著提升智能检测准确率，让 Commit 类型推荐更加智能化，减少手动选择成本
+
+### 上轮迭代 (v1.7.0)
 - **改进内容**: 快捷键绑定功能
   - 为 `gitCommitSaoHua.showStatistics` 命令添加 `Ctrl+Shift+S` 快捷键
   - 在 package.json 的 `contributes.keybindings` 中注册
@@ -371,16 +395,24 @@ php -S localhost:8000
 - ✅ showStatistics 快捷键绑定（v1.7.0）
 - ✅ Ctrl+Shift+S 查看统计
 - ✅ Ctrl+Shift+G 随机生成
+- ✅ AST 代码结构分析增强（v1.8.0）
+- ✅ 7 种函数定义模式检测
+- ✅ 4 种类/组件定义模式检测
+- ✅ 12 种 CSS 属性检测
+- ✅ AST 优先级优化（AST > Diff > 文件类型）
+- ✅ 置信度评估增强
 
 ### 下一步建议
 1. **短期**: 
    - 优化 diff 分析算法（支持更多语言特定的关键词）
+   - 添加更多 AST 特征检测（import/export 语句、测试文件识别）
    - ~~添加骚话使用统计（最受欢迎的类型/风格）~~ ✅ 已在 v1.6.0 实现
    - ~~添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）~~ ✅ 已在 v1.7.0 实现
+   - ~~智能检测准确率提升（集成简单 AST 分析）~~ ✅ 已在 v1.8.0 实现
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本
-   - 智能检测准确率提升（集成简单 AST 分析）
+   - 智能检测准确率再提升（集成 TypeScript AST API）
 3. **长期**: 
    - AI 生成个性化骚话
    - 团队骚话库（云同步）

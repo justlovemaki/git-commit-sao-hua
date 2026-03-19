@@ -265,6 +265,138 @@ async function getDiffContent() {
 }
 
 /**
+ * 分析 diff 内容中的 AST 代码结构变更
+ * @param {string} diffContent - git diff 内容
+ * @returns {{type: string|null, confidence: string, reason: string, astFeatures: string[]}} - AST 分析结果
+ */
+function analyzeASTChange(diffContent) {
+    if (!diffContent || diffContent.length === 0) {
+        return {
+            type: null,
+            confidence: 'low',
+            reason: '无 diff 内容',
+            astFeatures: []
+        };
+    }
+
+    const astFeatures = [];
+    let detectedType = null;
+    let confidence = 'low';
+    let reason = '';
+
+    const addedLines = diffContent.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++'));
+    const removedLines = diffContent.split('\n').filter(line => line.startsWith('-') && !line.startsWith('---'));
+    const addedContent = addedLines.join('\n');
+
+    const newFunctionPatterns = [
+        /function\s+\w+\s*\(/g,
+        /const\s+\w+\s*=\s*(async\s+)?\(/g,
+        /let\s+\w+\s*=\s*(async\s+)?\(/g,
+        /async\s+function\s+\w+/g,
+        /(\w+)\s*:\s*(async\s+)?function/g,
+        /(\w+)\s*=\s*(async\s+)?\([^)]*\)\s*=>/g
+    ];
+
+    let newFunctionCount = 0;
+    for (const pattern of newFunctionPatterns) {
+        const matches = addedContent.match(pattern);
+        if (matches) {
+            newFunctionCount += matches.length;
+        }
+    }
+    if (newFunctionCount > 0) {
+        astFeatures.push(`新增 ${newFunctionCount} 个函数`);
+        detectedType = 'feat';
+        confidence = 'high';
+    }
+
+    const newClassPatterns = [
+        /class\s+\w+/g,
+        /export\s+default\s+function\s+\w+/g,
+        /export\s+(const|let|var)\s+\w+\s*=\s*\([^)]*\)\s*=>/g,
+        /export\s+(const|let|var)\s+\w+\s*=\s*React\.Component/g
+    ];
+
+    let newClassCount = 0;
+    for (const pattern of newClassPatterns) {
+        const matches = addedContent.match(pattern);
+        if (matches) {
+            newClassCount += matches.length;
+        }
+    }
+    if (newClassCount > 0) {
+        astFeatures.push(`新增 ${newClassCount} 个类/组件`);
+        if (!detectedType) {
+            detectedType = 'feat';
+            confidence = 'high';
+        }
+    }
+
+    const cssPatterns = [
+        /\bcolor\s*:/gi,
+        /\bmargin\s*:/gi,
+        /\bpadding\s*:/gi,
+        /\bdisplay\s*:/gi,
+        /\bwidth\s*:/gi,
+        /\bheight\s*:/gi,
+        /\bfont-size\s*:/gi,
+        /\bbackground(-color)?\s*:/gi,
+        /\bborder\s*:/gi,
+        /\bposition\s*:/gi,
+        /\bflex(-grow|-shrink|-basis)?\s*:/gi,
+        /\bgrid(-template|-area|-column|-row)?\s*:/gi
+    ];
+
+    let cssMatchCount = 0;
+    for (const pattern of cssPatterns) {
+        const matches = diffContent.match(pattern);
+        if (matches) {
+            cssMatchCount += matches.length;
+        }
+    }
+    if (cssMatchCount >= 3) {
+        astFeatures.push(`检测到 ${cssMatchCount} 处 CSS 样式变更`);
+        detectedType = 'style';
+        confidence = 'high';
+    }
+
+    if (removedLines.length > 0 && addedLines.length === 0) {
+        astFeatures.push(`删除 ${removedLines.length} 行代码`);
+        if (!detectedType) {
+            detectedType = 'refactor';
+            confidence = 'medium';
+        }
+    }
+
+    if (addedLines.length > 0 && removedLines.length > 0 && !detectedType) {
+        const totalChanges = addedLines.length + removedLines.length;
+        if (totalChanges > 10) {
+            astFeatures.push(`修改 ${totalChanges} 行代码`);
+            detectedType = 'refactor';
+            confidence = 'medium';
+        } else {
+            astFeatures.push(`小幅度修改 (${totalChanges} 行)`);
+            detectedType = 'fix';
+            confidence = 'low';
+        }
+    }
+
+    if (astFeatures.length > 0) {
+        reason = `AST 分析：${astFeatures.join(', ')}`;
+    } else {
+        reason = '未检测到明显的 AST 结构变更';
+        confidence = 'low';
+    }
+
+    return {
+        type: detectedType,
+        confidence,
+        reason,
+        astFeatures
+    };
+}
+
+/**
  * 分析 diff 内容判断 commit 类型
  * @param {string} diffContent diff 内容
  * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string}} 分析结果
@@ -333,10 +465,10 @@ function analyzeDiffContent(diffContent) {
 }
 
 /**
- * 智能分析文件变更和 diff 内容，推荐 Commit 类型
+ * 智能分析文件变更、diff 内容和 AST 结构，推荐 Commit 类型
  * @param {Array<{files: string[], raw: string}>} changedFiles 变更文件列表
  * @param {string} diffContent diff 内容
- * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string}} 综合分析结果
+ * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[]}} 综合分析结果
  */
 function analyzeCommitType(changedFiles, diffContent = null) {
     if (!changedFiles || changedFiles.length === 0) {
@@ -345,7 +477,8 @@ function analyzeCommitType(changedFiles, diffContent = null) {
             confidence: 'low',
             matchedKeywords: [],
             reason: '无变更文件',
-            fileType: 'unknown'
+            fileType: 'unknown',
+            astFeatures: []
         };
     }
 
@@ -369,121 +502,116 @@ function analyzeCommitType(changedFiles, diffContent = null) {
         const ext = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
         const baseName = fileName.toLowerCase();
 
-        // style: .css/.scss/.less/.sass
         if (['.css', '.scss', '.less', '.sass'].includes(ext)) {
             typeCounts.style++;
             fileType = 'style';
             continue;
         }
 
-        // test: .test.js/.spec.js/test_*.js
         if (baseName.match(/(\.test\.js|\.spec\.js|^test_.+\.js$)/)) {
             typeCounts.test++;
             fileType = 'test';
             continue;
         }
 
-        // docs: .md/.txt
         if (['.md', '.txt'].includes(ext) && !baseName.includes('changelog')) {
             typeCounts.docs++;
             fileType = 'docs';
             continue;
         }
 
-        // chore: .json (package.json 除外)
         if (ext === '.json' && !baseName.includes('package')) {
             typeCounts.chore++;
             continue;
         }
 
-        // build: package.json/package-lock.json
         if (baseName === 'package.json' || baseName === 'package-lock.json') {
             typeCounts.build++;
             fileType = 'build';
             continue;
         }
 
-        // .gitignore/.editorconfig → chore
         if (baseName === '.gitignore' || baseName === '.editorconfig') {
             typeCounts.chore++;
             continue;
         }
 
-        // CI/CD 配置文件 (.github/, .gitlab-ci.yml) → ci
         if (filePath.includes('.github/') || baseName === '.gitlab-ci.yml' || baseName === 'jenkinsfile') {
             typeCounts.ci++;
             fileType = 'ci';
             continue;
         }
 
-        // 配置文件 (.env, config/*) → chore
         if (baseName.startsWith('.env') || filePath.includes('/config/') || filePath.includes('\\config\\')) {
             typeCounts.chore++;
             continue;
         }
 
-        // .ts/.js → feat 或 fix（根据变更内容判断）
         if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
-            // 暂时默认为 feat，将在 diff 分析后可能覆盖
             typeCounts.feat++;
             fileType = 'code';
             continue;
         }
 
-        // 其他情况默认为 chore
         typeCounts.chore++;
     }
 
-    // 找出文件分析中出现次数最多的类型
-    let maxFileType = null;
-    let maxFileCount = 0;
-
-    for (const [type, count] of Object.entries(typeCounts)) {
-        if (count > maxFileCount) {
-            maxFileCount = count;
-            maxFileType = type;
-        }
+    let astResult = null;
+    if (diffContent) {
+        astResult = analyzeASTChange(diffContent);
     }
 
-    // 如果有 diff 内容，进行 diff 内容分析
     let diffResult = null;
     if (diffContent) {
         diffResult = analyzeDiffContent(diffContent);
     }
 
-    // 综合判断：diff 分析结果优先于文件分析
-    let finalType = maxFileType;
+    let finalType = null;
     let confidence = 'low';
     let matchedKeywords = [];
     let reason = '';
+    const astFeatures = astResult?.astFeatures || [];
 
-    if (diffResult && diffResult.matchedKeywords.length > 0) {
-        // diff 分析有明确结果时，优先使用 diff 分析结果
-        if (diffResult.confidence === 'high') {
-            finalType = diffResult.type;
-            confidence = 'high';
-            reason = `diff 高置信度: ${diffResult.reason}`;
-        } else if (diffResult.confidence === 'medium') {
-            // 中等置信度时，diff 结果权重更高
-            finalType = diffResult.type;
-            confidence = 'medium';
-            reason = `diff 中等置信度: ${diffResult.reason}`;
-        } else {
-            // 低置信度时，结合文件分析
-            if (maxFileType === 'feat' || maxFileType === 'fix') {
-                finalType = maxFileType;
-                reason = `diff 分析不明确，使用文件类型: ${maxFileType}`;
-            } else {
+    if (astResult && astResult.type && astResult.confidence === 'high') {
+        finalType = astResult.type;
+        confidence = 'high';
+        reason = astResult.reason;
+    }
+    else if (astResult && astResult.type && astResult.confidence === 'medium') {
+        if (diffResult && diffResult.matchedKeywords.length > 0) {
+            if (diffResult.confidence === 'high') {
                 finalType = diffResult.type;
-                reason = `diff 分析: ${diffResult.reason}`;
+                confidence = 'high';
+                reason = diffResult.reason;
+            } else {
+                finalType = astResult.type;
+                confidence = 'medium';
+                reason = `${astResult.reason}; ${diffResult.reason}`;
             }
-            confidence = 'low';
+        } else {
+            finalType = astResult.type;
+            confidence = 'medium';
+            reason = astResult.reason;
         }
+        matchedKeywords = diffResult?.matchedKeywords || [];
+    }
+    else if (diffResult && diffResult.matchedKeywords.length > 0) {
+        finalType = diffResult.type;
+        confidence = diffResult.confidence;
+        reason = diffResult.reason;
         matchedKeywords = diffResult.matchedKeywords;
-    } else {
-        // 无 diff 分析结果时，使用文件分析
+    }
+    else {
+        let maxFileType = null;
+        let maxFileCount = 0;
+        for (const [type, count] of Object.entries(typeCounts)) {
+            if (count > maxFileCount) {
+                maxFileCount = count;
+                maxFileType = type;
+            }
+        }
         finalType = maxFileType;
-        reason = `基于文件类型分析: ${maxFileType} (${maxFileCount} 个文件)`;
+        reason = `基于文件类型分析：${maxFileType} (${maxFileCount} 个文件)`;
         confidence = maxFileCount >= 3 ? 'medium' : 'low';
     }
 
@@ -492,7 +620,8 @@ function analyzeCommitType(changedFiles, diffContent = null) {
         confidence,
         matchedKeywords,
         reason,
-        fileType
+        fileType,
+        astFeatures
     };
 }
 
@@ -538,8 +667,11 @@ async function generateSmartCommit() {
     const detailMessage = [
         `类型: ${analysisResult.type}`,
         `置信度: ${analysisResult.confidence}`,
-        `分析: ${analysisResult.reason}`
-    ].join('\n');
+        `分析: ${analysisResult.reason}`,
+        analysisResult.astFeatures && analysisResult.astFeatures.length > 0 
+            ? `AST: ${analysisResult.astFeatures.join(', ')}` 
+            : ''
+    ].filter(Boolean).join('\n');
 
     vscode.window.showInformationMessage(
         `${confidenceEmoji} 智能检测推荐类型: ${analysisResult.type}`,
