@@ -141,7 +141,19 @@
           "description": "启用音效反馈（通过状态栏消息和通知实现）"
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "gitCommitSaoHua.generateRandom",
+        "key": "ctrl+shift+g",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "gitCommitSaoHua.showStatistics",
+        "key": "ctrl+shift+s",
+        "when": "editorTextFocus"
+      }
+    ]
   },
   "scripts": {
     "check": "node -e \"const fs=require('fs'); const required=['extension.js','sao-hua-data.js','README.md','LICENSE','icon.png']; const missing=required.filter(f=>!fs.existsSync(f)); if(missing.length){console.error('Missing required files:', missing.join(', ')); process.exit(1);} console.log('Extension files look good.');\"",
