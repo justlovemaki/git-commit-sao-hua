@@ -4,12 +4,18 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.6.0 (VSCode 插件)
+- **当前版本**: v1.7.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
+
+### v1.7.0 - 快捷键绑定功能 🎹
+- ✅ **查看统计快捷键** - 为 `gitCommitSaoHua.showStatistics` 命令添加 `Ctrl+Shift+S` 快捷键
+- ✅ **快捷键体系完善** - 与 `Ctrl+Shift+G`（随机生成）形成一致的快捷键风格
+- ✅ **when 条件** - 仅在 `editorTextFocus` 时生效，避免与其他快捷键冲突
+- ✅ **用户体验提升** - 无需打开命令面板，一键查看使用统计
 
 ### v1.0.0 - 初始版本
 - ✅ 12 种 Commit 类型
@@ -307,7 +313,16 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.6.0)
+### 本轮迭代 (v1.7.0)
+- **改进内容**: 快捷键绑定功能
+  - 为 `gitCommitSaoHua.showStatistics` 命令添加 `Ctrl+Shift+S` 快捷键
+  - 在 package.json 的 `contributes.keybindings` 中注册
+  - when 条件：`editorTextFocus`，仅在编辑器聚焦时生效
+  - 与现有快捷键 `Ctrl+Shift+G`（随机生成）形成一致的快捷键体系
+- **风险等级**: 低风险（仅快捷键配置，无核心逻辑变更）
+- **收益**: 提升用户访问统计功能的便捷性，完善快捷键体系，无需打开命令面板即可查看统计
+
+### 上轮迭代 (v1.6.0)
 - **改进内容**: 使用统计功能
   - 新增 `getStatistics`/`recordGeneration`/`resetStatistics`/`showStatistics` 函数
   - 记录总生成次数、每种 Commit 类型使用次数、每种风格使用次数、最近生成时间
@@ -353,16 +368,19 @@ php -S localhost:8000
 - ✅ statistics 使用统计功能（v1.6.0）
 - ✅ 统计面板展示（总次数、Top 3 类型、Top 3 风格、最近生成时间）
 - ✅ 一键重置统计
+- ✅ showStatistics 快捷键绑定（v1.7.0）
+- ✅ Ctrl+Shift+S 查看统计
+- ✅ Ctrl+Shift+G 随机生成
 
 ### 下一步建议
 1. **短期**: 
    - 优化 diff 分析算法（支持更多语言特定的关键词）
    - ~~添加骚话使用统计（最受欢迎的类型/风格）~~ ✅ 已在 v1.6.0 实现
+   - ~~添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）~~ ✅ 已在 v1.7.0 实现
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本
    - 智能检测准确率提升（集成简单 AST 分析）
-   - 添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）
 3. **长期**: 
    - AI 生成个性化骚话
    - 团队骚话库（云同步）
