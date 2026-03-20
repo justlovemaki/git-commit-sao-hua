@@ -4,12 +4,22 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.8.0 (VSCode 插件)
+- **当前版本**: v1.9.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
+
+### v1.9.0 - AST 检测增强 + 多语言关键词支持 🚀
+- ✅ **Import/Export 语句检测** - 新增 `import xxx from`, `export default`, `export const/let/var`, `export { xxx }` 模式识别
+- ✅ **测试文件变更识别** - 自动检测 `.test.js`, `.spec.js` 等测试文件变更，推荐 `test` 类型
+- ✅ **Python 关键词支持** - `def`, `class`, `import`, `from`
+- ✅ **Java/Kotlin 关键词支持** - `public`, `private`, `protected`, `class`, `interface`, `fun`
+- ✅ **TypeScript 关键词支持** - `interface`, `type`, `enum`, `namespace`
+- ✅ **语言特定类型映射** - 检测到语言特定关键词时自动推荐 `feat` 类型
+- ✅ **版本号同步** - package.json 和 extension.js 版本更新到 1.9.0
+- ✅ **文档同步更新** - README.md 补充 v1.9.0 新功能说明
 
 ### v1.8.0 - AST 代码结构分析增强 🧠
 - ✅ **AST 代码结构分析** - 新增 `analyzeASTChange` 函数，通过正则匹配识别代码结构变更
@@ -324,7 +334,19 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.8.0)
+### 本轮迭代 (v1.9.0)
+- **改进内容**: AST 检测增强 + 多语言关键词支持
+  - 新增 import/export 语句检测（`import xxx from`, `export default`, `export const/let/var`, `export { xxx }`）
+  - 新增测试文件变更识别（`.test.js`, `.spec.js` 等），自动推荐 `test` 类型
+  - Diff 分析扩展支持 Python 关键词（`def`, `class`, `import`, `from`）
+  - Diff 分析扩展支持 Java/Kotlin 关键词（`public`, `private`, `protected`, `class`, `interface`, `fun`）
+  - Diff 分析扩展支持 TypeScript 关键词（`interface`, `type`, `enum`, `namespace`）
+  - 语言特定类型映射：检测到语言特定关键词时自动推荐 `feat` 类型
+  - 版本号同步：package.json 和 extension.js 更新到 1.9.0
+- **风险等级**: 低风险（仅分析逻辑增强，无核心逻辑变更）
+- **收益**: 进一步提升智能检测准确率，支持多语言项目，让 Commit 类型推荐更加精准
+
+### 上轮迭代 (v1.8.0)
 - **改进内容**: AST 代码结构分析增强
   - 新增 `analyzeASTChange` 函数，通过正则匹配识别代码结构变更
   - 支持 7 种函数定义模式检测（`function xxx(`, `const xxx = (`, `async function`, 箭头函数等）
@@ -401,14 +423,22 @@ php -S localhost:8000
 - ✅ 12 种 CSS 属性检测
 - ✅ AST 优先级优化（AST > Diff > 文件类型）
 - ✅ 置信度评估增强
+- ✅ Import/Export 语句检测（v1.9.0）
+- ✅ 测试文件变更识别（v1.9.0）
+- ✅ Python 关键词支持（v1.9.0）
+- ✅ Java/Kotlin 关键词支持（v1.9.0）
+- ✅ TypeScript 关键词支持（v1.9.0）
+- ✅ 语言特定类型映射（v1.9.0）
 
 ### 下一步建议
 1. **短期**: 
-   - 优化 diff 分析算法（支持更多语言特定的关键词）
-   - 添加更多 AST 特征检测（import/export 语句、测试文件识别）
+   - ~~优化 diff 分析算法（支持更多语言特定的关键词）~~ ✅ 已在 v1.9.0 实现
+   - ~~添加更多 AST 特征检测（import/export 语句、测试文件识别）~~ ✅ 已在 v1.9.0 实现
    - ~~添加骚话使用统计（最受欢迎的类型/风格）~~ ✅ 已在 v1.6.0 实现
    - ~~添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）~~ ✅ 已在 v1.7.0 实现
    - ~~智能检测准确率提升（集成简单 AST 分析）~~ ✅ 已在 v1.8.0 实现
+   - [ ] 智能检测置信度可视化增强（在 UI 中更直观展示分析依据）
+   - [ ] 添加更多文件类型映射（.vue, .py, .java, .go 等）
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本

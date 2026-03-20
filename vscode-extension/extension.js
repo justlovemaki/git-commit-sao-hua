@@ -9,7 +9,7 @@
  * - 使用统计追踪
  * 
  * @author coding-expert
- * @version 1.5.0
+ * @version 1.9.0
  */
 
 const vscode = require('vscode');
@@ -23,6 +23,10 @@ const { commitTypes, styles, getRandomSaoHua, generateCommitMessage } = require(
  */
 const FIX_KEYWORDS = ['fix', 'bug', 'issue', 'error', 'crash', 'resolve', 'patch'];
 const FEAT_KEYWORDS = ['add', 'new', 'create', 'implement', 'feature', 'support'];
+
+const PYTHON_KEYWORDS = ['def ', 'class ', 'import ', 'from '];
+const JAVA_KEYWORDS = ['public ', 'private ', 'protected ', 'class ', 'interface ', 'fun '];
+const TYPESCRIPT_KEYWORDS = ['interface ', 'type ', 'enum ', 'namespace '];
 
 /**
  * 工作区状态键名
@@ -379,6 +383,38 @@ class ASTAnalyzer {
             confidence = 'high';
         }
 
+        // 检测 import/export 语句变更
+        const importExportCount = this.countPatternMatches(addedContent, [
+            /import\s+.+\s+from/gi,
+            /export\s+default/gi,
+            /export\s+(const|let|var)\s+/gi,
+            /export\s+\{/gi,
+            /export\s+\w+/gi
+        ]);
+
+        if (importExportCount > 0) {
+            astFeatures.push(`检测到 ${importExportCount} 处 import/export 语句`);
+            if (!detectedType) {
+                detectedType = 'feat';
+                confidence = 'high';
+            } else if (detectedType === 'refactor') {
+                confidence = 'high';
+            }
+        }
+
+        // 检测测试文件变更
+        const testFilePatterns = /\.(test|spec)\.(js|ts|jsx|tsx)$/i;
+        const hasTestChanges = testFilePatterns.test(diffContent) || 
+            (addedContent.includes('.test.') || addedContent.includes('.spec.'));
+
+        if (hasTestChanges) {
+            astFeatures.push('检测到测试文件变更');
+            if (!detectedType) {
+                detectedType = 'test';
+                confidence = 'medium';
+            }
+        }
+
         // 检测新增类/组件
         const newClassCount = this.countPatternMatches(addedContent, [
             /class\s+\w+/g,
@@ -490,15 +526,40 @@ class DiffAnalyzer {
         const fixMatched = this.matchKeywords(lowerContent, FIX_KEYWORDS);
         const featMatched = this.matchKeywords(lowerContent, FEAT_KEYWORDS);
 
+        // 统计语言特定关键词
+        const pythonMatched = this.matchKeywords(diffContent, PYTHON_KEYWORDS);
+        const javaMatched = this.matchKeywords(diffContent, JAVA_KEYWORDS);
+        const tsMatched = this.matchKeywords(diffContent, TYPESCRIPT_KEYWORDS);
+
         const fixScore = fixMatched.length;
         const featScore = featMatched.length;
+        const pythonScore = pythonMatched.length;
+        const javaScore = javaMatched.length;
+        const tsScore = tsMatched.length;
+
+        // 语言特定类型映射
+        const langScores = [
+            { name: 'Python', score: pythonScore, type: 'feat' },
+            { name: 'Java/Kotlin', score: javaScore, type: 'feat' },
+            { name: 'TypeScript', score: tsScore, type: 'feat' }
+        ];
 
         // 根据匹配结果判断类型
         let type = 'chore';
         let confidence = 'low';
         let reason = '';
+        const allMatched = [...fixMatched, ...featMatched];
 
-        if (fixScore > 0 && fixScore > featScore) {
+        // 检查语言特定关键词
+        const highLangScore = langScores.find(l => l.score >= 2);
+        if (highLangScore && fixScore === 0 && featScore === 0) {
+            type = highLangScore.type;
+            confidence = highLangScore.score >= 3 ? 'high' : 'medium';
+            reason = `检测到 ${highLangScore.name} 特定关键词`;
+            allMatched.push(...langScores.filter(l => l.score > 0).flatMap(l => 
+                Array(l.score).fill(l.name.toLowerCase())
+            ));
+        } else if (fixScore > 0 && fixScore > featScore) {
             type = 'fix';
             confidence = fixScore >= 3 ? 'high' : 'medium';
             reason = `检测到 fix 关键词：${[...new Set(fixMatched)].join(', ')}`;
@@ -517,7 +578,7 @@ class DiffAnalyzer {
         return {
             type,
             confidence,
-            matchedKeywords: [...new Set([...fixMatched, ...featMatched])],
+            matchedKeywords: [...new Set(allMatched)],
             reason
         };
     }
