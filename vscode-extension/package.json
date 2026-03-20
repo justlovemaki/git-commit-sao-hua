@@ -2,7 +2,7 @@
   "name": "git-commit-sao-hua",
   "displayName": "Git Commit 骚话生成器",
   "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "coding-expert",
   "engines": {
     "vscode": "^1.70.0"
@@ -139,6 +139,35 @@
           "type": "boolean",
           "default": true,
           "description": "启用音效反馈（通过状态栏消息和通知实现）"
+        },
+        "gitCommitSaoHua.customSaoHuaProbability": {
+          "type": "number",
+          "default": 0.3,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "使用自定义骚话的概率（0-1 之间，默认 0.3 表示 30% 概率）"
+        },
+        "gitCommitSaoHua.maxHistoryCount": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "描述历史记录最大保存数量（默认 10 条）"
+        },
+        "gitCommitSaoHua.enableSmartDetection": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用智能检测功能（自动分析 Git 变更推荐 Commit 类型）"
+        },
+        "gitCommitSaoHua.astAnalysisEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用 AST 代码结构分析（检测函数/类/CSS 变更）"
+        },
+        "gitCommitSaoHua.showConfidenceDetail": {
+          "type": "boolean",
+          "default": true,
+          "description": "显示智能检测的置信度详情信息"
         }
       }
     },

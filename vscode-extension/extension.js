@@ -1,9 +1,33 @@
+/**
+ * Git Commit 骚话生成器 - 主插件文件
+ * 
+ * 功能特性:
+ * - 支持 12 种 Commit 类型 × 5 种风格模式
+ * - 智能检测 Git 变更，自动推荐 Commit 类型
+ * - AST 代码结构分析，识别函数/类/CSS 变更
+ * - 自定义骚话管理，支持导入导出
+ * - 使用统计追踪
+ * 
+ * @author coding-expert
+ * @version 1.5.0
+ */
+
 const vscode = require('vscode');
 const { commitTypes, styles, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
 
+// ==================== 常量定义 ====================
+
+/**
+ * Commit 类型关键词映射
+ * 用于通过 diff 内容智能识别 Commit 类型
+ */
 const FIX_KEYWORDS = ['fix', 'bug', 'issue', 'error', 'crash', 'resolve', 'patch'];
 const FEAT_KEYWORDS = ['add', 'new', 'create', 'implement', 'feature', 'support'];
 
+/**
+ * 工作区状态键名
+ * 用于持久化用户偏好设置
+ */
 const STATE_KEYS = {
     type: 'gitCommitSaoHua.currentType',
     style: 'gitCommitSaoHua.currentStyle',
@@ -12,16 +36,152 @@ const STATE_KEYS = {
     statistics: 'gitCommitSaoHua.statistics'
 };
 
-const CUSTOM_SAO_HUA_PROBABILITY = 0.3;
+// ==================== Git 扩展管理 ====================
 
-const MAX_HISTORY_COUNT = 10;
+/**
+ * Git 扩展管理器
+ * 封装 Git 扩展的获取和激活逻辑，避免重复代码
+ */
+class GitExtensionManager {
+    /**
+     * 获取并激活 Git 扩展
+     * @returns {Promise<{api: any, repo: any}|null>} Git API 和当前仓库，失败返回 null
+     */
+    static async getGitAPI() {
+        try {
+            const gitExtension = vscode.extensions.getExtension('vscode.git');
+            if (!gitExtension) {
+                console.warn('[GitSaoHua] 未找到 Git 扩展');
+                return null;
+            }
 
-let currentType = 'feat';
-let currentStyle = 'sao';
-let extensionContext = null;
+            if (!gitExtension.isActive) {
+                try {
+                    await gitExtension.activate();
+                    console.log('[GitSaoHua] Git 扩展已激活');
+                } catch (e) {
+                    console.error('[GitSaoHua] Git 扩展激活失败:', e.message);
+                    return null;
+                }
+            }
 
+            const git = gitExtension.exports.getAPI(1);
+            if (!git || !git.repositories || git.repositories.length === 0) {
+                console.warn('[GitSaoHua] 未找到 Git 仓库');
+                return null;
+            }
+
+            const repo = git.repositories[0];
+            return { api: git, repo };
+        } catch (error) {
+            console.error('[GitSaoHua] 获取 Git API 失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 获取变更文件列表
+     * @returns {Promise<Array<{files: string[], raw: string}>|null>} 变更文件列表
+     */
+    static async getChangedFiles() {
+        const git = await this.getGitAPI();
+        if (!git) return null;
+
+        const changes = git.repo.state.workingTreeChanges;
+        if (!changes || changes.length === 0) {
+            return null;
+        }
+
+        return changes.map(change => ({
+            files: [change.uri.fsPath],
+            raw: change.uri.fsPath
+        }));
+    }
+
+    /**
+     * 获取 Git diff 内容
+     * @returns {Promise<string|null>} diff 内容
+     */
+    static async getDiffContent() {
+        const git = await this.getGitAPI();
+        if (!git) return null;
+
+        try {
+            const diff = await git.repo.diff();
+            return diff || null;
+        } catch (error) {
+            console.error('[GitSaoHua] 获取 diff 失败:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 插入消息到 Git 输入框
+     * @param {string} message 要插入的消息
+     * @param {string} reason 失败原因
+     */
+    static async fallbackToClipboard(message, reason) {
+        await vscode.env.clipboard.writeText(message);
+        vscode.window.showInformationMessage(`已复制到剪贴板（${reason}）`);
+    }
+}
+
+// ==================== 配置管理 ====================
+
+/**
+ * 插件配置管理器
+ * 封装配置读取和默认值管理
+ */
+class ConfigManager {
+    /**
+     * 获取配置项
+     * @template T
+     * @param {string} key 配置键名
+     * @param {T} defaultValue 默认值
+     * @returns {T} 配置值
+     */
+    static get(key, defaultValue) {
+        const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+        return config.get(key, defaultValue);
+    }
+
+    /**
+     * 获取所有配置默认值
+     * @returns {Object} 配置默认值对象
+     */
+    static getDefaults() {
+        return {
+            defaultStyle: 'sao',
+            defaultType: 'feat',
+            autoInsert: true,
+            enableSoundEffects: true,
+            // 新增可配置项
+            customSaoHuaProbability: 0.3,
+            maxHistoryCount: 10,
+            enableSmartDetection: true,
+            astAnalysisEnabled: true,
+            showConfidenceDetail: true
+        };
+    }
+}
+
+// ==================== 状态管理 ====================
+
+/**
+ * 插件全局状态
+ */
+const PluginState = {
+    currentType: 'feat',
+    currentStyle: 'sao',
+    extensionContext: null
+};
+
+/**
+ * 获取使用统计数据
+ * @returns {Object} 统计数据对象
+ */
 function getStatistics() {
-    return extensionContext?.workspaceState.get(STATE_KEYS.statistics) || {
+    return PluginState.extensionContext?.workspaceState.get(STATE_KEYS.statistics) || {
         totalCount: 0,
         typeUsage: {},
         styleUsage: {},
@@ -29,13 +189,20 @@ function getStatistics() {
     };
 }
 
+/**
+ * 保存统计数据
+ * @param {Object} stats 统计数据
+ */
 async function saveStatistics(stats) {
-    if (!extensionContext) {
-        return;
-    }
-    await extensionContext.workspaceState.update(STATE_KEYS.statistics, stats);
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.statistics, stats);
 }
 
+/**
+ * 记录生成事件
+ * @param {string} type Commit 类型
+ * @param {string} style 风格
+ */
 async function recordGeneration(type, style) {
     const stats = getStatistics();
     stats.totalCount += 1;
@@ -45,6 +212,9 @@ async function recordGeneration(type, style) {
     await saveStatistics(stats);
 }
 
+/**
+ * 重置统计数据
+ */
 async function resetStatistics() {
     await saveStatistics({
         totalCount: 0,
@@ -54,16 +224,26 @@ async function resetStatistics() {
     });
 }
 
+/**
+ * 获取使用频率最高的项目
+ * @param {Object} usageObj 使用次数对象
+ * @param {number} count 返回数量
+ * @returns {Array<[string, number]>} 排序后的数组
+ */
 function getTopItems(usageObj, count = 3) {
     return Object.entries(usageObj)
         .sort((a, b) => b[1] - a[1])
         .slice(0, count);
 }
 
+/**
+ * 格式化时间戳为友好提示
+ * @param {number} timestamp 时间戳
+ * @returns {string} 友好的时间描述
+ */
 function formatLastGeneratedTime(timestamp) {
-    if (!timestamp) {
-        return '暂无记录';
-    }
+    if (!timestamp) return '暂无记录';
+
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now - date;
@@ -71,19 +251,16 @@ function formatLastGeneratedTime(timestamp) {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) {
-        return '刚刚';
-    } else if (diffMins < 60) {
-        return `${diffMins} 分钟前`;
-    } else if (diffHours < 24) {
-        return `${diffHours} 小时前`;
-    } else if (diffDays < 7) {
-        return `${diffDays} 天前`;
-    } else {
-        return date.toLocaleString('zh-CN');
-    }
+    if (diffMins < 1) return '刚刚';
+    if (diffMins < 60) return `${diffMins} 分钟前`;
+    if (diffHours < 24) return `${diffHours} 小时前`;
+    if (diffDays < 7) return `${diffDays} 天前`;
+    return date.toLocaleString('zh-CN');
 }
 
+/**
+ * 显示统计信息
+ */
 async function showStatistics() {
     const stats = getStatistics();
     const totalCount = stats.totalCount || 0;
@@ -91,36 +268,20 @@ async function showStatistics() {
     const topStyles = getTopItems(stats.styleUsage, 3);
     const lastTime = formatLastGeneratedTime(stats.lastGeneratedAt);
 
-    const typeLabels = {};
-    for (const t of commitTypes) {
-        typeLabels[t.value] = t.label;
-    }
-    const styleLabels = {};
-    for (const s of styles) {
-        styleLabels[s.value] = `${s.emoji} ${s.label}`;
-    }
+    // 构建类型和风格标签映射
+    const typeLabels = Object.fromEntries(commitTypes.map(t => [t.value, t.label]));
+    const styleLabels = Object.fromEntries(styles.map(s => [s.value, `${s.emoji} ${s.label}`]));
 
     const statsItems = [
-        {
-            label: `$(number) 总生成次数: ${totalCount}`,
-            kind: vscode.QuickPickItemKind.Separator
-        },
-        {
-            label: `📊 总生成次数`,
-            description: `${totalCount} 次`,
-            kind: vscode.QuickPickItemKind.Default
-        }
+        { label: `$(number) 总生成次数：${totalCount}`, kind: vscode.QuickPickItemKind.Separator },
+        { label: `📊 总生成次数`, description: `${totalCount} 次`, kind: vscode.QuickPickItemKind.Default }
     ];
 
     if (topTypes.length > 0) {
-        statsItems.push({
-            label: '',
-            kind: vscode.QuickPickItemKind.Separator
-        });
-        statsItems.push({
-            label: `🔥 最常用的 Commit 类型 (Top 3)`,
-            kind: vscode.QuickPickItemKind.Default
-        });
+        statsItems.push(
+            { label: '', kind: vscode.QuickPickItemKind.Separator },
+            { label: `🔥 最常用的 Commit 类型 (Top 3)`, kind: vscode.QuickPickItemKind.Default }
+        );
         for (const [type, count] of topTypes) {
             statsItems.push({
                 label: `   ${typeLabels[type] || type}`,
@@ -131,14 +292,10 @@ async function showStatistics() {
     }
 
     if (topStyles.length > 0) {
-        statsItems.push({
-            label: '',
-            kind: vscode.QuickPickItemKind.Separator
-        });
-        statsItems.push({
-            label: `✨ 最常用的风格 (Top 3)`,
-            kind: vscode.QuickPickItemKind.Default
-        });
+        statsItems.push(
+            { label: '', kind: vscode.QuickPickItemKind.Separator },
+            { label: `✨ 最常用的风格 (Top 3)`, kind: vscode.QuickPickItemKind.Default }
+        );
         for (const [style, count] of topStyles) {
             statsItems.push({
                 label: `   ${styleLabels[style] || style}`,
@@ -148,26 +305,12 @@ async function showStatistics() {
         }
     }
 
-    statsItems.push({
-        label: '',
-        kind: vscode.QuickPickItemKind.Separator
-    });
-    statsItems.push({
-        label: `🕐 最近生成时间`,
-        description: lastTime,
-        kind: vscode.QuickPickItemKind.Default
-    });
-
-    statsItems.push({
-        label: '',
-        kind: vscode.QuickPickItemKind.Separator
-    });
-    statsItems.push({
-        label: `$(trash) 重置统计`,
-        description: '清空所有统计数据',
-        value: 'reset',
-        kind: vscode.QuickPickItemKind.Default
-    });
+    statsItems.push(
+        { label: '', kind: vscode.QuickPickItemKind.Separator },
+        { label: `🕐 最近生成时间`, description: lastTime, kind: vscode.QuickPickItemKind.Default },
+        { label: '', kind: vscode.QuickPickItemKind.Separator },
+        { label: `$(trash) 重置统计`, description: '清空所有统计数据', value: 'reset', kind: vscode.QuickPickItemKind.Default }
+    );
 
     const selected = await vscode.window.showQuickPick(statsItems, {
         placeHolder: '查看使用统计',
@@ -189,964 +332,481 @@ async function showStatistics() {
     }
 }
 
-/**
- * 获取 Git 变更文件列表
- * @returns {Promise<{files: string[], raw: string}[]>} 变更文件列表
- */
-async function getChangedFiles() {
-    try {
-        const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (!gitExtension) {
-            return null;
-        }
-
-        if (!gitExtension.isActive) {
-            try {
-                await gitExtension.activate();
-            } catch (e) {
-                return null;
-            }
-        }
-
-        const git = gitExtension.exports.getAPI(1);
-        if (!git || !git.repositories || git.repositories.length === 0) {
-            return null;
-        }
-
-        const repo = git.repositories[0];
-        const changes = repo.state.workingTreeChanges;
-        
-        if (!changes || changes.length === 0) {
-            return null;
-        }
-
-        return changes.map(change => ({
-            files: [change.uri.fsPath],
-            raw: change.uri.fsPath
-        }));
-    } catch (error) {
-        console.error('获取 Git 变更失败:', error);
-        return null;
-    }
-}
+// ==================== AST 分析器 ====================
 
 /**
- * 获取 Git diff 内容
- * @returns {Promise<string|null>} diff 内容
+ * AST 代码结构分析器
+ * 分析 diff 内容中的代码结构变更
  */
-async function getDiffContent() {
-    try {
-        const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (!gitExtension) {
-            return null;
+class ASTAnalyzer {
+    /**
+     * 分析 diff 内容中的 AST 代码结构变更
+     * @param {string} diffContent - git diff 内容
+     * @returns {{type: string|null, confidence: string, reason: string, astFeatures: string[]}} - AST 分析结果
+     */
+    static analyze(diffContent) {
+        if (!diffContent || diffContent.length === 0) {
+            return {
+                type: null,
+                confidence: 'low',
+                reason: '无 diff 内容',
+                astFeatures: []
+            };
         }
 
-        if (!gitExtension.isActive) {
-            try {
-                await gitExtension.activate();
-            } catch (e) {
-                return null;
-            }
-        }
+        const astFeatures = [];
+        let detectedType = null;
+        let confidence = 'low';
 
-        const git = gitExtension.exports.getAPI(1);
-        if (!git || !git.repositories || git.repositories.length === 0) {
-            return null;
-        }
+        // 提取新增代码行
+        const addedLines = diffContent.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++'));
+        const removedLines = diffContent.split('\n').filter(line => line.startsWith('-') && !line.startsWith('---'));
+        const addedContent = addedLines.join('\n');
 
-        const repo = git.repositories[0];
-        const diff = await repo.diff();
-        
-        return diff || null;
-    } catch (error) {
-        console.error('获取 Git diff 失败:', error);
-        return null;
-    }
-}
+        // 检测新增函数
+        const newFunctionCount = this.countPatternMatches(addedContent, [
+            /function\s+\w+\s*\(/g,
+            /const\s+\w+\s*=\s*(async\s+)?\(/g,
+            /let\s+\w+\s*=\s*(async\s+)?\(/g,
+            /async\s+function\s+\w+/g,
+            /(\w+)\s*:\s*(async\s+)?function/g,
+            /(\w+)\s*=\s*(async\s+)?\([^)]*\)\s*=>/g
+        ]);
 
-/**
- * 分析 diff 内容中的 AST 代码结构变更
- * @param {string} diffContent - git diff 内容
- * @returns {{type: string|null, confidence: string, reason: string, astFeatures: string[]}} - AST 分析结果
- */
-function analyzeASTChange(diffContent) {
-    if (!diffContent || diffContent.length === 0) {
-        return {
-            type: null,
-            confidence: 'low',
-            reason: '无 diff 内容',
-            astFeatures: []
-        };
-    }
-
-    const astFeatures = [];
-    let detectedType = null;
-    let confidence = 'low';
-    let reason = '';
-
-    const addedLines = diffContent.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++'));
-    const removedLines = diffContent.split('\n').filter(line => line.startsWith('-') && !line.startsWith('---'));
-    const addedContent = addedLines.join('\n');
-
-    const newFunctionPatterns = [
-        /function\s+\w+\s*\(/g,
-        /const\s+\w+\s*=\s*(async\s+)?\(/g,
-        /let\s+\w+\s*=\s*(async\s+)?\(/g,
-        /async\s+function\s+\w+/g,
-        /(\w+)\s*:\s*(async\s+)?function/g,
-        /(\w+)\s*=\s*(async\s+)?\([^)]*\)\s*=>/g
-    ];
-
-    let newFunctionCount = 0;
-    for (const pattern of newFunctionPatterns) {
-        const matches = addedContent.match(pattern);
-        if (matches) {
-            newFunctionCount += matches.length;
-        }
-    }
-    if (newFunctionCount > 0) {
-        astFeatures.push(`新增 ${newFunctionCount} 个函数`);
-        detectedType = 'feat';
-        confidence = 'high';
-    }
-
-    const newClassPatterns = [
-        /class\s+\w+/g,
-        /export\s+default\s+function\s+\w+/g,
-        /export\s+(const|let|var)\s+\w+\s*=\s*\([^)]*\)\s*=>/g,
-        /export\s+(const|let|var)\s+\w+\s*=\s*React\.Component/g
-    ];
-
-    let newClassCount = 0;
-    for (const pattern of newClassPatterns) {
-        const matches = addedContent.match(pattern);
-        if (matches) {
-            newClassCount += matches.length;
-        }
-    }
-    if (newClassCount > 0) {
-        astFeatures.push(`新增 ${newClassCount} 个类/组件`);
-        if (!detectedType) {
+        if (newFunctionCount > 0) {
+            astFeatures.push(`新增 ${newFunctionCount} 个函数`);
             detectedType = 'feat';
             confidence = 'high';
         }
-    }
 
-    const cssPatterns = [
-        /\bcolor\s*:/gi,
-        /\bmargin\s*:/gi,
-        /\bpadding\s*:/gi,
-        /\bdisplay\s*:/gi,
-        /\bwidth\s*:/gi,
-        /\bheight\s*:/gi,
-        /\bfont-size\s*:/gi,
-        /\bbackground(-color)?\s*:/gi,
-        /\bborder\s*:/gi,
-        /\bposition\s*:/gi,
-        /\bflex(-grow|-shrink|-basis)?\s*:/gi,
-        /\bgrid(-template|-area|-column|-row)?\s*:/gi
-    ];
+        // 检测新增类/组件
+        const newClassCount = this.countPatternMatches(addedContent, [
+            /class\s+\w+/g,
+            /export\s+default\s+function\s+\w+/g,
+            /export\s+(const|let|var)\s+\w+\s*=\s*\([^)]*\)\s*=>/g,
+            /export\s+(const|let|var)\s+\w+\s*=\s*React\.Component/g
+        ]);
 
-    let cssMatchCount = 0;
-    for (const pattern of cssPatterns) {
-        const matches = diffContent.match(pattern);
-        if (matches) {
-            cssMatchCount += matches.length;
-        }
-    }
-    if (cssMatchCount >= 3) {
-        astFeatures.push(`检测到 ${cssMatchCount} 处 CSS 样式变更`);
-        detectedType = 'style';
-        confidence = 'high';
-    }
-
-    if (removedLines.length > 0 && addedLines.length === 0) {
-        astFeatures.push(`删除 ${removedLines.length} 行代码`);
-        if (!detectedType) {
-            detectedType = 'refactor';
-            confidence = 'medium';
-        }
-    }
-
-    if (addedLines.length > 0 && removedLines.length > 0 && !detectedType) {
-        const totalChanges = addedLines.length + removedLines.length;
-        if (totalChanges > 10) {
-            astFeatures.push(`修改 ${totalChanges} 行代码`);
-            detectedType = 'refactor';
-            confidence = 'medium';
-        } else {
-            astFeatures.push(`小幅度修改 (${totalChanges} 行)`);
-            detectedType = 'fix';
-            confidence = 'low';
-        }
-    }
-
-    if (astFeatures.length > 0) {
-        reason = `AST 分析：${astFeatures.join(', ')}`;
-    } else {
-        reason = '未检测到明显的 AST 结构变更';
-        confidence = 'low';
-    }
-
-    return {
-        type: detectedType,
-        confidence,
-        reason,
-        astFeatures
-    };
-}
-
-/**
- * 分析 diff 内容判断 commit 类型
- * @param {string} diffContent diff 内容
- * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string}} 分析结果
- */
-function analyzeDiffContent(diffContent) {
-    if (!diffContent || diffContent.length === 0) {
-        return {
-            type: 'chore',
-            confidence: 'low',
-            matchedKeywords: [],
-            reason: '无 diff 内容'
-        };
-    }
-
-    const lowerContent = diffContent.toLowerCase();
-    
-    let fixScore = 0;
-    let featScore = 0;
-    const fixMatched = [];
-    const featMatched = [];
-
-    for (const keyword of FIX_KEYWORDS) {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-        const matches = lowerContent.match(regex);
-        if (matches) {
-            fixScore += matches.length;
-            fixMatched.push(keyword);
-        }
-    }
-
-    for (const keyword of FEAT_KEYWORDS) {
-        const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-        const matches = lowerContent.match(regex);
-        if (matches) {
-            featScore += matches.length;
-            featMatched.push(keyword);
-        }
-    }
-
-    let type = 'chore';
-    let confidence = 'low';
-    let reason = '';
-
-    if (fixScore > 0 && fixScore > featScore) {
-        type = 'fix';
-        confidence = fixScore >= 3 ? 'high' : 'medium';
-        reason = `检测到 fix 关键词: ${[...new Set(fixMatched)].join(', ')}`;
-    } else if (featScore > 0 && featScore > fixScore) {
-        type = 'feat';
-        confidence = featScore >= 3 ? 'high' : 'medium';
-        reason = `检测到 feat 关键词: ${[...new Set(featMatched)].join(', ')}`;
-    } else if (fixScore > 0 && fixScore === featScore) {
-        type = 'fix';
-        confidence = 'low';
-        reason = 'fix 和 feat 关键词数量相同，优先选择 fix';
-    } else {
-        reason = '未检测到明确的 fix 或 feat 关键词';
-    }
-
-    return {
-        type,
-        confidence,
-        matchedKeywords: [...new Set([...fixMatched, ...featMatched])],
-        reason
-    };
-}
-
-/**
- * 智能分析文件变更、diff 内容和 AST 结构，推荐 Commit 类型
- * @param {Array<{files: string[], raw: string}>} changedFiles 变更文件列表
- * @param {string} diffContent diff 内容
- * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[]}} 综合分析结果
- */
-function analyzeCommitType(changedFiles, diffContent = null) {
-    if (!changedFiles || changedFiles.length === 0) {
-        return {
-            type: null,
-            confidence: 'low',
-            matchedKeywords: [],
-            reason: '无变更文件',
-            fileType: 'unknown',
-            astFeatures: []
-        };
-    }
-
-    const typeCounts = {
-        fix: 0,
-        feat: 0,
-        chore: 0,
-        docs: 0,
-        style: 0,
-        test: 0,
-        ci: 0,
-        build: 0,
-        refactor: 0
-    };
-
-    let fileType = 'unknown';
-
-    for (const change of changedFiles) {
-        const filePath = change.raw;
-        const fileName = filePath.split(/[/\\]/).pop();
-        const ext = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
-        const baseName = fileName.toLowerCase();
-
-        if (['.css', '.scss', '.less', '.sass'].includes(ext)) {
-            typeCounts.style++;
-            fileType = 'style';
-            continue;
-        }
-
-        if (baseName.match(/(\.test\.js|\.spec\.js|^test_.+\.js$)/)) {
-            typeCounts.test++;
-            fileType = 'test';
-            continue;
-        }
-
-        if (['.md', '.txt'].includes(ext) && !baseName.includes('changelog')) {
-            typeCounts.docs++;
-            fileType = 'docs';
-            continue;
-        }
-
-        if (ext === '.json' && !baseName.includes('package')) {
-            typeCounts.chore++;
-            continue;
-        }
-
-        if (baseName === 'package.json' || baseName === 'package-lock.json') {
-            typeCounts.build++;
-            fileType = 'build';
-            continue;
-        }
-
-        if (baseName === '.gitignore' || baseName === '.editorconfig') {
-            typeCounts.chore++;
-            continue;
-        }
-
-        if (filePath.includes('.github/') || baseName === '.gitlab-ci.yml' || baseName === 'jenkinsfile') {
-            typeCounts.ci++;
-            fileType = 'ci';
-            continue;
-        }
-
-        if (baseName.startsWith('.env') || filePath.includes('/config/') || filePath.includes('\\config\\')) {
-            typeCounts.chore++;
-            continue;
-        }
-
-        if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
-            typeCounts.feat++;
-            fileType = 'code';
-            continue;
-        }
-
-        typeCounts.chore++;
-    }
-
-    let astResult = null;
-    if (diffContent) {
-        astResult = analyzeASTChange(diffContent);
-    }
-
-    let diffResult = null;
-    if (diffContent) {
-        diffResult = analyzeDiffContent(diffContent);
-    }
-
-    let finalType = null;
-    let confidence = 'low';
-    let matchedKeywords = [];
-    let reason = '';
-    const astFeatures = astResult?.astFeatures || [];
-
-    if (astResult && astResult.type && astResult.confidence === 'high') {
-        finalType = astResult.type;
-        confidence = 'high';
-        reason = astResult.reason;
-    }
-    else if (astResult && astResult.type && astResult.confidence === 'medium') {
-        if (diffResult && diffResult.matchedKeywords.length > 0) {
-            if (diffResult.confidence === 'high') {
-                finalType = diffResult.type;
+        if (newClassCount > 0) {
+            astFeatures.push(`新增 ${newClassCount} 个类/组件`);
+            if (!detectedType) {
+                detectedType = 'feat';
                 confidence = 'high';
-                reason = diffResult.reason;
+            }
+        }
+
+        // 检测 CSS 样式变更
+        const cssMatchCount = this.countPatternMatches(diffContent, [
+            /\bcolor\s*:/gi, /\bmargin\s*:/gi, /\bpadding\s*:/gi,
+            /\bdisplay\s*:/gi, /\bwidth\s*:/gi, /\bheight\s*:/gi,
+            /\bfont-size\s*:/gi, /\bbackground(-color)?\s*:/gi,
+            /\bborder\s*:/gi, /\bposition\s*:/gi,
+            /\bflex(-grow|-shrink|-basis)?\s*:/gi,
+            /\bgrid(-template|-area|-column|-row)?\s*:/gi
+        ]);
+
+        if (cssMatchCount >= 3) {
+            astFeatures.push(`检测到 ${cssMatchCount} 处 CSS 样式变更`);
+            detectedType = 'style';
+            confidence = 'high';
+        }
+
+        // 检测纯删除操作
+        if (removedLines.length > 0 && addedLines.length === 0) {
+            astFeatures.push(`删除 ${removedLines.length} 行代码`);
+            if (!detectedType) {
+                detectedType = 'refactor';
+                confidence = 'medium';
+            }
+        }
+
+        // 检测修改操作
+        if (addedLines.length > 0 && removedLines.length > 0 && !detectedType) {
+            const totalChanges = addedLines.length + removedLines.length;
+            if (totalChanges > 10) {
+                astFeatures.push(`修改 ${totalChanges} 行代码`);
+                detectedType = 'refactor';
+                confidence = 'medium';
+            } else {
+                astFeatures.push(`小幅度修改 (${totalChanges} 行)`);
+                detectedType = 'fix';
+                confidence = 'low';
+            }
+        }
+
+        return {
+            type: detectedType,
+            confidence,
+            reason: astFeatures.length > 0 
+                ? `AST 分析：${astFeatures.join(', ')}`
+                : '未检测到明显的 AST 结构变更',
+            astFeatures
+        };
+    }
+
+    /**
+     * 统计多个正则表达式的匹配总数
+     * @param {string} content 待匹配内容
+     * @param {RegExp[]} patterns 正则表达式数组
+     * @returns {number} 匹配总数
+     */
+    static countPatternMatches(content, patterns) {
+        let totalCount = 0;
+        for (const pattern of patterns) {
+            const matches = content.match(pattern);
+            if (matches) {
+                totalCount += matches.length;
+            }
+        }
+        return totalCount;
+    }
+}
+
+// ==================== Diff 分析器 ====================
+
+/**
+ * Diff 内容分析器
+ * 通过关键词匹配分析 Commit 类型
+ */
+class DiffAnalyzer {
+    /**
+     * 分析 diff 内容判断 commit 类型
+     * @param {string} diffContent diff 内容
+     * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string}} 分析结果
+     */
+    static analyze(diffContent) {
+        if (!diffContent || diffContent.length === 0) {
+            return {
+                type: 'chore',
+                confidence: 'low',
+                matchedKeywords: [],
+                reason: '无 diff 内容'
+            };
+        }
+
+        const lowerContent = diffContent.toLowerCase();
+        
+        // 统计 fix 和 feat 关键词匹配
+        const fixMatched = this.matchKeywords(lowerContent, FIX_KEYWORDS);
+        const featMatched = this.matchKeywords(lowerContent, FEAT_KEYWORDS);
+
+        const fixScore = fixMatched.length;
+        const featScore = featMatched.length;
+
+        // 根据匹配结果判断类型
+        let type = 'chore';
+        let confidence = 'low';
+        let reason = '';
+
+        if (fixScore > 0 && fixScore > featScore) {
+            type = 'fix';
+            confidence = fixScore >= 3 ? 'high' : 'medium';
+            reason = `检测到 fix 关键词：${[...new Set(fixMatched)].join(', ')}`;
+        } else if (featScore > 0 && featScore > fixScore) {
+            type = 'feat';
+            confidence = featScore >= 3 ? 'high' : 'medium';
+            reason = `检测到 feat 关键词：${[...new Set(featMatched)].join(', ')}`;
+        } else if (fixScore > 0 && fixScore === featScore) {
+            type = 'fix';
+            confidence = 'low';
+            reason = 'fix 和 feat 关键词数量相同，优先选择 fix';
+        } else {
+            reason = '未检测到明确的 fix 或 feat 关键词';
+        }
+
+        return {
+            type,
+            confidence,
+            matchedKeywords: [...new Set([...fixMatched, ...featMatched])],
+            reason
+        };
+    }
+
+    /**
+     * 匹配关键词
+     * @param {string} content 小写内容
+     * @param {string[]} keywords 关键词列表
+     * @returns {string[]} 匹配到的关键词
+     */
+    static matchKeywords(content, keywords) {
+        const matched = [];
+        for (const keyword of keywords) {
+            const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+            const matches = content.match(regex);
+            if (matches) {
+                matched.push(...Array(matches.length).fill(keyword));
+            }
+        }
+        return matched;
+    }
+}
+
+// ==================== 智能类型检测 ====================
+
+/**
+ * 智能 Commit 类型检测器
+ * 综合分析文件类型、diff 内容和 AST 结构
+ */
+class CommitTypeDetector {
+    /**
+     * 智能分析文件变更、diff 内容和 AST 结构，推荐 Commit 类型
+     * @param {Array<{files: string[], raw: string}>} changedFiles 变更文件列表
+     * @param {string} diffContent diff 内容
+     * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[]}} 综合分析结果
+     */
+    static analyze(changedFiles, diffContent = null) {
+        if (!changedFiles || changedFiles.length === 0) {
+            return {
+                type: null,
+                confidence: 'low',
+                matchedKeywords: [],
+                reason: '无变更文件',
+                fileType: 'unknown',
+                astFeatures: []
+            };
+        }
+
+        // 文件类型分析
+        const typeCounts = this.analyzeFileTypes(changedFiles);
+        
+        // AST 分析
+        const astResult = ConfigManager.get('astAnalysisEnabled', true) && diffContent
+            ? ASTAnalyzer.analyze(diffContent)
+            : null;
+
+        // Diff 关键词分析
+        const diffResult = diffContent ? DiffAnalyzer.analyze(diffContent) : null;
+
+        // 综合判断最终类型
+        return this.makeFinalDecision(typeCounts, astResult, diffResult);
+    }
+
+    /**
+     * 分析文件类型
+     * @param {Array<{files: string[], raw: string}>} changedFiles 变更文件列表
+     * @returns {Object} 类型计数字典
+     */
+    static analyzeFileTypes(changedFiles) {
+        const typeCounts = {
+            fix: 0, feat: 0, chore: 0, docs: 0, style: 0,
+            test: 0, ci: 0, build: 0, refactor: 0
+        };
+
+        for (const change of changedFiles) {
+            const filePath = change.raw;
+            const fileName = filePath.split(/[/\\]/).pop();
+            const ext = fileName.includes('.') 
+                ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() 
+                : '';
+            const baseName = fileName.toLowerCase();
+
+            // 样式文件
+            if (['.css', '.scss', '.less', '.sass'].includes(ext)) {
+                typeCounts.style++;
+                continue;
+            }
+
+            // 测试文件
+            if (baseName.match(/(\.test\.js|\.spec\.js|^test_.+\.js$)/)) {
+                typeCounts.test++;
+                continue;
+            }
+
+            // 文档文件
+            if (['.md', '.txt'].includes(ext) && !baseName.includes('changelog')) {
+                typeCounts.docs++;
+                continue;
+            }
+
+            // 配置文件
+            if (ext === '.json' && !baseName.includes('package')) {
+                typeCounts.chore++;
+                continue;
+            }
+
+            // 构建配置
+            if (baseName === 'package.json' || baseName === 'package-lock.json') {
+                typeCounts.build++;
+                continue;
+            }
+
+            // 编辑器配置
+            if (baseName === '.gitignore' || baseName === '.editorconfig') {
+                typeCounts.chore++;
+                continue;
+            }
+
+            // CI/CD 配置
+            if (filePath.includes('.github/') || 
+                baseName === '.gitlab-ci.yml' || 
+                baseName === 'jenkinsfile') {
+                typeCounts.ci++;
+                continue;
+            }
+
+            // 环境变量和配置文件
+            if (baseName.startsWith('.env') || filePath.includes('/config/')) {
+                typeCounts.chore++;
+                continue;
+            }
+
+            // 源代码文件
+            if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // 其他文件
+            typeCounts.chore++;
+        }
+
+        return typeCounts;
+    }
+
+    /**
+     * 综合判断最终 Commit 类型
+     * @param {Object} typeCounts 文件类型计数
+     * @param {Object|null} astResult AST 分析结果
+     * @param {Object|null} diffResult Diff 分析结果
+     * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[]}}
+     */
+    static makeFinalDecision(typeCounts, astResult, diffResult) {
+        let finalType = null;
+        let confidence = 'low';
+        let matchedKeywords = [];
+        let reason = '';
+        const astFeatures = astResult?.astFeatures || [];
+
+        // 优先级 1: AST 高置信度
+        if (astResult?.type && astResult.confidence === 'high') {
+            finalType = astResult.type;
+            confidence = 'high';
+            reason = astResult.reason;
+        }
+        // 优先级 2: AST 中置信度 + Diff 关键词
+        else if (astResult?.type && astResult.confidence === 'medium') {
+            if (diffResult?.matchedKeywords.length > 0) {
+                if (diffResult.confidence === 'high') {
+                    finalType = diffResult.type;
+                    confidence = 'high';
+                    reason = diffResult.reason;
+                } else {
+                    finalType = astResult.type;
+                    confidence = 'medium';
+                    reason = `${astResult.reason}; ${diffResult.reason}`;
+                }
             } else {
                 finalType = astResult.type;
                 confidence = 'medium';
-                reason = `${astResult.reason}; ${diffResult.reason}`;
+                reason = astResult.reason;
             }
-        } else {
-            finalType = astResult.type;
-            confidence = 'medium';
-            reason = astResult.reason;
+            matchedKeywords = diffResult?.matchedKeywords || [];
         }
-        matchedKeywords = diffResult?.matchedKeywords || [];
-    }
-    else if (diffResult && diffResult.matchedKeywords.length > 0) {
-        finalType = diffResult.type;
-        confidence = diffResult.confidence;
-        reason = diffResult.reason;
-        matchedKeywords = diffResult.matchedKeywords;
-    }
-    else {
-        let maxFileType = null;
-        let maxFileCount = 0;
-        for (const [type, count] of Object.entries(typeCounts)) {
-            if (count > maxFileCount) {
-                maxFileCount = count;
-                maxFileType = type;
-            }
+        // 优先级 3: Diff 关键词
+        else if (diffResult?.matchedKeywords.length > 0) {
+            finalType = diffResult.type;
+            confidence = diffResult.confidence;
+            reason = diffResult.reason;
+            matchedKeywords = diffResult.matchedKeywords;
         }
-        finalType = maxFileType;
-        reason = `基于文件类型分析：${maxFileType} (${maxFileCount} 个文件)`;
-        confidence = maxFileCount >= 3 ? 'medium' : 'low';
-    }
+        // 优先级 4: 文件类型分析
+        else {
+            const [maxFileType, maxFileCount] = Object.entries(typeCounts)
+                .reduce((max, [type, count]) => count > max[1] ? [type, count] : max, ['', 0]);
+            
+            finalType = maxFileType;
+            reason = `基于文件类型分析：${maxFileType} (${maxFileCount} 个文件)`;
+            confidence = maxFileCount >= 3 ? 'medium' : 'low';
+        }
 
-    return {
-        type: finalType,
-        confidence,
-        matchedKeywords,
-        reason,
-        fileType,
-        astFeatures
-    };
+        return {
+            type: finalType,
+            confidence,
+            matchedKeywords,
+            reason,
+            fileType: 'code',
+            astFeatures
+        };
+    }
 }
+
+// ==================== 偏好管理 ====================
 
 /**
- * 智能检测 Commit 类型
- * 自动分析当前 Git 变更和 diff 内容，推荐合适的 Commit 类型
+ * 恢复用户偏好设置
  */
-async function generateSmartCommit() {
-    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-    const defaultStyle = config.get('defaultStyle', 'sao');
-    const defaultType = config.get('defaultType', 'feat');
-    const autoInsert = config.get('autoInsert', true);
-
-    const initialStyle = currentStyle || defaultStyle;
-    const initialType = currentType || defaultType;
-
-    // 显示正在分析的状态
-    vscode.window.setStatusBarMessage('🔍 正在智能分析变更文件和 diff 内容...', 2000);
-
-    // 获取变更文件和 diff 内容
-    const changedFiles = await getChangedFiles();
-    const diffContent = await getDiffContent();
-
-    if (!changedFiles || changedFiles.length === 0) {
-        vscode.window.showWarningMessage('未检测到 Git 变更文件，将使用手动选择模式');
-        return await showSaoHuaGenerator();
-    }
-
-    // 智能分析 Commit 类型（结合文件和 diff 内容）
-    const analysisResult = analyzeCommitType(changedFiles, diffContent);
-    
-    if (!analysisResult || !analysisResult.type) {
-        vscode.window.showWarningMessage('智能检测失败，将使用手动选择模式');
-        return await showSaoHuaGenerator();
-    }
-
-    currentType = analysisResult.type;
-    await persistPreferences();
-
-    // 显示详细的智能检测信息
-    const confidenceEmoji = analysisResult.confidence === 'high' ? '🎯' : 
-                           analysisResult.confidence === 'medium' ? '✨' : '💡';
-    const detailMessage = [
-        `类型: ${analysisResult.type}`,
-        `置信度: ${analysisResult.confidence}`,
-        `分析: ${analysisResult.reason}`,
-        analysisResult.astFeatures && analysisResult.astFeatures.length > 0 
-            ? `AST: ${analysisResult.astFeatures.join(', ')}` 
-            : ''
-    ].filter(Boolean).join('\n');
-
-    vscode.window.showInformationMessage(
-        `${confidenceEmoji} 智能检测推荐类型: ${analysisResult.type}`,
-        { modal: false, detail: detailMessage }
-    );
-    playSoundEffect('generate');
-
-    // 继续选择风格和描述
-    const styleItems = styles.map(s => ({
-        label: `${s.emoji} ${s.label}`,
-        value: s.value,
-        picked: s.value === initialStyle
-    }));
-
-    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
-        placeHolder: '选择风格模式',
-        ignoreFocusOut: true
-    });
-
-    if (!selectedStyle) {
-        return;
-    }
-    currentStyle = selectedStyle.value;
-    await persistPreferences();
-
-    let description = await getDescriptionWithHistory();
-
-    let message;
-    let usedCustom = false;
-    if (shouldUseCustomSaoHua()) {
-        const customMessage = generateCustomSaoHuaMessage();
-        if (customMessage) {
-            message = customMessage;
-            usedCustom = true;
-        }
-    }
-    if (!message) {
-        message = generateCommitMessage(currentType, currentStyle, description);
-    }
-
-    const customLabel = usedCustom ? ' (自定义)' : '';
-    const customEmoji = usedCustom ? '✨ ' : '';
-
-    if (autoInsert) {
-        const confidenceEmoji = analysisResult.confidence === 'high' ? '🎯' : 
-                               analysisResult.confidence === 'medium' ? '✨' : '💡';
-        const result = await vscode.window.showInformationMessage(
-            `${customEmoji}生成成功！类型: ${currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
-            { modal: true, detail: message },
-            '插入到 Git'
-        );
-
-        if (result === '插入到 Git') {
-            await insertToGitInput(message, true);
-        } else {
-            await vscode.env.clipboard.writeText(message);
-            playSoundEffect('copy');
-            vscode.window.showInformationMessage('已复制到剪贴板');
-        }
-    } else {
-        await vscode.env.clipboard.writeText(message);
-        playSoundEffect('copy');
-        const confidenceEmoji = analysisResult.confidence === 'high' ? '🎯' : 
-                               analysisResult.confidence === 'medium' ? '✨' : '💡';
-        await vscode.window.showInformationMessage(
-            `${customEmoji}已复制到剪贴板！类型: ${currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
-            { modal: true, detail: message }
-        );
-    }
-
-    await recordGeneration(currentType, currentStyle);
-}
-
-/**
- * 播放音效反馈
- * - 状态栏消息 + emoji 动画作为视觉反馈
- * - 不同通知级别触发系统通知音
- * @param {'generate' | 'copy' | 'success'} type 音效类型
- */
-function playSoundEffect(type) {
-    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-    const enableSoundEffects = config.get('enableSoundEffects', true);
-
-    if (!enableSoundEffects) {
-        return;
-    }
-
-    const emojiAnimations = {
-        generate: ['🎯', '🎯', '✨'],
-        copy: ['📋', '📋', '✅'],
-        success: ['🎉', '🎉', '🎊']
-    };
-
-    const statusMessages = {
-        generate: '正在生成骚话...',
-        copy: '已复制到剪贴板',
-        success: '生成成功！'
-    };
-
-    const notificationLevels = {
-        generate: vscode.window.showInformationMessage,
-        copy: vscode.window.showInformationMessage,
-        success: vscode.window.showInformationMessage
-    };
-
-    const emojis = emojiAnimations[type] || ['✨'];
-    const statusMsg = statusMessages[type] || '完成';
-
-    let index = 0;
-    const animation = setInterval(() => {
-        if (index >= emojis.length) {
-            clearInterval(animation);
-            vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[emojis.length - 1]}`, 3000);
-            return;
-        }
-        vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[index]}`, 500);
-        index++;
-    }, 300);
-
-    const notifyFn = notificationLevels[type];
-    if (type === 'success') {
-        notifyFn('✨ 骚话生成成功！', { modal: false });
-    } else if (type === 'copy') {
-        notifyFn('📋 已复制到剪贴板', { modal: false });
-    }
-}
-
-function activate(context) {
-    console.log('Git Commit 骚话生成器 已激活!');
-
-    extensionContext = context;
-    restorePreferences();
-
-    const generateCommand = vscode.commands.registerCommand('gitCommitSaoHua.generate', async () => {
-        await showSaoHuaGenerator();
-    });
-
-    const generateSmartCommand = vscode.commands.registerCommand('gitCommitSaoHua.generateSmart', async () => {
-        await generateSmartCommit();
-    });
-
-    const generateRandomCommand = vscode.commands.registerCommand('gitCommitSaoHua.generateRandom', async () => {
-        const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-        const autoInsert = config.get('autoInsert', true);
-
-        let message;
-        let usedCustom = false;
-        let result;
-
-        if (shouldUseCustomSaoHua()) {
-            const customMessage = generateCustomSaoHuaMessage();
-            if (customMessage) {
-                message = customMessage;
-                usedCustom = true;
-                const customSaoHua = getRandomCustomSaoHua();
-                if (customSaoHua) {
-                    currentType = customSaoHua.type;
-                    currentStyle = customSaoHua.style;
-                    result = { type: customSaoHua.type, style: customSaoHua.style };
-                }
-            }
-        }
-
-        if (!message) {
-            result = getRandomSaoHua();
-            currentType = result.type;
-            currentStyle = result.style;
-            await persistPreferences();
-            message = generateCommitMessage(result.type, result.style);
-        } else {
-            await persistPreferences();
-        }
-
-        const typeLabel = usedCustom ? `${result.type} (自定义)` : `${result.type}`;
-
-        if (autoInsert) {
-            await vscode.window.showInformationMessage(`随机生成: ${typeLabel} ${usedCustom ? '✨' : ''}`, {
-                modal: true,
-                detail: message
-            });
-            playSoundEffect('success');
-            await insertToGitInput(message, true);
-        } else {
-            await vscode.env.clipboard.writeText(message);
-            playSoundEffect('copy');
-            await vscode.window.showInformationMessage(`已复制到剪贴板！类型: ${typeLabel} ${usedCustom ? '✨' : ''}`, {
-                modal: true,
-                detail: message
-            });
-        }
-
-        if (result) {
-            await recordGeneration(result.type, result.style);
-        }
-    });
-
-    const selectTypeCommand = vscode.commands.registerCommand('gitCommitSaoHua.selectType', async () => {
-        const items = commitTypes.map(t => ({
-            label: t.label,
-            description: t.desc,
-            value: t.value
-        }));
-
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: '选择 Commit 类型'
-        });
-
-        if (selected) {
-            currentType = selected.value;
-            await persistPreferences();
-            vscode.window.showInformationMessage(`已选择类型: ${selected.label}`);
-        }
-    });
-
-    const selectStyleCommand = vscode.commands.registerCommand('gitCommitSaoHua.selectStyle', async () => {
-        const items = styles.map(s => ({
-            label: `${s.emoji} ${s.label}`,
-            value: s.value
-        }));
-
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: '选择风格模式'
-        });
-
-        if (selected) {
-            currentStyle = selected.value;
-            await persistPreferences();
-            vscode.window.showInformationMessage(`已选择风格: ${selected.label}`);
-        }
-    });
-
-    const resetPreferencesCommand = vscode.commands.registerCommand('gitCommitSaoHua.resetPreferences', async () => {
-        resetPreferencesToConfig();
-        await clearPersistedPreferences();
-        vscode.window.showInformationMessage(`已重置偏好：${currentType} / ${getStyleLabel(currentStyle)}`);
-    });
-
-    const clearDescriptionHistoryCommand = vscode.commands.registerCommand('gitCommitSaoHua.clearDescriptionHistory', async () => {
-        await clearDescriptionHistory();
-        vscode.window.showInformationMessage('已清空描述历史记录');
-    });
-
-    const openKeybindingsCommand = vscode.commands.registerCommand('gitCommitSaoHua.openKeybindings', async () => {
-        const keybindingsConfig = [
-            '{',
-            '    "key": "ctrl+shift+g",',
-            '    "command": "gitCommitSaoHua.generate",',
-            '    "when": "editorTextFocus"',
-            '}'
-        ].join('\n');
-
-        const doc = await vscode.workspace.openTextDocument({
-            content: `// 在此文件中添加以下配置来自定义快捷键:\n//
-// 示例:\n// ${keybindingsConfig}\n//
-// 可用命令:\n// - gitCommitSaoHua.generate: 生成骚话 Commit\n// - gitCommitSaoHua.generateSmart: 智能检测生成 Commit\n// - gitCommitSaoHua.generateRandom: 随机生成 Commit\n// - gitCommitSaoHua.selectType: 选择 Commit 类型\n// - gitCommitSaoHua.selectStyle: 选择风格模式\n// - gitCommitSaoHua.resetPreferences: 重置类型/风格偏好\n`,
-            language: 'json'
-        });
-
-        await vscode.window.showTextDocument(doc);
-        vscode.window.showInformationMessage('请在打开的文件中添加快捷键配置，或打开: 文件 > 首选项 > 快捷键 进行设置');
-    });
-
-    const manageCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.manageCustomSaoHua', async () => {
-        await showCustomSaoHuaManager();
-    });
-
-    const addCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.addCustomSaoHua', async () => {
-        await addSingleCustomSaoHua();
-    });
-
-    const clearCustomSaoHuaCommand = vscode.commands.registerCommand('gitCommitSaoHua.clearCustomSaoHua', async () => {
-        const list = getCustomSaoHuaList();
-        if (list.length === 0) {
-            vscode.window.showInformationMessage('暂无自定义骚话');
-            return;
-        }
-
-        const result = await vscode.window.showWarningMessage(
-            `确定要清空所有 ${list.length} 条自定义骚话吗？`,
-            { modal: true },
-            '确定清空',
-            '取消'
-        );
-
-        if (result === '确定清空') {
-            await clearAllCustomSaoHua();
-            vscode.window.showInformationMessage('已清空所有自定义骚话');
-        }
-    });
-
-    const showStatisticsCommand = vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', async () => {
-        await showStatistics();
-    });
-
-    context.subscriptions.push(generateCommand);
-    context.subscriptions.push(generateSmartCommand);
-    context.subscriptions.push(generateRandomCommand);
-    context.subscriptions.push(selectTypeCommand);
-    context.subscriptions.push(selectStyleCommand);
-    context.subscriptions.push(resetPreferencesCommand);
-    context.subscriptions.push(clearDescriptionHistoryCommand);
-    context.subscriptions.push(openKeybindingsCommand);
-    context.subscriptions.push(manageCustomSaoHuaCommand);
-    context.subscriptions.push(addCustomSaoHuaCommand);
-    context.subscriptions.push(clearCustomSaoHuaCommand);
-    context.subscriptions.push(showStatisticsCommand);
-}
-
-async function showSaoHuaGenerator() {
-    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-    const defaultStyle = config.get('defaultStyle', 'sao');
-    const defaultType = config.get('defaultType', 'feat');
-    const autoInsert = config.get('autoInsert', true);
-
-    const initialType = currentType || defaultType;
-    const initialStyle = currentStyle || defaultStyle;
-
-    // 让用户选择使用智能检测还是手动选择
-    const modeItems = [
-        { label: '$(search) 智能检测', description: '自动分析 Git 变更，推荐 Commit 类型', value: 'smart' },
-        { label: '$(list-flat) 手动选择', description: '手动选择 Commit 类型', value: 'manual' }
-    ];
-
-    const selectedMode = await vscode.window.showQuickPick(modeItems, {
-        placeHolder: '选择生成方式',
-        ignoreFocusOut: true
-    });
-
-    if (!selectedMode) {
-        return;
-    }
-
-    // 如果选择智能检测，调用智能检测功能
-    if (selectedMode.value === 'smart') {
-        return await generateSmartCommit();
-    }
-
-    // 手动选择模式
-
-    const typeItems = commitTypes.map(t => ({
-        label: t.label,
-        description: t.desc,
-        value: t.value,
-        picked: t.value === initialType
-    }));
-
-    const selectedType = await vscode.window.showQuickPick(typeItems, {
-        placeHolder: '选择 Commit 类型',
-        ignoreFocusOut: true
-    });
-
-    if (!selectedType) {
-        return;
-    }
-    currentType = selectedType.value;
-    await persistPreferences();
-
-    const styleItems = styles.map(s => ({
-        label: `${s.emoji} ${s.label}`,
-        value: s.value,
-        picked: s.value === initialStyle
-    }));
-
-    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
-        placeHolder: '选择风格模式',
-        ignoreFocusOut: true
-    });
-
-    if (!selectedStyle) {
-        return;
-    }
-    currentStyle = selectedStyle.value;
-    await persistPreferences();
-
-    let description = await getDescriptionWithHistory();
-
-    let message;
-    let usedCustom = false;
-    if (shouldUseCustomSaoHua()) {
-        const customMessage = generateCustomSaoHuaMessage();
-        if (customMessage) {
-            message = customMessage;
-            usedCustom = true;
-        }
-    }
-    if (!message) {
-        message = generateCommitMessage(currentType, currentStyle, description);
-    }
-
-    const customLabel = usedCustom ? ' (自定义)' : '';
-    const customEmoji = usedCustom ? '✨ ' : '';
-
-    playSoundEffect('generate');
-
-    if (autoInsert) {
-        const result = await vscode.window.showInformationMessage(
-            `${customEmoji}生成成功！类型: ${currentType}${customLabel}`,
-            { modal: true, detail: message },
-            '插入到 Git'
-        );
-
-        if (result === '插入到 Git') {
-            await insertToGitInput(message, true);
-        } else {
-            await vscode.env.clipboard.writeText(message);
-            playSoundEffect('copy');
-            vscode.window.showInformationMessage('已复制到剪贴板');
-        }
-    } else {
-        await vscode.env.clipboard.writeText(message);
-        playSoundEffect('copy');
-        await vscode.window.showInformationMessage(
-            `${customEmoji}已复制到剪贴板！类型: ${currentType}${customLabel}`,
-            { modal: true, detail: message }
-        );
-    }
-
-    await recordGeneration(currentType, currentStyle);
-}
-
 function restorePreferences() {
-    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-    const defaultType = config.get('defaultType', 'feat');
-    const defaultStyle = config.get('defaultStyle', 'sao');
+    const defaults = ConfigManager.getDefaults();
+    const savedType = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.type);
+    const savedStyle = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.style);
 
-    const savedType = extensionContext?.workspaceState.get(STATE_KEYS.type);
-    const savedStyle = extensionContext?.workspaceState.get(STATE_KEYS.style);
-
-    currentType = isValidType(savedType) ? savedType : defaultType;
-    currentStyle = isValidStyle(savedStyle) ? savedStyle : defaultStyle;
+    PluginState.currentType = isValidType(savedType) ? savedType : defaults.defaultType;
+    PluginState.currentStyle = isValidStyle(savedStyle) ? savedStyle : defaults.defaultStyle;
 }
 
+/**
+ * 重置偏好到配置默认值
+ */
 function resetPreferencesToConfig() {
-    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
-    currentType = config.get('defaultType', 'feat');
-    currentStyle = config.get('defaultStyle', 'sao');
+    const defaults = ConfigManager.getDefaults();
+    PluginState.currentType = defaults.defaultType;
+    PluginState.currentStyle = defaults.defaultStyle;
 }
 
+/**
+ * 持久化偏好设置
+ */
 async function persistPreferences() {
-    if (!extensionContext) {
-        return;
-    }
-
-    await extensionContext.workspaceState.update(STATE_KEYS.type, currentType);
-    await extensionContext.workspaceState.update(STATE_KEYS.style, currentStyle);
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.type, PluginState.currentType);
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.style, PluginState.currentStyle);
 }
 
+/**
+ * 清除持久化偏好
+ */
 async function clearPersistedPreferences() {
-    if (!extensionContext) {
-        return;
-    }
-
-    await extensionContext.workspaceState.update(STATE_KEYS.type, undefined);
-    await extensionContext.workspaceState.update(STATE_KEYS.style, undefined);
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.type, undefined);
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.style, undefined);
 }
 
+/**
+ * 验证 Commit 类型是否有效
+ * @param {string} type 类型值
+ * @returns {boolean} 是否有效
+ */
 function isValidType(type) {
     return commitTypes.some(item => item.value === type);
 }
 
+/**
+ * 验证风格是否有效
+ * @param {string} styleKey 风格值
+ * @returns {boolean} 是否有效
+ */
 function isValidStyle(styleKey) {
     return styles.some(item => item.value === styleKey);
 }
 
+/**
+ * 获取风格标签
+ * @param {string} styleKey 风格值
+ * @returns {string} 风格标签
+ */
 function getStyleLabel(styleKey) {
     const style = styles.find(s => s.value === styleKey);
     return style ? `${style.emoji} ${style.label}` : styleKey;
 }
+
+// ==================== 自定义骚话管理 ====================
 
 /**
  * 获取自定义骚话列表
  * @returns {Array<{type: string, style: string, content: string}>} 自定义骚话列表
  */
 function getCustomSaoHuaList() {
-    return extensionContext?.workspaceState.get(STATE_KEYS.customSaoHua) || [];
+    return PluginState.extensionContext?.workspaceState.get(STATE_KEYS.customSaoHua) || [];
 }
 
 /**
@@ -1154,10 +814,8 @@ function getCustomSaoHuaList() {
  * @param {Array} list 自定义骚话列表
  */
 async function saveCustomSaoHuaList(list) {
-    if (!extensionContext) {
-        return;
-    }
-    await extensionContext.workspaceState.update(STATE_KEYS.customSaoHua, list);
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.customSaoHua, list);
 }
 
 /**
@@ -1233,7 +891,7 @@ async function importCustomSaoHua(jsonData) {
             message: `成功导入 ${validItems.length} 条自定义骚话` 
         };
     } catch (error) {
-        return { success: false, count: 0, message: `导入失败: ${error.message}` };
+        return { success: false, count: 0, message: `导入失败：${error.message}` };
     }
 }
 
@@ -1243,9 +901,7 @@ async function importCustomSaoHua(jsonData) {
  */
 function getRandomCustomSaoHua() {
     const list = getCustomSaoHuaList();
-    if (list.length === 0) {
-        return null;
-    }
+    if (list.length === 0) return null;
     return list[Math.floor(Math.random() * list.length)];
 }
 
@@ -1255,24 +911,62 @@ function getRandomCustomSaoHua() {
  */
 function generateCustomSaoHuaMessage() {
     const customSaoHua = getRandomCustomSaoHua();
-    if (!customSaoHua) {
-        return null;
-    }
+    if (!customSaoHua) return null;
     return generateCommitMessage(customSaoHua.type, customSaoHua.style, customSaoHua.content);
 }
 
 /**
- * 检查是否应使用自定义骚话（30% 概率）
+ * 检查是否应使用自定义骚话
  * @returns {boolean} 是否使用自定义骚话
  */
 function shouldUseCustomSaoHua() {
     const list = getCustomSaoHuaList();
-    if (list.length === 0) {
-        return false;
-    }
-    return Math.random() < CUSTOM_SAO_HUA_PROBABILITY;
+    if (list.length === 0) return false;
+    const probability = ConfigManager.get('customSaoHuaProbability', 0.3);
+    return Math.random() < probability;
 }
 
+// ==================== 描述历史管理 ====================
+
+/**
+ * 获取描述历史记录
+ * @returns {string[]} 描述历史
+ */
+function getDescriptionHistory() {
+    return PluginState.extensionContext?.workspaceState.get(STATE_KEYS.descriptionHistory) || [];
+}
+
+/**
+ * 保存描述到历史
+ * @param {string} description 描述内容
+ */
+async function saveDescriptionToHistory(description) {
+    if (!PluginState.extensionContext || !description) return;
+
+    let history = getDescriptionHistory();
+    history = history.filter(d => d !== description);
+    history.unshift(description);
+
+    const maxCount = ConfigManager.get('maxHistoryCount', 10);
+    if (history.length > maxCount) {
+        history = history.slice(0, maxCount);
+    }
+
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, history);
+}
+
+/**
+ * 清空描述历史
+ */
+async function clearDescriptionHistory() {
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, []);
+}
+
+/**
+ * 获取描述（带历史记录）
+ * @returns {Promise<string|undefined>} 描述内容
+ */
 async function getDescriptionWithHistory() {
     const history = getDescriptionHistory();
 
@@ -1298,20 +992,14 @@ async function getDescriptionWithHistory() {
         ignoreFocusOut: true
     });
 
-    if (!selected) {
-        return undefined;
-    }
+    if (!selected) return undefined;
 
     if (selected.kind === 'history') {
         const pickedDesc = await vscode.window.showQuickPick(historyItems, {
             placeHolder: '选择最近使用的描述',
             ignoreFocusOut: true
         });
-
-        if (pickedDesc) {
-            return pickedDesc.label;
-        }
-        return undefined;
+        return pickedDesc?.label;
     }
 
     const newDescription = await vscode.window.showInputBox({
@@ -1326,65 +1014,28 @@ async function getDescriptionWithHistory() {
     return newDescription;
 }
 
-function getDescriptionHistory() {
-    return extensionContext?.workspaceState.get(STATE_KEYS.descriptionHistory) || [];
-}
+// ==================== Git 输入框插入 ====================
 
-async function saveDescriptionToHistory(description) {
-    if (!extensionContext || !description) {
-        return;
-    }
-
-    let history = getDescriptionHistory();
-    history = history.filter(d => d !== description);
-    history.unshift(description);
-
-    if (history.length > MAX_HISTORY_COUNT) {
-        history = history.slice(0, MAX_HISTORY_COUNT);
-    }
-
-    await extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, history);
-}
-
-async function clearDescriptionHistory() {
-    if (!extensionContext) {
-        return;
-    }
-
-    await extensionContext.workspaceState.update(STATE_KEYS.descriptionHistory, []);
-}
-
+/**
+ * 插入消息到 Git 输入框
+ * @param {string} message 消息内容
+ * @param {boolean} tryInsert 是否尝试插入
+ */
 async function insertToGitInput(message, tryInsert = true) {
     if (!tryInsert) {
         await vscode.env.clipboard.writeText(message);
-        playSoundEffect('copy');
         vscode.window.showInformationMessage('已复制到剪贴板');
         return;
     }
 
     try {
-        const gitExtension = vscode.extensions.getExtension('vscode.git');
-        if (!gitExtension) {
-            await fallbackToClipboard(message, '未找到 Git 扩展');
+        const git = await GitExtensionManager.getGitAPI();
+        if (!git) {
+            await GitExtensionManager.fallbackToClipboard(message, '未找到 Git 扩展');
             return;
         }
 
-        if (!gitExtension.isActive) {
-            try {
-                await gitExtension.activate();
-            } catch (e) {
-                await fallbackToClipboard(message, 'Git 扩展激活失败');
-                return;
-            }
-        }
-
-        const git = gitExtension.exports.getAPI(1);
-        if (!git || !git.repositories || git.repositories.length === 0) {
-            await fallbackToClipboard(message, '未找到 Git 仓库');
-            return;
-        }
-
-        const repos = git.repositories;
+        const repos = git.api.repositories;
         let targetRepo = null;
 
         if (repos.length === 1) {
@@ -1407,24 +1058,29 @@ async function insertToGitInput(message, tryInsert = true) {
         }
 
         if (!targetRepo) {
-            await fallbackToClipboard(message, '未选择仓库');
+            await GitExtensionManager.fallbackToClipboard(message, '未选择仓库');
             return;
         }
 
         const inputBox = targetRepo.inputBox;
         if (inputBox) {
             inputBox.value = message;
-            playSoundEffect('success');
             vscode.window.showInformationMessage('✓ 已插入到 Git 输入框');
             return;
         }
 
-        await fallbackToClipboard(message, '无法获取 Git 输入框');
+        await GitExtensionManager.fallbackToClipboard(message, '无法获取 Git 输入框');
     } catch (error) {
-        await fallbackToClipboard(message, '插入失败');
+        console.error('[GitSaoHua] 插入到 Git 失败:', error);
+        await GitExtensionManager.fallbackToClipboard(message, '插入失败');
     }
 }
 
+/**
+ * 选择仓库
+ * @param {Array} repos 仓库列表
+ * @returns {Promise<any|null>} 选中的仓库
+ */
 async function selectRepository(repos) {
     const items = repos.map(repo => {
         const root = repo.root;
@@ -1435,7 +1091,7 @@ async function selectRepository(repos) {
 
         return {
             label: parentPath ? `${name} (${parentPath})` : name,
-            description: `分支: ${branch}`,
+            description: `分支：${branch}`,
             repo: repo
         };
     });
@@ -1448,18 +1104,289 @@ async function selectRepository(repos) {
     return selected ? selected.repo : null;
 }
 
+/**
+ * 判断路径是否在仓库内
+ * @param {string} filePath 文件路径
+ * @param {string} repoRoot 仓库根路径
+ * @returns {boolean} 是否在仓库内
+ */
 function isPathInsideRepo(filePath, repoRoot) {
     const normalizedFilePath = filePath.replace(/\\/g, '/').toLowerCase();
     const normalizedRepoRoot = repoRoot.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
-
-    return normalizedFilePath === normalizedRepoRoot || normalizedFilePath.startsWith(`${normalizedRepoRoot}/`);
+    return normalizedFilePath === normalizedRepoRoot || 
+           normalizedFilePath.startsWith(`${normalizedRepoRoot}/`);
 }
 
-async function fallbackToClipboard(message, reason) {
-    await vscode.env.clipboard.writeText(message);
-    playSoundEffect('copy');
-    vscode.window.showInformationMessage(`已复制到剪贴板（${reason}）`);
+// ==================== 音效反馈 ====================
+
+/**
+ * 播放音效反馈（通过状态栏动画和通知实现）
+ * @param {'generate' | 'copy' | 'success'} type 音效类型
+ */
+function playSoundEffect(type) {
+    const enableSoundEffects = ConfigManager.get('enableSoundEffects', true);
+    if (!enableSoundEffects) return;
+
+    const emojiAnimations = {
+        generate: ['🎯', '🎯', '✨'],
+        copy: ['📋', '📋', '✅'],
+        success: ['🎉', '🎉', '🎊']
+    };
+
+    const statusMessages = {
+        generate: '正在生成骚话...',
+        copy: '已复制到剪贴板',
+        success: '生成成功！'
+    };
+
+    const emojis = emojiAnimations[type] || ['✨'];
+    const statusMsg = statusMessages[type] || '完成';
+
+    let index = 0;
+    const animation = setInterval(() => {
+        if (index >= emojis.length) {
+            clearInterval(animation);
+            vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[emojis.length - 1]}`, 3000);
+            return;
+        }
+        vscode.window.setStatusBarMessage(`${statusMsg} ${emojis[index]}`, 500);
+        index++;
+    }, 300);
+
+    if (type === 'success') {
+        vscode.window.showInformationMessage('✨ 骚话生成成功！', { modal: false });
+    } else if (type === 'copy') {
+        vscode.window.showInformationMessage('📋 已复制到剪贴板', { modal: false });
+    }
 }
+
+// ==================== 智能生成 ====================
+
+/**
+ * 智能检测 Commit 类型并生成
+ */
+async function generateSmartCommit() {
+    const defaultStyle = ConfigManager.get('defaultStyle', 'sao');
+    const defaultType = ConfigManager.get('defaultType', 'feat');
+    const autoInsert = ConfigManager.get('autoInsert', true);
+
+    const initialStyle = PluginState.currentStyle || defaultStyle;
+    const initialType = PluginState.currentType || defaultType;
+
+    vscode.window.setStatusBarMessage('🔍 正在智能分析变更文件和 diff 内容...', 2000);
+
+    const changedFiles = await GitExtensionManager.getChangedFiles();
+    const diffContent = await GitExtensionManager.getDiffContent();
+
+    if (!changedFiles || changedFiles.length === 0) {
+        vscode.window.showWarningMessage('未检测到 Git 变更文件，将使用手动选择模式');
+        return await showSaoHuaGenerator();
+    }
+
+    const analysisResult = CommitTypeDetector.analyze(changedFiles, diffContent);
+    
+    if (!analysisResult || !analysisResult.type) {
+        vscode.window.showWarningMessage('智能检测失败，将使用手动选择模式');
+        return await showSaoHuaGenerator();
+    }
+
+    PluginState.currentType = analysisResult.type;
+    await persistPreferences();
+
+    const confidenceEmoji = {
+        high: '🎯',
+        medium: '✨',
+        low: '💡'
+    }[analysisResult.confidence] || '💡';
+
+    const detailMessage = [
+        `类型：${analysisResult.type}`,
+        `置信度：${analysisResult.confidence}`,
+        `分析：${analysisResult.reason}`,
+        analysisResult.astFeatures?.length > 0 
+            ? `AST: ${analysisResult.astFeatures.join(', ')}` 
+            : ''
+    ].filter(Boolean).join('\n');
+
+    vscode.window.showInformationMessage(
+        `${confidenceEmoji} 智能检测推荐类型：${analysisResult.type}`,
+        { modal: false, detail: detailMessage }
+    );
+
+    playSoundEffect('generate');
+
+    const styleItems = styles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value,
+        picked: s.value === initialStyle
+    }));
+
+    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
+        placeHolder: '选择风格模式',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedStyle) return;
+    
+    PluginState.currentStyle = selectedStyle.value;
+    await persistPreferences();
+
+    let description = await getDescriptionWithHistory();
+
+    let message;
+    let usedCustom = false;
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            message = customMessage;
+            usedCustom = true;
+        }
+    }
+    if (!message) {
+        message = generateCommitMessage(PluginState.currentType, PluginState.currentStyle, description);
+    }
+
+    const customLabel = usedCustom ? ' (自定义)' : '';
+    const customEmoji = usedCustom ? '✨ ' : '';
+
+    if (autoInsert) {
+        const result = await vscode.window.showInformationMessage(
+            `${customEmoji}生成成功！类型：${PluginState.currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
+            { modal: true, detail: message },
+            '插入到 Git'
+        );
+
+        if (result === '插入到 Git') {
+            await insertToGitInput(message, true);
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
+            vscode.window.showInformationMessage('已复制到剪贴板');
+        }
+    } else {
+        await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
+        await vscode.window.showInformationMessage(
+            `${customEmoji}已复制到剪贴板！类型：${PluginState.currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
+            { modal: true, detail: message }
+        );
+    }
+
+    await recordGeneration(PluginState.currentType, PluginState.currentStyle);
+}
+
+// ==================== 主生成器 ====================
+
+/**
+ * 显示骚话生成器界面
+ */
+async function showSaoHuaGenerator() {
+    const defaultStyle = ConfigManager.get('defaultStyle', 'sao');
+    const defaultType = ConfigManager.get('defaultType', 'feat');
+    const autoInsert = ConfigManager.get('autoInsert', true);
+    const enableSmartDetection = ConfigManager.get('enableSmartDetection', true);
+
+    const initialType = PluginState.currentType || defaultType;
+    const initialStyle = PluginState.currentStyle || defaultStyle;
+
+    // 模式选择
+    const modeItems = [
+        { label: '$(search) 智能检测', description: '自动分析 Git 变更，推荐 Commit 类型', value: 'smart' },
+        { label: '$(list-flat) 手动选择', description: '手动选择 Commit 类型', value: 'manual' }
+    ];
+
+    const selectedMode = await vscode.window.showQuickPick(modeItems, {
+        placeHolder: '选择生成方式',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedMode) return;
+
+    if (selectedMode.value === 'smart') {
+        return await generateSmartCommit();
+    }
+
+    // 手动选择模式
+    const typeItems = commitTypes.map(t => ({
+        label: t.label,
+        description: t.desc,
+        value: t.value,
+        picked: t.value === initialType
+    }));
+
+    const selectedType = await vscode.window.showQuickPick(typeItems, {
+        placeHolder: '选择 Commit 类型',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedType) return;
+    
+    PluginState.currentType = selectedType.value;
+    await persistPreferences();
+
+    const styleItems = styles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value,
+        picked: s.value === initialStyle
+    }));
+
+    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
+        placeHolder: '选择风格模式',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedStyle) return;
+    
+    PluginState.currentStyle = selectedStyle.value;
+    await persistPreferences();
+
+    let description = await getDescriptionWithHistory();
+
+    let message;
+    let usedCustom = false;
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            message = customMessage;
+            usedCustom = true;
+        }
+    }
+    if (!message) {
+        message = generateCommitMessage(PluginState.currentType, PluginState.currentStyle, description);
+    }
+
+    const customLabel = usedCustom ? ' (自定义)' : '';
+    const customEmoji = usedCustom ? '✨ ' : '';
+
+    playSoundEffect('generate');
+
+    if (autoInsert) {
+        const result = await vscode.window.showInformationMessage(
+            `${customEmoji}生成成功！类型：${PluginState.currentType}${customLabel}`,
+            { modal: true, detail: message },
+            '插入到 Git'
+        );
+
+        if (result === '插入到 Git') {
+            await insertToGitInput(message, true);
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
+            vscode.window.showInformationMessage('已复制到剪贴板');
+        }
+    } else {
+        await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
+        await vscode.window.showInformationMessage(
+            `${customEmoji}已复制到剪贴板！类型：${PluginState.currentType}${customLabel}`,
+            { modal: true, detail: message }
+        );
+    }
+
+    await recordGeneration(PluginState.currentType, PluginState.currentStyle);
+}
+
+// ==================== 自定义骚话管理界面 ====================
 
 /**
  * 显示自定义骚话管理界面
@@ -1480,9 +1407,7 @@ async function showCustomSaoHuaManager() {
         ignoreFocusOut: true
     });
 
-    if (!selected) {
-        return;
-    }
+    if (!selected) return;
 
     switch (selected.value) {
         case 'add':
@@ -1497,7 +1422,7 @@ async function showCustomSaoHuaManager() {
         case 'export':
             await exportCustomSaoHuaToFile();
             break;
-        case 'clear':
+        case 'clear': {
             const confirmResult = await vscode.window.showWarningMessage(
                 `确定要清空所有 ${list.length} 条自定义骚话吗？`,
                 { modal: true },
@@ -1509,6 +1434,7 @@ async function showCustomSaoHuaManager() {
                 vscode.window.showInformationMessage('已清空所有自定义骚话');
             }
             break;
+        }
     }
 }
 
@@ -1527,9 +1453,7 @@ async function addSingleCustomSaoHua() {
         ignoreFocusOut: true
     });
 
-    if (!selectedType) {
-        return;
-    }
+    if (!selectedType) return;
 
     const styleItems = styles.map(s => ({
         label: `${s.emoji} ${s.label}`,
@@ -1541,30 +1465,22 @@ async function addSingleCustomSaoHua() {
         ignoreFocusOut: true
     });
 
-    if (!selectedStyle) {
-        return;
-    }
+    if (!selectedStyle) return;
 
     const content = await vscode.window.showInputBox({
         placeHolder: '输入自定义骚话内容',
         prompt: '例如：这是我为你写的专属骚话',
         validateInput: (value) => {
-            if (!value || value.trim().length === 0) {
-                return '请输入内容';
-            }
-            if (value.length > 100) {
-                return '内容不能超过 100 个字符';
-            }
+            if (!value || value.trim().length === 0) return '请输入内容';
+            if (value.length > 100) return '内容不能超过 100 个字符';
             return null;
         }
     });
 
-    if (!content) {
-        return;
-    }
+    if (!content) return;
 
     await addCustomSaoHua(selectedType.value, selectedStyle.value, content.trim());
-    vscode.window.showInformationMessage(`已添加自定义骚话: ${selectedType.value}/${selectedStyle.value}`);
+    vscode.window.showInformationMessage(`已添加自定义骚话：${selectedType.value}/${selectedStyle.value}`);
 }
 
 /**
@@ -1581,7 +1497,7 @@ async function viewCustomSaoHuaList() {
     const items = list.map((item, index) => ({
         label: `${index + 1}. ${item.type}/${item.style}`,
         description: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''),
-        detail: `添加时间: ${new Date(item.addedAt).toLocaleString()}`,
+        detail: `添加时间：${new Date(item.addedAt).toLocaleString()}`,
         value: index
     }));
 
@@ -1593,9 +1509,7 @@ async function viewCustomSaoHuaList() {
         ignoreFocusOut: true
     });
 
-    if (!viewOrDelete) {
-        return;
-    }
+    if (!viewOrDelete) return;
 
     if (viewOrDelete.value === 'view') {
         const selected = await vscode.window.showQuickPick(items, {
@@ -1634,10 +1548,7 @@ async function importCustomSaoHuaFromFile() {
     };
 
     const fileUri = await vscode.window.showOpenDialog(options);
-
-    if (!fileUri || fileUri.length === 0) {
-        return;
-    }
+    if (!fileUri || fileUri.length === 0) return;
 
     try {
         const doc = await vscode.workspace.openTextDocument(fileUri[0]);
@@ -1650,7 +1561,7 @@ async function importCustomSaoHuaFromFile() {
             vscode.window.showErrorMessage(result.message);
         }
     } catch (error) {
-        vscode.window.showErrorMessage(`导入失败: ${error.message}`);
+        vscode.window.showErrorMessage(`导入失败：${error.message}`);
     }
 }
 
@@ -1674,10 +1585,7 @@ async function exportCustomSaoHuaToFile() {
     };
 
     const fileUri = await vscode.window.showSaveDialog(options);
-
-    if (!fileUri) {
-        return;
-    }
+    if (!fileUri) return;
 
     try {
         const jsonContent = exportCustomSaoHua();
@@ -1685,10 +1593,197 @@ async function exportCustomSaoHuaToFile() {
         await vscode.workspace.fs.writeFile(fileUri, writeData);
         vscode.window.showInformationMessage(`已导出 ${list.length} 条自定义骚话到 ${fileUri.fsPath}`);
     } catch (error) {
-        vscode.window.showErrorMessage(`导出失败: ${error.message}`);
+        vscode.window.showErrorMessage(`导出失败：${error.message}`);
     }
 }
 
+// ==================== 插件激活/停用 ====================
+
+/**
+ * 激活插件
+ * @param {vscode.ExtensionContext} context 扩展上下文
+ */
+function activate(context) {
+    console.log('[GitSaoHua] Git Commit 骚话生成器 已激活!');
+
+    PluginState.extensionContext = context;
+    restorePreferences();
+
+    // 注册命令
+    const commands = [
+        vscode.commands.registerCommand('gitCommitSaoHua.generate', showSaoHuaGenerator),
+        vscode.commands.registerCommand('gitCommitSaoHua.generateSmart', generateSmartCommit),
+        vscode.commands.registerCommand('gitCommitSaoHua.generateRandom', generateRandomCommit),
+        vscode.commands.registerCommand('gitCommitSaoHua.selectType', selectType),
+        vscode.commands.registerCommand('gitCommitSaoHua.selectStyle', selectStyle),
+        vscode.commands.registerCommand('gitCommitSaoHua.resetPreferences', resetPreferences),
+        vscode.commands.registerCommand('gitCommitSaoHua.clearDescriptionHistory', clearDescriptionHistory),
+        vscode.commands.registerCommand('gitCommitSaoHua.openKeybindings', openKeybindings),
+        vscode.commands.registerCommand('gitCommitSaoHua.manageCustomSaoHua', showCustomSaoHuaManager),
+        vscode.commands.registerCommand('gitCommitSaoHua.addCustomSaoHua', addSingleCustomSaoHua),
+        vscode.commands.registerCommand('gitCommitSaoHua.clearCustomSaoHua', clearCustomSaoHuaCommand),
+        vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', showStatistics)
+    ];
+
+    context.subscriptions.push(...commands);
+}
+
+/**
+ * 随机生成 Commit
+ */
+async function generateRandomCommit() {
+    const autoInsert = ConfigManager.get('autoInsert', true);
+
+    let message;
+    let usedCustom = false;
+    let result;
+
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            message = customMessage;
+            usedCustom = true;
+            const customSaoHua = getRandomCustomSaoHua();
+            if (customSaoHua) {
+                PluginState.currentType = customSaoHua.type;
+                PluginState.currentStyle = customSaoHua.style;
+                result = { type: customSaoHua.type, style: customSaoHua.style };
+            }
+        }
+    }
+
+    if (!message) {
+        result = getRandomSaoHua();
+        PluginState.currentType = result.type;
+        PluginState.currentStyle = result.style;
+        await persistPreferences();
+        message = generateCommitMessage(result.type, result.style);
+    } else {
+        await persistPreferences();
+    }
+
+    const typeLabel = usedCustom ? `${result.type} (自定义)` : `${result.type}`;
+
+    if (autoInsert) {
+        await vscode.window.showInformationMessage(`随机生成：${typeLabel} ${usedCustom ? '✨' : ''}`, {
+            modal: true,
+            detail: message
+        });
+        playSoundEffect('success');
+        await insertToGitInput(message, true);
+    } else {
+        await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
+        await vscode.window.showInformationMessage(`已复制到剪贴板！类型：${typeLabel} ${usedCustom ? '✨' : ''}`, {
+            modal: true,
+            detail: message
+        });
+    }
+
+    if (result) {
+        await recordGeneration(result.type, result.style);
+    }
+}
+
+/**
+ * 选择 Commit 类型
+ */
+async function selectType() {
+    const items = commitTypes.map(t => ({
+        label: t.label,
+        description: t.desc,
+        value: t.value
+    }));
+
+    const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: '选择 Commit 类型'
+    });
+
+    if (selected) {
+        PluginState.currentType = selected.value;
+        await persistPreferences();
+        vscode.window.showInformationMessage(`已选择类型：${selected.label}`);
+    }
+}
+
+/**
+ * 选择风格模式
+ */
+async function selectStyle() {
+    const items = styles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value
+    }));
+
+    const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: '选择风格模式'
+    });
+
+    if (selected) {
+        PluginState.currentStyle = selected.value;
+        await persistPreferences();
+        vscode.window.showInformationMessage(`已选择风格：${selected.label}`);
+    }
+}
+
+/**
+ * 重置偏好设置
+ */
+async function resetPreferences() {
+    resetPreferencesToConfig();
+    await clearPersistedPreferences();
+    vscode.window.showInformationMessage(`已重置偏好：${PluginState.currentType} / ${getStyleLabel(PluginState.currentStyle)}`);
+}
+
+/**
+ * 打开快捷键设置
+ */
+async function openKeybindings() {
+    const keybindingsConfig = [
+        '{',
+        '    "key": "ctrl+shift+g",',
+        '    "command": "gitCommitSaoHua.generate",',
+        '    "when": "editorTextFocus"',
+        '}'
+    ].join('\n');
+
+    const doc = await vscode.workspace.openTextDocument({
+        content: `// 在此文件中添加以下配置来自定义快捷键:\n//
+// 示例:\n// ${keybindingsConfig}\n//
+// 可用命令:\n// - gitCommitSaoHua.generate: 生成骚话 Commit\n// - gitCommitSaoHua.generateSmart: 智能检测生成 Commit\n// - gitCommitSaoHua.generateRandom: 随机生成 Commit\n// - gitCommitSaoHua.selectType: 选择 Commit 类型\n// - gitCommitSaoHua.selectStyle: 选择风格模式\n// - gitCommitSaoHua.resetPreferences: 重置类型/风格偏好\n`,
+        language: 'json'
+    });
+
+    await vscode.window.showTextDocument(doc);
+    vscode.window.showInformationMessage('请在打开的文件中添加快捷键配置，或打开：文件 > 首选项 > 快捷键 进行设置');
+}
+
+/**
+ * 清空自定义骚话命令
+ */
+async function clearCustomSaoHuaCommand() {
+    const list = getCustomSaoHuaList();
+    if (list.length === 0) {
+        vscode.window.showInformationMessage('暂无自定义骚话');
+        return;
+    }
+
+    const result = await vscode.window.showWarningMessage(
+        `确定要清空所有 ${list.length} 条自定义骚话吗？`,
+        { modal: true },
+        '确定清空',
+        '取消'
+    );
+
+    if (result === '确定清空') {
+        await clearAllCustomSaoHua();
+        vscode.window.showInformationMessage('已清空所有自定义骚话');
+    }
+}
+
+/**
+ * 停用插件
+ */
 function deactivate() {}
 
 module.exports = {
