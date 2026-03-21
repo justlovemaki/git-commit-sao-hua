@@ -114,15 +114,35 @@ docs: API 文档
    - **fix 关键词**: fix, bug, issue, error, crash, resolve, patch
    - **feat 关键词**: add, new, create, implement, feature, support
 
-3. **综合判断**: Diff 分析结果优先于文件分析，高置信度（3个以上关键词）直接采用
+3. **综合判断**: AST 分析和 Diff 分析的优先级可通过配置项控制（默认 AST 优先于 Diff，Diff 优先于文件类型分析）
 
 ### 置信度等级
 
 | 等级 | 说明 |
 |------|------|
-| 🎯 high | 高置信度，diff 中检测到 3 个以上相关关键词 |
-| ✨ medium | 中等置信度，diff 中检测到 1-2 个相关关键词 |
-| 💡 low | 低置信度，仅基于文件类型判断 |
+| 🎯 high | 高置信度，diff 中检测到 >= highConfidenceThreshold 个相关关键词（默认 3 个） |
+| ✨ medium | 中等置信度，diff 中检测到 >= mediumConfidenceThreshold 个相关关键词（默认 1 个） |
+| 💡 low | 低置信度，检测到的关键词数量低于阈值或仅基于文件类型判断 |
+
+### 可配置阈值
+
+智能检测功能支持自定义置信度阈值：
+
+```json
+{
+    "gitCommitSaoHua.smartDetection.highConfidenceThreshold": 3,
+    "gitCommitSaoHua.smartDetection.mediumConfidenceThreshold": 1,
+    "gitCommitSaoHua.smartDetection.astPriorityEnabled": true,
+    "gitCommitSaoHua.smartDetection.diffPriorityEnabled": true
+}
+```
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `highConfidenceThreshold` | 3 | 高置信度所需的关键词数量阈值（范围 1-10） |
+| `mediumConfidenceThreshold` | 1 | 中等置信度所需的关键词数量阈值（范围 1-5） |
+| `astPriorityEnabled` | true | AST 分析优先策略：启用时，高置信度 AST 结果优先于其他分析 |
+| `diffPriorityEnabled` | true | Diff 分析优先策略：启用时，当 AST 置信度不足时，优先采用 diff 结果 |
 
 ### 使用智能检测
 
@@ -214,6 +234,15 @@ docs: API 文档
 | `defaultStyle` | string | `sao` | 默认风格 (love/sao/zha/chu/fo)，也是重置偏好后的回退值 |
 | `defaultType` | string | `feat` | 默认 Commit 类型，也是重置偏好后的回退值 |
 | `autoInsert` | boolean | `true` | 是否自动插入到 Git 输入框 |
+| `customSaoHuaProbability` | number | `0.3` | 使用自定义骚话的概率（0-1 之间） |
+| `maxHistoryCount` | number | `10` | 描述历史记录最大保存数量（1-50） |
+| `enableSmartDetection` | boolean | `true` | 启用智能检测功能 |
+| `astAnalysisEnabled` | boolean | `true` | 启用 AST 代码结构分析 |
+| `showConfidenceDetail` | boolean | `true` | 显示智能检测的置信度详情信息 |
+| `smartDetection.highConfidenceThreshold` | number | `3` | 高置信度所需的关键词数量阈值（1-10） |
+| `smartDetection.mediumConfidenceThreshold` | number | `1` | 中等置信度所需的关键词数量阈值（1-5） |
+| `smartDetection.astPriorityEnabled` | boolean | `true` | 是否启用 AST 分析优先策略 |
+| `smartDetection.diffPriorityEnabled` | boolean | `true` | 是否启用 Diff 分析优先策略 |
 
 ### 描述历史记录
 

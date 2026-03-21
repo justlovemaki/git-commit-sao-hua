@@ -168,6 +168,30 @@
           "type": "boolean",
           "default": true,
           "description": "显示智能检测的置信度详情信息"
+        },
+        "gitCommitSaoHua.smartDetection.highConfidenceThreshold": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "高置信度所需的关键词数量阈值（>=此值时判定为 high）"
+        },
+        "gitCommitSaoHua.smartDetection.mediumConfidenceThreshold": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 5,
+          "description": "中等置信度所需的关键词数量阈值（>=此值时判定为 medium）"
+        },
+        "gitCommitSaoHua.smartDetection.astPriorityEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用 AST 分析优先策略（高置信度 AST 结果优先于其他分析）"
+        },
+        "gitCommitSaoHua.smartDetection.diffPriorityEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否启用 Diff 分析优先策略（当 AST 置信度不足时，优先采用 diff 结果）"
         }
       }
     },

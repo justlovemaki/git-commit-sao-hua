@@ -11,6 +11,17 @@
 
 ## 🎯 进化历程
 
+### v1.11.0 - 智能检测置信度阈值可配置 ⚙️ (本次进化)
+- ✅ **高置信度阈值配置** - 新增 `smartDetection.highConfidenceThreshold` 配置（默认 3，范围 1-10），可自定义高置信度所需的关键词数量
+- ✅ **中等置信度阈值配置** - 新增 `smartDetection.mediumConfidenceThreshold` 配置（默认 1，范围 1-5），可自定义中等置信度所需的关键词数量
+- ✅ **AST 优先级开关** - 新增 `smartDetection.astPriorityEnabled` 配置（默认 true），控制是否启用 AST 分析优先策略
+- ✅ **Diff 优先级开关** - 新增 `smartDetection.diffPriorityEnabled` 配置（默认 true），控制是否启用 Diff 分析优先策略
+- ✅ **置信度计算函数** - 新增 `calcConfidence()` 辅助函数，统一使用配置阈值进行置信度判断
+- ✅ **文件类型置信度优化** - 文件类型判断也使用可配置的阈值（`calcFileTypeConfidence()`）
+- ✅ **ConfigManager 扩展** - 新增 `getSmartDetectionConfig()` 方法，集中管理智能检测配置
+- ✅ **向后兼容** - 默认值与当前行为一致，老用户无感知升级
+- ✅ **文档同步更新** - README.md 补充配置项说明和置信度等级表格，PROJECT_EVOLUTION.md 版本更新至 v1.11.0
+
 ### v1.10.0 - 文件类型扩展 + 置信度可视化增强 🎯
 - ✅ **9 种新语言文件类型支持** - `.vue`(Vue), `.py`(Python), `.java/.kt`(Java/Kotlin), `.go`(Go), `.rs`(Rust), `.php`(PHP), `.rb`(Ruby), `.swift`(Swift), `.cs`(C#)
 - ✅ **分析链路可视化** - 智能检测结果中显示完整的分析链路（文件类型 / AST / Diff）
@@ -343,16 +354,19 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.10.0)
-- **改进内容**: 文件类型扩展 + 置信度可视化增强
-  - 新增 9 种语言文件类型支持：`.vue`(Vue), `.py`(Python), `.java/.kt`(Java/Kotlin), `.go`(Go), `.rs`(Rust), `.php`(PHP), `.rb`(Ruby), `.swift`(Swift), `.cs`(C#)
-  - 新增分析链路可视化：智能检测结果中显示完整的分析链路（文件类型 / AST / Diff）
-  - 新增 emoji 标记分析来源：📁 文件类型 / 🧠 AST 分析 / 📝 Diff 关键词
-  - 新增 breakdown 对象：`makeFinalDecision` 返回 `breakdown` 对象，记录各分析来源的贡献
-  - UI 展示优化：智能检测提示中使用分隔线清晰展示分析链路和最终结论
-  - 版本号同步：package.json 和 extension.js 更新到 1.10.0
-- **风险等级**: 低风险（仅分析逻辑增强和 UI 优化，无核心逻辑变更）
-- **收益**: 支持更多编程语言项目，让用户更清晰地理解智能检测的分析依据，提升透明度和信任感
+### 本轮迭代 (v1.11.0) - 本次进化
+- **改进内容**: 智能检测置信度阈值可配置
+  - 新增 `smartDetection.highConfidenceThreshold` 配置（默认 3，范围 1-10），可自定义高置信度所需的关键词数量
+  - 新增 `smartDetection.mediumConfidenceThreshold` 配置（默认 1，范围 1-5），可自定义中等置信度所需的关键词数量
+  - 新增 `smartDetection.astPriorityEnabled` 配置（默认 true），控制是否启用 AST 分析优先策略
+  - 新增 `smartDetection.diffPriorityEnabled` 配置（默认 true），控制是否启用 Diff 分析优先策略
+  - 新增 `calcConfidence()` 辅助函数，统一使用配置阈值进行置信度判断
+  - 新增 `calcFileTypeConfidence()` 函数，文件类型判断也使用可配置的阈值
+  - ConfigManager 扩展：新增 `getSmartDetectionConfig()` 方法，集中管理智能检测配置
+  - 向后兼容：默认值与当前行为一致，老用户无感知升级
+  - 文档同步更新：README.md 补充配置项说明和置信度等级表格
+- **风险等级**: 低风险（仅配置项扩展和阈值判断逻辑优化，无核心逻辑变更）
+- **收益**: 提升用户自定义能力，让智能检测更灵活，适应不同项目和用户的使用习惯
 
 ### 上轮迭代 (v1.9.0)
 - **改进内容**: AST 检测增强 + 多语言关键词支持
@@ -454,6 +468,13 @@ php -S localhost:8000
 - ✅ emoji 标记分析来源（v1.10.0）
 - ✅ breakdown 对象返回（v1.10.0）
 - ✅ UI 展示优化（v1.10.0）
+- ✅ smartDetection.highConfidenceThreshold 配置（v1.11.0）
+- ✅ smartDetection.mediumConfidenceThreshold 配置（v1.11.0）
+- ✅ smartDetection.astPriorityEnabled 配置（v1.11.0）
+- ✅ smartDetection.diffPriorityEnabled 配置（v1.11.0）
+- ✅ calcConfidence() 辅助函数（v1.11.0）
+- ✅ calcFileTypeConfidence() 函数（v1.11.0）
+- ✅ getSmartDetectionConfig() 方法（v1.11.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -464,8 +485,9 @@ php -S localhost:8000
    - ~~智能检测准确率提升（集成简单 AST 分析）~~ ✅ 已在 v1.8.0 实现
    - ~~智能检测置信度可视化增强（在 UI 中更直观展示分析依据）~~ ✅ 已在 v1.10.0 实现
    - ~~添加更多文件类型映射（.vue, .py, .java, .go 等）~~ ✅ 已在 v1.10.0 实现
+   - ~~智能检测置信度阈值可配置~~ ✅ 已在 v1.11.0 实现
    - [ ] 支持更多文件类型（.scala, .ex, .elm 等）
-   - [ ] 智能检测置信度阈值可配置
+   - [ ] 智能检测置信度阈值 UI 调节（在插件设置界面提供滑动条）
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本

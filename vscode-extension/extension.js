@@ -159,12 +159,26 @@ class ConfigManager {
             defaultType: 'feat',
             autoInsert: true,
             enableSoundEffects: true,
-            // 新增可配置项
             customSaoHuaProbability: 0.3,
             maxHistoryCount: 10,
             enableSmartDetection: true,
             astAnalysisEnabled: true,
-            showConfidenceDetail: true
+            showConfidenceDetail: true,
+            smartDetection: {
+                highConfidenceThreshold: 3,
+                mediumConfidenceThreshold: 1,
+                astPriorityEnabled: true,
+                diffPriorityEnabled: true
+            }
+        };
+    }
+
+    static getSmartDetectionConfig() {
+        return {
+            highConfidenceThreshold: this.get('smartDetection.highConfidenceThreshold', 3),
+            mediumConfidenceThreshold: this.get('smartDetection.mediumConfidenceThreshold', 1),
+            astPriorityEnabled: this.get('smartDetection.astPriorityEnabled', true),
+            diffPriorityEnabled: this.get('smartDetection.diffPriorityEnabled', true)
         };
     }
 }
@@ -521,6 +535,9 @@ class DiffAnalyzer {
         }
 
         const lowerContent = diffContent.toLowerCase();
+        const smartConfig = ConfigManager.getSmartDetectionConfig();
+        const highThreshold = smartConfig.highConfidenceThreshold;
+        const mediumThreshold = smartConfig.mediumConfidenceThreshold;
         
         // 统计 fix 和 feat 关键词匹配
         const fixMatched = this.matchKeywords(lowerContent, FIX_KEYWORDS);
@@ -550,22 +567,28 @@ class DiffAnalyzer {
         let reason = '';
         const allMatched = [...fixMatched, ...featMatched];
 
+        const calcConfidence = (score) => {
+            if (score >= highThreshold) return 'high';
+            if (score >= mediumThreshold) return 'medium';
+            return 'low';
+        };
+
         // 检查语言特定关键词
-        const highLangScore = langScores.find(l => l.score >= 2);
+        const highLangScore = langScores.find(l => l.score >= mediumThreshold);
         if (highLangScore && fixScore === 0 && featScore === 0) {
             type = highLangScore.type;
-            confidence = highLangScore.score >= 3 ? 'high' : 'medium';
+            confidence = calcConfidence(highLangScore.score);
             reason = `检测到 ${highLangScore.name} 特定关键词`;
             allMatched.push(...langScores.filter(l => l.score > 0).flatMap(l => 
                 Array(l.score).fill(l.name.toLowerCase())
             ));
         } else if (fixScore > 0 && fixScore > featScore) {
             type = 'fix';
-            confidence = fixScore >= 3 ? 'high' : 'medium';
+            confidence = calcConfidence(fixScore);
             reason = `检测到 fix 关键词：${[...new Set(fixMatched)].join(', ')}`;
         } else if (featScore > 0 && featScore > fixScore) {
             type = 'feat';
-            confidence = featScore >= 3 ? 'high' : 'medium';
+            confidence = calcConfidence(featScore);
             reason = `检测到 feat 关键词：${[...new Set(featMatched)].join(', ')}`;
         } else if (fixScore > 0 && fixScore === featScore) {
             type = 'fix';
@@ -792,6 +815,12 @@ class CommitTypeDetector {
         let reason = '';
         const astFeatures = astResult?.astFeatures || [];
         
+        const smartConfig = ConfigManager.getSmartDetectionConfig();
+        const highThreshold = smartConfig.highConfidenceThreshold;
+        const mediumThreshold = smartConfig.mediumConfidenceThreshold;
+        const astPriorityEnabled = smartConfig.astPriorityEnabled;
+        const diffPriorityEnabled = smartConfig.diffPriorityEnabled;
+        
         const breakdown = {
             fileType: { type: null, count: 0, reason: '' },
             ast: { type: null, confidence: 'low', reason: '' },
@@ -823,14 +852,19 @@ class CommitTypeDetector {
             };
         }
 
-        if (astResult?.type && astResult.confidence === 'high') {
+        const calcFileTypeConfidence = (count) => {
+            if (count >= highThreshold) return 'medium';
+            return 'low';
+        };
+
+        if (astResult?.type && astResult.confidence === 'high' && astPriorityEnabled) {
             finalType = astResult.type;
             confidence = 'high';
             reason = breakdown.ast.reason;
         }
         else if (astResult?.type && astResult.confidence === 'medium') {
             if (diffResult?.matchedKeywords.length > 0) {
-                if (diffResult.confidence === 'high') {
+                if (diffResult.confidence === 'high' && diffPriorityEnabled) {
                     finalType = diffResult.type;
                     confidence = 'high';
                     reason = breakdown.diff.reason;
@@ -855,7 +889,7 @@ class CommitTypeDetector {
         else {
             finalType = maxFileType;
             reason = breakdown.fileType.reason;
-            confidence = maxFileCount >= 3 ? 'medium' : 'low';
+            confidence = calcFileTypeConfidence(maxFileCount);
         }
 
         return {
