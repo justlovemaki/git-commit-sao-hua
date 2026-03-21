@@ -11,6 +11,15 @@
 
 ## 🎯 进化历程
 
+### v1.10.0 - 文件类型扩展 + 置信度可视化增强 🎯
+- ✅ **9 种新语言文件类型支持** - `.vue`(Vue), `.py`(Python), `.java/.kt`(Java/Kotlin), `.go`(Go), `.rs`(Rust), `.php`(PHP), `.rb`(Ruby), `.swift`(Swift), `.cs`(C#)
+- ✅ **分析链路可视化** - 智能检测结果中显示完整的分析链路（文件类型 / AST / Diff）
+- ✅ **emoji 标记分析来源** - 📁 文件类型 / 🧠 AST 分析 / 📝 Diff 关键词
+- ✅ **breakdown 对象** - `makeFinalDecision` 返回 `breakdown` 对象，记录各分析来源的贡献
+- ✅ **UI 展示优化** - 智能检测提示中使用分隔线清晰展示分析链路和最终结论
+- ✅ **版本号同步** - package.json 和 extension.js 版本更新到 1.10.0
+- ✅ **文档同步更新** - PROJECT_EVOLUTION.md 补充 v1.10.0 新功能说明
+
 ### v1.9.0 - AST 检测增强 + 多语言关键词支持 🚀
 - ✅ **Import/Export 语句检测** - 新增 `import xxx from`, `export default`, `export const/let/var`, `export { xxx }` 模式识别
 - ✅ **测试文件变更识别** - 自动检测 `.test.js`, `.spec.js` 等测试文件变更，推荐 `test` 类型
@@ -334,7 +343,18 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.9.0)
+### 本轮迭代 (v1.10.0)
+- **改进内容**: 文件类型扩展 + 置信度可视化增强
+  - 新增 9 种语言文件类型支持：`.vue`(Vue), `.py`(Python), `.java/.kt`(Java/Kotlin), `.go`(Go), `.rs`(Rust), `.php`(PHP), `.rb`(Ruby), `.swift`(Swift), `.cs`(C#)
+  - 新增分析链路可视化：智能检测结果中显示完整的分析链路（文件类型 / AST / Diff）
+  - 新增 emoji 标记分析来源：📁 文件类型 / 🧠 AST 分析 / 📝 Diff 关键词
+  - 新增 breakdown 对象：`makeFinalDecision` 返回 `breakdown` 对象，记录各分析来源的贡献
+  - UI 展示优化：智能检测提示中使用分隔线清晰展示分析链路和最终结论
+  - 版本号同步：package.json 和 extension.js 更新到 1.10.0
+- **风险等级**: 低风险（仅分析逻辑增强和 UI 优化，无核心逻辑变更）
+- **收益**: 支持更多编程语言项目，让用户更清晰地理解智能检测的分析依据，提升透明度和信任感
+
+### 上轮迭代 (v1.9.0)
 - **改进内容**: AST 检测增强 + 多语言关键词支持
   - 新增 import/export 语句检测（`import xxx from`, `export default`, `export const/let/var`, `export { xxx }`）
   - 新增测试文件变更识别（`.test.js`, `.spec.js` 等），自动推荐 `test` 类型
@@ -429,6 +449,11 @@ php -S localhost:8000
 - ✅ Java/Kotlin 关键词支持（v1.9.0）
 - ✅ TypeScript 关键词支持（v1.9.0）
 - ✅ 语言特定类型映射（v1.9.0）
+- ✅ 9 种新语言文件类型支持（v1.10.0）
+- ✅ 分析链路可视化（v1.10.0）
+- ✅ emoji 标记分析来源（v1.10.0）
+- ✅ breakdown 对象返回（v1.10.0）
+- ✅ UI 展示优化（v1.10.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -437,8 +462,10 @@ php -S localhost:8000
    - ~~添加骚话使用统计（最受欢迎的类型/风格）~~ ✅ 已在 v1.6.0 实现
    - ~~添加快捷键绑定（例如 Ctrl+Shift+S 查看统计）~~ ✅ 已在 v1.7.0 实现
    - ~~智能检测准确率提升（集成简单 AST 分析）~~ ✅ 已在 v1.8.0 实现
-   - [ ] 智能检测置信度可视化增强（在 UI 中更直观展示分析依据）
-   - [ ] 添加更多文件类型映射（.vue, .py, .java, .go 等）
+   - ~~智能检测置信度可视化增强（在 UI 中更直观展示分析依据）~~ ✅ 已在 v1.10.0 实现
+   - ~~添加更多文件类型映射（.vue, .py, .java, .go 等）~~ ✅ 已在 v1.10.0 实现
+   - [ ] 支持更多文件类型（.scala, .ex, .elm 等）
+   - [ ] 智能检测置信度阈值可配置
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本

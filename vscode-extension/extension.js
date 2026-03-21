@@ -9,7 +9,7 @@
  * - 使用统计追踪
  * 
  * @author coding-expert
- * @version 1.9.0
+ * @version 1.10.0
  */
 
 const vscode = require('vscode');
@@ -717,6 +717,60 @@ class CommitTypeDetector {
                 continue;
             }
 
+            // Vue 组件
+            if (ext === '.vue') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Python 代码
+            if (ext === '.py') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Java / Kotlin 代码
+            if (['.java', '.kt'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Go 代码
+            if (ext === '.go') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Rust 代码
+            if (ext === '.rs') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // PHP 代码
+            if (ext === '.php') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Ruby 代码
+            if (ext === '.rb') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Swift 代码
+            if (ext === '.swift') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // C# 代码
+            if (ext === '.cs') {
+                typeCounts.feat++;
+                continue;
+            }
+
             // 其他文件
             typeCounts.chore++;
         }
@@ -729,7 +783,7 @@ class CommitTypeDetector {
      * @param {Object} typeCounts 文件类型计数
      * @param {Object|null} astResult AST 分析结果
      * @param {Object|null} diffResult Diff 分析结果
-     * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[]}}
+     * @returns {{type: string, confidence: string, matchedKeywords: string[], reason: string, fileType: string, astFeatures: string[], breakdown: Object}}
      */
     static makeFinalDecision(typeCounts, astResult, diffResult) {
         let finalType = null;
@@ -737,46 +791,70 @@ class CommitTypeDetector {
         let matchedKeywords = [];
         let reason = '';
         const astFeatures = astResult?.astFeatures || [];
+        
+        const breakdown = {
+            fileType: { type: null, count: 0, reason: '' },
+            ast: { type: null, confidence: 'low', reason: '' },
+            diff: { type: null, confidence: 'low', matchedKeywords: [], reason: '' }
+        };
 
-        // 优先级 1: AST 高置信度
+        const [maxFileType, maxFileCount] = Object.entries(typeCounts)
+            .reduce((max, [type, count]) => count > max[1] ? [type, count] : max, ['', 0]);
+        breakdown.fileType = {
+            type: maxFileType,
+            count: maxFileCount,
+            reason: `📁 ${maxFileType} (${maxFileCount} 个文件)`
+        };
+
+        if (astResult?.type) {
+            breakdown.ast = {
+                type: astResult.type,
+                confidence: astResult.confidence,
+                reason: `🧠 ${astResult.reason}`
+            };
+        }
+
+        if (diffResult?.matchedKeywords?.length > 0) {
+            breakdown.diff = {
+                type: diffResult.type,
+                confidence: diffResult.confidence,
+                matchedKeywords: diffResult.matchedKeywords,
+                reason: `📝 ${diffResult.reason}`
+            };
+        }
+
         if (astResult?.type && astResult.confidence === 'high') {
             finalType = astResult.type;
             confidence = 'high';
-            reason = astResult.reason;
+            reason = breakdown.ast.reason;
         }
-        // 优先级 2: AST 中置信度 + Diff 关键词
         else if (astResult?.type && astResult.confidence === 'medium') {
             if (diffResult?.matchedKeywords.length > 0) {
                 if (diffResult.confidence === 'high') {
                     finalType = diffResult.type;
                     confidence = 'high';
-                    reason = diffResult.reason;
+                    reason = breakdown.diff.reason;
                 } else {
                     finalType = astResult.type;
                     confidence = 'medium';
-                    reason = `${astResult.reason}; ${diffResult.reason}`;
+                    reason = `${breakdown.ast.reason}; ${breakdown.diff.reason}`;
                 }
             } else {
                 finalType = astResult.type;
                 confidence = 'medium';
-                reason = astResult.reason;
+                reason = breakdown.ast.reason;
             }
             matchedKeywords = diffResult?.matchedKeywords || [];
         }
-        // 优先级 3: Diff 关键词
         else if (diffResult?.matchedKeywords.length > 0) {
             finalType = diffResult.type;
             confidence = diffResult.confidence;
-            reason = diffResult.reason;
+            reason = breakdown.diff.reason;
             matchedKeywords = diffResult.matchedKeywords;
         }
-        // 优先级 4: 文件类型分析
         else {
-            const [maxFileType, maxFileCount] = Object.entries(typeCounts)
-                .reduce((max, [type, count]) => count > max[1] ? [type, count] : max, ['', 0]);
-            
             finalType = maxFileType;
-            reason = `基于文件类型分析：${maxFileType} (${maxFileCount} 个文件)`;
+            reason = breakdown.fileType.reason;
             confidence = maxFileCount >= 3 ? 'medium' : 'low';
         }
 
@@ -786,7 +864,8 @@ class CommitTypeDetector {
             matchedKeywords,
             reason,
             fileType: 'code',
-            astFeatures
+            astFeatures,
+            breakdown
         };
     }
 }
@@ -1260,13 +1339,27 @@ async function generateSmartCommit() {
         low: '💡'
     }[analysisResult.confidence] || '💡';
 
+    const { breakdown } = analysisResult;
+    
+    const breakdownLines = [];
+    if (breakdown?.fileType?.count > 0) {
+        breakdownLines.push(breakdown.fileType.reason);
+    }
+    if (breakdown?.ast?.type) {
+        breakdownLines.push(breakdown.ast.reason);
+    }
+    if (breakdown?.diff?.matchedKeywords?.length > 0) {
+        breakdownLines.push(breakdown.diff.reason);
+    }
+
     const detailMessage = [
-        `类型：${analysisResult.type}`,
-        `置信度：${analysisResult.confidence}`,
-        `分析：${analysisResult.reason}`,
-        analysisResult.astFeatures?.length > 0 
-            ? `AST: ${analysisResult.astFeatures.join(', ')}` 
-            : ''
+        `类型：${analysisResult.type} (${analysisResult.confidence})`,
+        '',
+        '──── 分析链路 ────',
+        ...breakdownLines,
+        '',
+        '──── 最终结论 ────',
+        analysisResult.reason
     ].filter(Boolean).join('\n');
 
     vscode.window.showInformationMessage(
