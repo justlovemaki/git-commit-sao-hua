@@ -2,7 +2,7 @@
   "name": "git-commit-sao-hua",
   "displayName": "Git Commit 骚话生成器",
   "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "publisher": "coding-expert",
   "engines": {
     "vscode": "^1.70.0"
@@ -192,6 +192,11 @@
           "type": "boolean",
           "default": true,
           "description": "是否启用 Diff 分析优先策略（当 AST 置信度不足时，优先采用 diff 结果）"
+        },
+        "gitCommitSaoHua.enableDescriptionPrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "生成骚话后是否显示描述输入提示（可添加详细描述到 commit message）"
         }
       }
     },

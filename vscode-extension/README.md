@@ -2,7 +2,7 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
-> **当前版本**: v1.12.0
+> **当前版本**: v1.13.0
 
 ## 功能特点
 
@@ -227,7 +227,8 @@ docs: API 文档
 {
     "gitCommitSaoHua.defaultStyle": "sao",
     "gitCommitSaoHua.defaultType": "feat",
-    "gitCommitSaoHua.autoInsert": true
+    "gitCommitSaoHua.autoInsert": true,
+    "gitCommitSaoHua.enableDescriptionPrompt": true
 }
 ```
 
@@ -247,6 +248,7 @@ docs: API 文档
 | `smartDetection.mediumConfidenceThreshold` | number | `1` | 中等置信度所需的关键词数量阈值（1-5） |
 | `smartDetection.astPriorityEnabled` | boolean | `true` | 是否启用 AST 分析优先策略 |
 | `smartDetection.diffPriorityEnabled` | boolean | `true` | 是否启用 Diff 分析优先策略 |
+| `enableDescriptionPrompt` | boolean | `true` | 生成骚话后是否显示描述输入提示 |
 
 ### 描述历史记录
 
@@ -256,6 +258,24 @@ docs: API 文档
 2. **输入新描述**: 点击"输入新描述..."可以输入新描述，输入后会自动保存到历史记录
 3. **自动记忆**: 使用过的描述会自动保存，最多保留 10 条（最新优先）
 4. **清空历史**: 使用"清空描述历史"命令可以清空所有历史记录
+
+### Commit 描述智能生成
+
+在 `生成骚话 Commit`、`随机生成 Commit`、`智能检测生成 Commit` 三个入口中，生成骚话后会自动询问是否添加详细描述：
+
+1. **生成骚话后询问**: 插件会弹出 QuickPick 询问"是否添加详细描述？"
+2. **添加描述**: 选择后可通过 InputBox 输入详细描述
+3. **自动保存**: 输入的描述会自动保存到描述历史，供下次快速选择
+4. **格式组合**: 最终 commit message 格式为 `<type>: <骚话>\n\n<详细描述>`
+
+示例：
+```
+feat: 你是我的北极星，指引我前行的方向
+
+实现用户登录模块，包含表单验证、错误处理和记住登录状态功能
+```
+
+可通过配置项 `gitCommitSaoHua.enableDescriptionPrompt`（默认 `true`）控制是否显示描述输入提示。
 
 ### 偏好记忆说明
 

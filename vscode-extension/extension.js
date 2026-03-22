@@ -9,11 +9,11 @@
  * - 使用统计追踪
  * 
  * @author coding-expert
- * @version 1.12.0
+ * @version 1.13.0
  */
 
 const vscode = require('vscode');
-const { commitTypes, styles, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
+const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
 
 // ==================== 常量定义 ====================
 
@@ -1260,6 +1260,54 @@ async function getDescriptionWithHistory() {
     return newDescription;
 }
 
+/**
+ * 提示用户是否添加详细描述
+ * @param {string} saoHuaMessage 骚话内容
+ * @returns {Promise<string|undefined>} 描述内容或 undefined
+ */
+async function promptForDescription(saoHuaMessage) {
+    const enablePrompt = ConfigManager.get('enableDescriptionPrompt', true);
+    if (!enablePrompt) return undefined;
+
+    const options = [
+        { label: '$(add) 添加详细描述', description: '为 commit 添加更详细的描述', value: 'add' },
+        { label: '$(arrow-right) 跳过', description: '仅使用骚话，不添加描述', value: 'skip' }
+    ];
+
+    const selected = await vscode.window.showQuickPick(options, {
+        placeHolder: '是否添加详细描述？',
+        ignoreFocusOut: true
+    });
+
+    if (!selected || selected.value === 'skip') return undefined;
+
+    const description = await vscode.window.showInputBox({
+        placeHolder: '输入详细描述（可选）',
+        prompt: '例如：实现用户登录功能，包含表单验证和错误处理',
+        ignoreFocusOut: true
+    });
+
+    if (description) {
+        await saveDescriptionToHistory(description);
+    }
+
+    return description;
+}
+
+/**
+ * 组合骚话和描述为完整 commit message
+ * @param {string} type Commit 类型
+ * @param {string} saoHua 骚话内容
+ * @param {string|undefined} description 描述内容
+ * @returns {string} 完整的 commit message
+ */
+function composeCommitMessage(type, saoHua, description) {
+    if (description) {
+        return `${type}: ${saoHua}\n\n${description}`;
+    }
+    return `${type}: ${saoHua}`;
+}
+
 // ==================== Git 输入框插入 ====================
 
 /**
@@ -1491,20 +1539,21 @@ async function generateSmartCommit() {
     PluginState.currentStyle = selectedStyle.value;
     await persistPreferences();
 
-    let description = await getDescriptionWithHistory();
-
-    let message;
+    let saoHuaMessage;
     let usedCustom = false;
     if (shouldUseCustomSaoHua()) {
         const customMessage = generateCustomSaoHuaMessage();
         if (customMessage) {
-            message = customMessage;
+            saoHuaMessage = customMessage;
             usedCustom = true;
         }
     }
-    if (!message) {
-        message = generateCommitMessage(PluginState.currentType, PluginState.currentStyle, description);
+    if (!saoHuaMessage) {
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
     }
+
+    const description = await promptForDescription(saoHuaMessage);
+    const message = composeCommitMessage(PluginState.currentType, saoHuaMessage, description);
 
     const customLabel = usedCustom ? ' (自定义)' : '';
     const customEmoji = usedCustom ? '✨ ' : '';
@@ -1600,20 +1649,21 @@ async function showSaoHuaGenerator() {
     PluginState.currentStyle = selectedStyle.value;
     await persistPreferences();
 
-    let description = await getDescriptionWithHistory();
-
-    let message;
+    let saoHuaMessage;
     let usedCustom = false;
     if (shouldUseCustomSaoHua()) {
         const customMessage = generateCustomSaoHuaMessage();
         if (customMessage) {
-            message = customMessage;
+            saoHuaMessage = customMessage;
             usedCustom = true;
         }
     }
-    if (!message) {
-        message = generateCommitMessage(PluginState.currentType, PluginState.currentStyle, description);
+    if (!saoHuaMessage) {
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
     }
+
+    const description = await promptForDescription(saoHuaMessage);
+    const message = composeCommitMessage(PluginState.currentType, saoHuaMessage, description);
 
     const customLabel = usedCustom ? ' (自定义)' : '';
     const customEmoji = usedCustom ? '✨ ' : '';
@@ -1894,14 +1944,14 @@ function activate(context) {
 async function generateRandomCommit() {
     const autoInsert = ConfigManager.get('autoInsert', true);
 
-    let message;
+    let saoHuaMessage;
     let usedCustom = false;
     let result;
 
     if (shouldUseCustomSaoHua()) {
         const customMessage = generateCustomSaoHuaMessage();
         if (customMessage) {
-            message = customMessage;
+            saoHuaMessage = customMessage;
             usedCustom = true;
             const customSaoHua = getRandomCustomSaoHua();
             if (customSaoHua) {
@@ -1912,15 +1962,18 @@ async function generateRandomCommit() {
         }
     }
 
-    if (!message) {
+    if (!saoHuaMessage) {
         result = getRandomSaoHua();
         PluginState.currentType = result.type;
         PluginState.currentStyle = result.style;
         await persistPreferences();
-        message = generateCommitMessage(result.type, result.style);
+        saoHuaMessage = result.message;
     } else {
         await persistPreferences();
     }
+
+    const description = await promptForDescription(saoHuaMessage);
+    const message = composeCommitMessage(result.type, saoHuaMessage, description);
 
     const typeLabel = usedCustom ? `${result.type} (自定义)` : `${result.type}`;
 
