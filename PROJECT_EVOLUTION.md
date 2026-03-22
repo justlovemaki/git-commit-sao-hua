@@ -11,7 +11,22 @@
 
 ## 🎯 进化历程
 
-### v1.11.0 - 智能检测置信度阈值可配置 ⚙️ (本次进化)
+### v1.12.0 - 扩展 12 种新语言文件类型支持 🌍 (本次进化)
+- **改进内容**: 扩展 12 种新语言文件类型支持
+  - 新增 `.scala`(Scala), `.ex/.exs`(Elixir), `.elm`(Elm), `.erl`(Erlang), `.hs`(Haskell)
+  - 新增 `.clj/.cljs`(Clojure), `.fs/.fsx`(F#), `.ml/.mli`(OCaml), `.r/.R`(R)
+  - 新增 `.m/.mm`(Objective-C), `.dart`(Dart), `.lua`(Lua)
+  - 智能检测覆盖率提升：支持更多编程语言的开发者使用智能检测功能
+  - 版本号同步：package.json 和 extension.js 更新到 1.12.0
+  - 文档同步更新：README.md 补充新支持的语言列表
+- **风险等级**: 低风险（仅文件类型映射扩展，无核心逻辑变更）
+- **收益**: 扩大智能检测支持的语言范围，让 Scala、Elixir、Elm、Haskell 等小众语言开发者也能享受自动推荐 Commit 类型的便利
+- ✅ **12 种新语言文件类型支持** - `.scala`(Scala), `.ex/.exs`(Elixir), `.elm`(Elm), `.erl`(Erlang), `.hs`(Haskell), `.clj/.cljs`(Clojure), `.fs/.fsx`(F#), `.ml/.mli`(OCaml), `.r/.R`(R), `.m/.mm`(Objective-C), `.dart`(Dart), `.lua`(Lua)
+- ✅ **智能检测覆盖率提升** - 支持更多编程语言的开发者使用智能检测功能
+- ✅ **版本号同步** - package.json 和 extension.js 版本更新到 1.12.0
+- ✅ **文档同步更新** - README.md 补充新支持的语言列表，PROJECT_EVOLUTION.md 版本更新至 v1.12.0
+
+### v1.11.0 - 智能检测置信度阈值可配置 ⚙️
 - ✅ **高置信度阈值配置** - 新增 `smartDetection.highConfidenceThreshold` 配置（默认 3，范围 1-10），可自定义高置信度所需的关键词数量
 - ✅ **中等置信度阈值配置** - 新增 `smartDetection.mediumConfidenceThreshold` 配置（默认 1，范围 1-5），可自定义中等置信度所需的关键词数量
 - ✅ **AST 优先级开关** - 新增 `smartDetection.astPriorityEnabled` 配置（默认 true），控制是否启用 AST 分析优先策略
@@ -475,6 +490,7 @@ php -S localhost:8000
 - ✅ calcConfidence() 辅助函数（v1.11.0）
 - ✅ calcFileTypeConfidence() 函数（v1.11.0）
 - ✅ getSmartDetectionConfig() 方法（v1.11.0）
+- ✅ 12 种新语言文件类型支持（v1.12.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -486,7 +502,7 @@ php -S localhost:8000
    - ~~智能检测置信度可视化增强（在 UI 中更直观展示分析依据）~~ ✅ 已在 v1.10.0 实现
    - ~~添加更多文件类型映射（.vue, .py, .java, .go 等）~~ ✅ 已在 v1.10.0 实现
    - ~~智能检测置信度阈值可配置~~ ✅ 已在 v1.11.0 实现
-   - [ ] 支持更多文件类型（.scala, .ex, .elm 等）
+   - ~~支持更多文件类型（.scala, .ex, .elm 等）~~ ✅ 已在 v1.12.0 实现
    - [ ] 智能检测置信度阈值 UI 调节（在插件设置界面提供滑动条）
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
