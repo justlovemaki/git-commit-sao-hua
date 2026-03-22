@@ -9,7 +9,7 @@
  * - 使用统计追踪
  * 
  * @author coding-expert
- * @version 1.10.0
+ * @version 1.12.0
  */
 
 const vscode = require('vscode');
@@ -784,6 +784,78 @@ class CommitTypeDetector {
 
             // Swift 代码
             if (ext === '.swift') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Scala 代码
+            if (ext === '.scala') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Elixir 代码
+            if (['.ex', '.exs'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Elm 代码
+            if (ext === '.elm') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Erlang 代码
+            if (ext === '.erl') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Haskell 代码
+            if (ext === '.hs') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Clojure 代码
+            if (['.clj', '.cljs'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // F# 代码
+            if (['.fs', '.fsx'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // OCaml 代码
+            if (['.ml', '.mli'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // R 代码
+            if (['.r', '.R'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Objective-C 代码
+            if (['.m', '.mm'].includes(ext)) {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Dart 代码
+            if (ext === '.dart') {
+                typeCounts.feat++;
+                continue;
+            }
+
+            // Lua 代码
+            if (ext === '.lua') {
                 typeCounts.feat++;
                 continue;
             }

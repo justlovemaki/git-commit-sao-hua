@@ -2,7 +2,7 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
-> **当前版本**: v1.4.0
+> **当前版本**: v1.12.0
 
 ## 功能特点
 
@@ -109,6 +109,10 @@ docs: API 文档
    - `.md/.txt` → `docs`
    - `package.json/package-lock.json` → `build`
    - `.github/`、`.gitlab-ci.yml` → `ci`
+   - `.scala` → `Scala` / `.ex/.exs` → `Elixir` / `.elm` → `Elm`
+   - `.erl` → `Erlang` / `.hs` → `Haskell` / `.clj/.cljs` → `Clojure`
+   - `.fs/.fsx` → `F#` / `.ml/.mli` → `OCaml` / `.r/.R` → `R`
+   - `.m/.mm` → `Objective-C` / `.dart` → `Dart` / `.lua` → `Lua`
 
 2. **Diff 内容分析**: 分析 git diff 中的关键词
    - **fix 关键词**: fix, bug, issue, error, crash, resolve, patch
