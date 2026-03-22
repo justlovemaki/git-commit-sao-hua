@@ -4,14 +4,33 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.9.0 (VSCode 插件)
+- **当前版本**: v1.13.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
 
-### v1.12.0 - 扩展 12 种新语言文件类型支持 🌍 (本次进化)
+### v1.13.0 - Commit 描述智能生成 📝 (本次进化)
+- **改进内容**: Commit 描述智能生成功能
+  - 新增 `promptForDescription()` 函数，生成骚话后询问用户是否添加详细描述
+  - 新增 `composeCommitMessage()` 函数，组合骚话和描述为完整 commit message
+  - 修改 `generate`/`generateRandom`/`generateSmart` 三个入口支持描述提示
+  - 新增配置项 `enableDescriptionPrompt`（默认 true）控制是否显示提示
+  - 用户输入的描述自动保存到描述历史，供下次快速选择
+  - commit message 格式优化：`<type>: <骚话>\n\n<详细描述>`
+  - 版本号同步：package.json 和 extension.js 更新到 1.13.0
+  - 文档同步更新：README.md 补充新功能说明和配置项文档
+- **风险等级**: 低风险（仅新增可选提示流程，无核心逻辑变更）
+- **收益**: 让 commit message 既有趣又实用，骚话吸引眼球，描述说明细节，提升 commit 信息的质量和可读性
+- ✅ **描述提示功能** - 生成骚话后自动询问"是否添加详细描述？"，用户可选择添加或跳过
+- ✅ **描述组合功能** - 自动将骚话和描述组合成标准格式 `<type>: <骚话>\n\n<描述>`
+- ✅ **描述历史整合** - 输入的描述自动保存到现有 descriptionHistory，支持下次快速选择
+- ✅ **可配置开关** - 新增 `enableDescriptionPrompt` 配置项，用户可随时关闭提示
+- ✅ **三入口支持** - 生成骚话 Commit、随机生成 Commit、智能检测生成 Commit 均支持描述提示
+- ✅ **文档同步更新** - README.md 补充新功能说明、使用示例和配置项表格
+
+### v1.12.0 - 扩展 12 种新语言文件类型支持 🌍
 - **改进内容**: 扩展 12 种新语言文件类型支持
   - 新增 `.scala`(Scala), `.ex/.exs`(Elixir), `.elm`(Elm), `.erl`(Erlang), `.hs`(Haskell)
   - 新增 `.clj/.cljs`(Clojure), `.fs/.fsx`(F#), `.ml/.mli`(OCaml), `.r/.R`(R)
@@ -491,6 +510,11 @@ php -S localhost:8000
 - ✅ calcFileTypeConfidence() 函数（v1.11.0）
 - ✅ getSmartDetectionConfig() 方法（v1.11.0）
 - ✅ 12 种新语言文件类型支持（v1.12.0）
+- ✅ promptForDescription() 描述提示功能（v1.13.0）
+- ✅ composeCommitMessage() 骚话 + 描述组合功能（v1.13.0）
+- ✅ enableDescriptionPrompt 配置项（v1.13.0）
+- ✅ 描述历史整合（v1.13.0）
+- ✅ 三入口支持（生成/随机/智能检测）（v1.13.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -503,6 +527,7 @@ php -S localhost:8000
    - ~~添加更多文件类型映射（.vue, .py, .java, .go 等）~~ ✅ 已在 v1.10.0 实现
    - ~~智能检测置信度阈值可配置~~ ✅ 已在 v1.11.0 实现
    - ~~支持更多文件类型（.scala, .ex, .elm 等）~~ ✅ 已在 v1.12.0 实现
+   - ~~Commit 描述智能生成~~ ✅ 已在 v1.13.0 实现
    - [ ] 智能检测置信度阈值 UI 调节（在插件设置界面提供滑动条）
 2. **中期**: 
    - 浏览器插件版本（Chrome/Edge）
