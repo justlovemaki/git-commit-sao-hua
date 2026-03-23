@@ -7,9 +7,10 @@
  * - AST 代码结构分析，识别函数/类/CSS 变更
  * - 自定义骚话管理，支持导入导出
  * - 使用统计追踪
+ * - 快捷设置面板，UI 调节智能检测参数
  * 
  * @author coding-expert
- * @version 1.13.0
+ * @version 1.14.0
  */
 
 const vscode = require('vscode');
@@ -1932,7 +1933,8 @@ function activate(context) {
         vscode.commands.registerCommand('gitCommitSaoHua.manageCustomSaoHua', showCustomSaoHuaManager),
         vscode.commands.registerCommand('gitCommitSaoHua.addCustomSaoHua', addSingleCustomSaoHua),
         vscode.commands.registerCommand('gitCommitSaoHua.clearCustomSaoHua', clearCustomSaoHuaCommand),
-        vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', showStatistics)
+        vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', showStatistics),
+        vscode.commands.registerCommand('gitCommitSaoHua.quickSettings', quickSettings)
     ];
 
     context.subscriptions.push(...commands);
@@ -2092,6 +2094,113 @@ async function clearCustomSaoHuaCommand() {
         await clearAllCustomSaoHua();
         vscode.window.showInformationMessage('已清空所有自定义骚话');
     }
+}
+
+// ==================== 快捷设置面板 ====================
+
+/**
+ * 快捷设置面板 - 使用 QuickPick 提供直观的 UI 调节设置
+ */
+async function quickSettings() {
+    const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
+    const smartConfig = ConfigManager.getSmartDetectionConfig();
+
+    const settingsItems = [
+        {
+            label: '$(gear) 高置信度阈值',
+            description: `当前：${smartConfig.highConfidenceThreshold} (范围 1-10)`,
+            detail: '高置信度所需的关键词数量阈值',
+            settingKey: 'smartDetection.highConfidenceThreshold',
+            currentValue: smartConfig.highConfidenceThreshold,
+            min: 1,
+            max: 10,
+            type: 'number'
+        },
+        {
+            label: '$(gear) 中等置信度阈值',
+            description: `当前：${smartConfig.mediumConfidenceThreshold} (范围 1-5)`,
+            detail: '中等置信度所需的关键词数量阈值',
+            settingKey: 'smartDetection.mediumConfidenceThreshold',
+            currentValue: smartConfig.mediumConfidenceThreshold,
+            min: 1,
+            max: 5,
+            type: 'number'
+        },
+        {
+            label: '$(symbol-boolean) AST 分析优先',
+            description: smartConfig.astPriorityEnabled ? '✓ 已启用' : '✗ 已禁用',
+            detail: '高置信度 AST 结果优先于其他分析',
+            settingKey: 'smartDetection.astPriorityEnabled',
+            currentValue: smartConfig.astPriorityEnabled,
+            type: 'boolean'
+        },
+        {
+            label: '$(symbol-boolean) Diff 分析优先',
+            description: smartConfig.diffPriorityEnabled ? '✓ 已启用' : '✗ 已禁用',
+            detail: '当 AST 置信度不足时，优先采用 diff 结果',
+            settingKey: 'smartDetection.diffPriorityEnabled',
+            currentValue: smartConfig.diffPriorityEnabled,
+            type: 'boolean'
+        },
+        {
+            label: '$(symbol-boolean) 描述提示',
+            description: config.get('enableDescriptionPrompt', true) ? '✓ 已启用' : '✗ 已禁用',
+            detail: '生成骚话后询问是否添加详细描述',
+            settingKey: 'enableDescriptionPrompt',
+            currentValue: config.get('enableDescriptionPrompt', true),
+            type: 'boolean'
+        }
+    ];
+
+    const selected = await vscode.window.showQuickPick(settingsItems, {
+        placeHolder: '选择要调整的设置',
+        ignoreFocusOut: true
+    });
+
+    if (!selected) return;
+
+    let newValue;
+
+    if (selected.type === 'number') {
+        const input = await vscode.window.showInputBox({
+            placeHolder: `输入新值 (${selected.min}-${selected.max})`,
+            value: selected.currentValue.toString(),
+            validateInput: (value) => {
+                const num = parseInt(value);
+                if (isNaN(num)) return '请输入有效数字';
+                if (num < selected.min || num > selected.max) {
+                    return `值必须在 ${selected.min} 到 ${selected.max} 之间`;
+                }
+                return null;
+            }
+        });
+
+        if (input === undefined) return;
+        newValue = parseInt(input);
+    } else {
+        const toggleItems = [
+            { label: '✓ 启用', value: true },
+            { label: '✗ 禁用', value: false }
+        ];
+
+        const toggleSelected = await vscode.window.showQuickPick(toggleItems, {
+            placeHolder: `当前：${selected.currentValue ? '启用' : '禁用'}`,
+            ignoreFocusOut: true
+        });
+
+        if (!toggleSelected) return;
+        newValue = toggleSelected.value;
+    }
+
+    // 保存设置
+    await config.update(selected.settingKey, newValue, vscode.ConfigurationTarget.Workspace);
+
+    const settingLabel = selected.label.replace(/^\$\([^)]+\)\s*/, '');
+    const valueLabel = selected.type === 'boolean' 
+        ? (newValue ? '已启用' : '已禁用')
+        : `已设置为 ${newValue}`;
+
+    vscode.window.showInformationMessage(`✓ ${settingLabel}：${valueLabel}`);
 }
 
 /**
