@@ -5,12 +5,15 @@
  * - 支持 12 种 Commit 类型 × 5 种风格模式
  * - 智能检测 Git 变更，自动推荐 Commit 类型
  * - AST 代码结构分析，识别函数/类/CSS 变更
+ * - 多语言关键词支持（Python/Java/TypeScript/Go/Rust/PHP/Ruby/Swift）
+ * - 代码模式检测（Promise/async、错误处理、React Hooks）
+ * - 加权评分系统提升检测准确率
  * - 自定义骚话管理，支持导入导出
  * - 使用统计追踪
  * - 快捷设置面板，UI 调节智能检测参数
  * 
  * @author coding-expert
- * @version 1.14.0
+ * @version 1.15.0
  */
 
 const vscode = require('vscode');
@@ -28,6 +31,11 @@ const FEAT_KEYWORDS = ['add', 'new', 'create', 'implement', 'feature', 'support'
 const PYTHON_KEYWORDS = ['def ', 'class ', 'import ', 'from '];
 const JAVA_KEYWORDS = ['public ', 'private ', 'protected ', 'class ', 'interface ', 'fun '];
 const TYPESCRIPT_KEYWORDS = ['interface ', 'type ', 'enum ', 'namespace '];
+const GO_KEYWORDS = ['func ', 'package ', 'import ', 'var ', 'const ', 'type ', 'struct ', 'interface '];
+const RUST_KEYWORDS = ['fn ', 'mod ', 'pub ', 'impl ', 'trait ', 'struct ', 'enum ', 'let ', 'mut '];
+const PHP_KEYWORDS = ['function ', 'class ', 'public ', 'private ', 'protected ', 'use ', 'namespace ', 'trait '];
+const RUBY_KEYWORDS = ['def ', 'class ', 'module ', 'include ', 'extend ', 'attr_reader', 'attr_writer', 'attr_accessor'];
+const SWIFT_KEYWORDS = ['func ', 'class ', 'struct ', 'enum ', 'protocol ', 'extension ', 'var ', 'let ', 'import '];
 
 /**
  * 工作区状态键名
@@ -485,6 +493,65 @@ class ASTAnalyzer {
             }
         }
 
+        // 检测 Promise/async 模式
+        const asyncPatterns = [
+            /\.then\s*\(/g,
+            /\.catch\s*\(/g,
+            /await\s+/g,
+            /async\s+function/g,
+            /async\s+\(/g,
+            /Promise\.resolve/g,
+            /Promise\.reject/g
+        ];
+        const asyncMatchCount = this.countPatternMatches(addedContent, asyncPatterns);
+        if (asyncMatchCount > 0) {
+            astFeatures.push(`检测到 ${asyncMatchCount} 处 Promise/async 模式`);
+            if (!detectedType) {
+                detectedType = 'feat';
+                confidence = confidence === 'low' ? 'medium' : confidence;
+            }
+        }
+
+        // 检测错误处理模式
+        const errorPatterns = [
+            /try\s*\{/g,
+            /catch\s*\(/g,
+            /throw\s+new\s+Error/g,
+            /throw\s+new\s+\w+Error/g,
+            /\.catch\s*\(/g,
+            /reject\s*\(/g
+        ];
+        const errorMatchCount = this.countPatternMatches(addedContent, errorPatterns);
+        if (errorMatchCount > 0) {
+            astFeatures.push(`检测到 ${errorMatchCount} 处错误处理模式`);
+            if (!detectedType) {
+                detectedType = 'fix';
+                confidence = 'medium';
+            } else if (detectedType === 'feat') {
+                confidence = 'medium';
+            }
+        }
+
+        // 检测 React Hooks
+        const reactHookPatterns = [
+            /useState\s*\(/g,
+            /useEffect\s*\(/g,
+            /useContext\s*\(/g,
+            /useReducer\s*\(/g,
+            /useCallback\s*\(/g,
+            /useMemo\s*\(/g,
+            /useRef\s*\(/g,
+            /useLayoutEffect\s*\(/g
+        ];
+        const hookMatchCount = this.countPatternMatches(addedContent, reactHookPatterns);
+        if (hookMatchCount > 0) {
+            astFeatures.push(`检测到 ${hookMatchCount} 处 React Hooks`);
+            if (!detectedType) {
+                detectedType = 'feat';
+                confidence = 'high';
+            }
+        }
+
         return {
             type: detectedType,
             confidence,
@@ -548,18 +615,33 @@ class DiffAnalyzer {
         const pythonMatched = this.matchKeywords(diffContent, PYTHON_KEYWORDS);
         const javaMatched = this.matchKeywords(diffContent, JAVA_KEYWORDS);
         const tsMatched = this.matchKeywords(diffContent, TYPESCRIPT_KEYWORDS);
+        const goMatched = this.matchKeywords(diffContent, GO_KEYWORDS);
+        const rustMatched = this.matchKeywords(diffContent, RUST_KEYWORDS);
+        const phpMatched = this.matchKeywords(diffContent, PHP_KEYWORDS);
+        const rubyMatched = this.matchKeywords(diffContent, RUBY_KEYWORDS);
+        const swiftMatched = this.matchKeywords(diffContent, SWIFT_KEYWORDS);
 
         const fixScore = fixMatched.length;
         const featScore = featMatched.length;
         const pythonScore = pythonMatched.length;
         const javaScore = javaMatched.length;
         const tsScore = tsMatched.length;
+        const goScore = goMatched.length;
+        const rustScore = rustMatched.length;
+        const phpScore = phpMatched.length;
+        const rubyScore = rubyMatched.length;
+        const swiftScore = swiftMatched.length;
 
         // 语言特定类型映射
         const langScores = [
             { name: 'Python', score: pythonScore, type: 'feat' },
             { name: 'Java/Kotlin', score: javaScore, type: 'feat' },
-            { name: 'TypeScript', score: tsScore, type: 'feat' }
+            { name: 'TypeScript', score: tsScore, type: 'feat' },
+            { name: 'Go', score: goScore, type: 'feat' },
+            { name: 'Rust', score: rustScore, type: 'feat' },
+            { name: 'PHP', score: phpScore, type: 'feat' },
+            { name: 'Ruby', score: rubyScore, type: 'feat' },
+            { name: 'Swift', score: swiftScore, type: 'feat' }
         ];
 
         // 根据匹配结果判断类型
@@ -875,7 +957,7 @@ class CommitTypeDetector {
     }
 
     /**
-     * 综合判断最终 Commit 类型
+     * 综合判断最终 Commit 类型（加权评分系统）
      * @param {Object} typeCounts 文件类型计数
      * @param {Object|null} astResult AST 分析结果
      * @param {Object|null} diffResult Diff 分析结果
@@ -895,31 +977,39 @@ class CommitTypeDetector {
         const diffPriorityEnabled = smartConfig.diffPriorityEnabled;
         
         const breakdown = {
-            fileType: { type: null, count: 0, reason: '' },
-            ast: { type: null, confidence: 'low', reason: '' },
-            diff: { type: null, confidence: 'low', matchedKeywords: [], reason: '' }
+            fileType: { type: null, count: 0, reason: '', score: 0 },
+            ast: { type: null, confidence: 'low', reason: '', score: 0 },
+            diff: { type: null, confidence: 'low', matchedKeywords: [], reason: '', score: 0 }
         };
 
         const [maxFileType, maxFileCount] = Object.entries(typeCounts)
             .reduce((max, [type, count]) => count > max[1] ? [type, count] : max, ['', 0]);
+        const fileTypeScore = maxFileCount * 0.2;
         breakdown.fileType = {
             type: maxFileType,
             count: maxFileCount,
+            score: fileTypeScore,
             reason: `📁 ${maxFileType} (${maxFileCount} 个文件)`
         };
 
         if (astResult?.type) {
+            const astScoreMap = { high: 0.4, medium: 0.25, low: 0.1 };
+            const astScore = astScoreMap[astResult.confidence] || 0.1;
             breakdown.ast = {
                 type: astResult.type,
                 confidence: astResult.confidence,
+                score: astScore,
                 reason: `🧠 ${astResult.reason}`
             };
         }
 
         if (diffResult?.matchedKeywords?.length > 0) {
+            const diffScoreMap = { high: 0.4, medium: 0.25, low: 0.1 };
+            const diffScore = diffScoreMap[diffResult.confidence] || 0.1;
             breakdown.diff = {
                 type: diffResult.type,
                 confidence: diffResult.confidence,
+                score: diffScore,
                 matchedKeywords: diffResult.matchedKeywords,
                 reason: `📝 ${diffResult.reason}`
             };
@@ -930,20 +1020,51 @@ class CommitTypeDetector {
             return 'low';
         };
 
+        // 加权评分系统：AST 0.4 + Diff 0.4 + FileType 0.2
+        const typeScores = {};
+        
+        if (astResult?.type) {
+            typeScores[astResult.type] = (typeScores[astResult.type] || 0) + (breakdown.ast.score || 0);
+        }
+        if (diffResult?.type) {
+            typeScores[diffResult.type] = (typeScores[diffResult.type] || 0) + (breakdown.diff.score || 0);
+        }
+        if (maxFileType && maxFileCount > 0) {
+            typeScores[maxFileType] = (typeScores[maxFileType] || 0) + fileTypeScore;
+        }
+
+        // 找出得分最高的类型
+        const sortedTypes = Object.entries(typeScores).sort((a, b) => b[1] - a[1]);
+        const topType = sortedTypes[0];
+        const topScore = topType ? topType[1] : 0;
+
+        // 检查是否有多个来源指向同一类型（置信度提升）
+        const sourcesAgree = [];
+        if (astResult?.type) sourcesAgree.push(astResult.type);
+        if (diffResult?.type) sourcesAgree.push(diffResult.type);
+        if (maxFileCount > 0) sourcesAgree.push(maxFileType);
+        
+        const typeOccurrences = {};
+        for (const t of sourcesAgree) {
+            typeOccurrences[t] = (typeOccurrences[t] || 0) + 1;
+        }
+        const agreementCount = topType ? typeOccurrences[topType[0]] : 0;
+
+        // 根据加权得分和一致性计算最终置信度
         if (astResult?.type && astResult.confidence === 'high' && astPriorityEnabled) {
             finalType = astResult.type;
             confidence = 'high';
             reason = breakdown.ast.reason;
         }
         else if (astResult?.type && astResult.confidence === 'medium') {
-            if (diffResult?.matchedKeywords.length > 0) {
+            if (diffResult?.matchedKeywords?.length > 0) {
                 if (diffResult.confidence === 'high' && diffPriorityEnabled) {
                     finalType = diffResult.type;
                     confidence = 'high';
                     reason = breakdown.diff.reason;
                 } else {
                     finalType = astResult.type;
-                    confidence = 'medium';
+                    confidence = agreementCount >= 2 ? 'high' : 'medium';
                     reason = `${breakdown.ast.reason}; ${breakdown.diff.reason}`;
                 }
             } else {
@@ -953,9 +1074,9 @@ class CommitTypeDetector {
             }
             matchedKeywords = diffResult?.matchedKeywords || [];
         }
-        else if (diffResult?.matchedKeywords.length > 0) {
+        else if (diffResult?.matchedKeywords?.length > 0) {
             finalType = diffResult.type;
-            confidence = diffResult.confidence;
+            confidence = agreementCount >= 2 ? 'high' : diffResult.confidence;
             reason = breakdown.diff.reason;
             matchedKeywords = diffResult.matchedKeywords;
         }
@@ -965,6 +1086,11 @@ class CommitTypeDetector {
             confidence = calcFileTypeConfidence(maxFileCount);
         }
 
+        // 如果多个分析来源指向同一类型，提升置信度
+        if (agreementCount >= 2 && confidence !== 'high') {
+            confidence = confidence === 'low' ? 'medium' : 'high';
+        }
+
         return {
             type: finalType,
             confidence,
@@ -972,7 +1098,8 @@ class CommitTypeDetector {
             reason,
             fileType: 'code',
             astFeatures,
-            breakdown
+            breakdown,
+            weightedScore: topScore
         };
     }
 }

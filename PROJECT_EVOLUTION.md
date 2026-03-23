@@ -4,12 +4,40 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.14.0 (VSCode 插件)
+- **当前版本**: v1.15.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
+
+### v1.15.0 - 智能检测准确率再提升 🧠 (本次进化)
+- **改进内容**: 智能检测准确率再提升功能
+  - 新增 Go 关键词支持：`func`, `package`, `import`, `var`, `const`, `type`, `struct`, `interface`
+  - 新增 Rust 关键词支持：`fn`, `mod`, `pub`, `impl`, `trait`, `struct`, `enum`, `let`, `mut`
+  - 新增 PHP 关键词支持：`function`, `class`, `public`, `private`, `protected`, `use`, `namespace`, `trait`
+  - 新增 Ruby 关键词支持：`def`, `class`, `module`, `include`, `extend`, `attr_reader`, `attr_writer`, `attr_accessor`
+  - 新增 Swift 关键词支持：`func`, `class`, `struct`, `enum`, `protocol`, `extension`, `var`, `let`, `import`
+  - 新增 Promise/async 模式检测：`.then()`, `await`, `async function`, Promise 相关
+  - 新增错误处理模式检测：`try-catch`, `throw new Error`, `.catch()`
+  - 新增 React Hooks 检测：`useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`
+  - 实现加权评分系统：AST 分析权重 0.4，Diff 关键词权重 0.4，文件类型权重 0.2
+  - 多来源一致时置信度提升：多个分析来源指向同一类型时自动提升置信度等级
+  - 版本号同步：package.json 和 extension.js 更新到 1.15.0
+  - 文档同步更新：README.md 补充 v1.15.0 新功能说明
+- **风险等级**: 低风险（仅增强分析逻辑，无核心逻辑变更）
+- **收益**: 进一步提升智能检测准确率，支持更多编程语言和代码模式，让 Commit 类型推荐更加精准
+- ✅ **Go 关键词支持** - `func`, `package`, `import`, `var`, `const`, `type`, `struct`, `interface`
+- ✅ **Rust 关键词支持** - `fn`, `mod`, `pub`, `impl`, `trait`, `struct`, `enum`, `let`, `mut`
+- ✅ **PHP 关键词支持** - `function`, `class`, `public`, `private`, `protected`, `use`, `namespace`, `trait`
+- ✅ **Ruby 关键词支持** - `def`, `class`, `module`, `include`, `extend`, `attr_reader`, `attr_writer`, `attr_accessor`
+- ✅ **Swift 关键词支持** - `func`, `class`, `struct`, `enum`, `protocol`, `extension`, `var`, `let`, `import`
+- ✅ **Promise/async 模式检测** - `.then()`, `.catch()`, `await`, `async function`, Promise 相关
+- ✅ **错误处理模式检测** - `try-catch`, `throw new Error`, `.catch()`, `reject()`
+- ✅ **React Hooks 检测** - `useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`, `useRef`, `useLayoutEffect`
+- ✅ **加权评分系统** - AST 0.4 + Diff 0.4 + FileType 0.2，综合计算各类型得分
+- ✅ **置信度提升机制** - 多个分析来源指向同一类型时提升置信度等级
+- ✅ **文档同步更新** - README.md 补充 v1.15.0 新功能说明
 
 ### v1.14.0 - 快捷设置面板 ⚙️ (本次进化)
 - **改进内容**: 快捷设置面板功能
@@ -548,6 +576,16 @@ php -S localhost:8000
 - ✅ AST 优先级开关 UI 调节（v1.14.0）
 - ✅ Diff 优先级开关 UI 调节（v1.14.0）
 - ✅ 描述提示开关 UI 调节（v1.14.0）
+- ✅ Go 关键词支持（v1.15.0）
+- ✅ Rust 关键词支持（v1.15.0）
+- ✅ PHP 关键词支持（v1.15.0）
+- ✅ Ruby 关键词支持（v1.15.0）
+- ✅ Swift 关键词支持（v1.15.0）
+- ✅ Promise/async 模式检测（v1.15.0）
+- ✅ 错误处理模式检测（v1.15.0）
+- ✅ React Hooks 检测（v1.15.0）
+- ✅ 加权评分系统（v1.15.0）
+- ✅ 多来源一致置信度提升（v1.15.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -562,7 +600,8 @@ php -S localhost:8000
    - ~~支持更多文件类型（.scala, .ex, .elm 等）~~ ✅ 已在 v1.12.0 实现
    - ~~Commit 描述智能生成~~ ✅ 已在 v1.13.0 实现
    - ~~智能检测置信度阈值 UI 调节（在插件设置界面提供滑动条）~~ ✅ 已在 v1.14.0 实现
-2. **中期**: 
+   - ~~智能检测准确率再提升（增强多语言关键词和代码模式检测）~~ ✅ 已在 v1.15.0 实现
+ 2. **中期**:
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本
    - 智能检测准确率再提升（集成 TypeScript AST API）
