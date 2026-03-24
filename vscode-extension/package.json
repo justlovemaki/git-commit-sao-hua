@@ -2,7 +2,7 @@
   "name": "git-commit-sao-hua",
   "displayName": "Git Commit 骚话生成器",
   "description": "让每次 Git 提交都充满爱意（或骚气）！支持 12 种类型 × 5 种风格",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "publisher": "coding-expert",
   "engines": {
     "vscode": "^1.70.0"
@@ -31,7 +31,10 @@
     "onCommand:gitCommitSaoHua.addCustomSaoHua",
     "onCommand:gitCommitSaoHua.clearCustomSaoHua",
     "onCommand:gitCommitSaoHua.showStatistics",
-    "onCommand:gitCommitSaoHua.quickSettings"
+    "onCommand:gitCommitSaoHua.quickSettings",
+    "onCommand:gitCommitSaoHua.showDetectionLogs",
+    "onCommand:gitCommitSaoHua.clearDetectionLogs",
+    "onCommand:gitCommitSaoHua.analyzeDetectionAccuracy"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -99,6 +102,21 @@
       {
         "command": "gitCommitSaoHua.quickSettings",
         "title": "快捷设置面板",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.showDetectionLogs",
+        "title": "查看检测日志",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.clearDetectionLogs",
+        "title": "清空检测日志",
+        "category": "Git Commit 骚话"
+      },
+      {
+        "command": "gitCommitSaoHua.analyzeDetectionAccuracy",
+        "title": "分析检测准确率",
         "category": "Git Commit 骚话"
       }
     ],
@@ -203,6 +221,11 @@
           "type": "boolean",
           "default": true,
           "description": "生成骚话后是否显示描述输入提示（可添加详细描述到 commit message）"
+        },
+        "gitCommitSaoHua.enableDetectionLogging": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用智能检测日志记录功能（记录每次检测结果和用户反馈）"
         }
       }
     },

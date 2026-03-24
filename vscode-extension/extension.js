@@ -11,9 +11,10 @@
  * - 自定义骚话管理，支持导入导出
  * - 使用统计追踪
  * - 快捷设置面板，UI 调节智能检测参数
+ * - 智能检测日志记录和准确率分析
  * 
  * @author coding-expert
- * @version 1.15.0
+ * @version 1.16.0
  */
 
 const vscode = require('vscode');
@@ -46,7 +47,8 @@ const STATE_KEYS = {
     style: 'gitCommitSaoHua.currentStyle',
     descriptionHistory: 'gitCommitSaoHua.descriptionHistory',
     customSaoHua: 'gitCommitSaoHua.customSaoHua',
-    statistics: 'gitCommitSaoHua.statistics'
+    statistics: 'gitCommitSaoHua.statistics',
+    detectionLogs: 'gitCommitSaoHua.detectionLogs'
 };
 
 // ==================== Git 扩展管理 ====================
@@ -173,6 +175,7 @@ class ConfigManager {
             enableSmartDetection: true,
             astAnalysisEnabled: true,
             showConfidenceDetail: true,
+            enableDetectionLogging: true,
             smartDetection: {
                 highConfidenceThreshold: 3,
                 mediumConfidenceThreshold: 1,
@@ -249,6 +252,185 @@ async function resetStatistics() {
         styleUsage: {},
         lastGeneratedAt: null
     });
+}
+
+// ==================== 检测日志管理 ====================
+
+const MAX_DETECTION_LOGS = 50;
+
+/**
+ * 获取检测日志列表
+ * @returns {Array} 检测日志数组
+ */
+function getDetectionLogs() {
+    return PluginState.extensionContext?.workspaceState.get(STATE_KEYS.detectionLogs) || [];
+}
+
+/**
+ * 保存检测日志列表
+ * @param {Array} logs 检测日志数组
+ */
+async function saveDetectionLogs(logs) {
+    if (!PluginState.extensionContext) return;
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.detectionLogs, logs);
+}
+
+/**
+ * 添加检测日志
+ * @param {Object} logData 日志数据
+ */
+async function addDetectionLog(logData) {
+    if (!ConfigManager.get('enableDetectionLogging', true)) return;
+    
+    const logs = getDetectionLogs();
+    logs.unshift({
+        timestamp: Date.now(),
+        ...logData
+    });
+    
+    if (logs.length > MAX_DETECTION_LOGS) {
+        logs.length = MAX_DETECTION_LOGS;
+    }
+    
+    await saveDetectionLogs(logs);
+}
+
+/**
+ * 清空检测日志
+ */
+async function clearDetectionLogs() {
+    await saveDetectionLogs([]);
+}
+
+/**
+ * 分析检测准确率
+ * @returns {Object} 准确率分析结果
+ */
+function analyzeDetectionAccuracy() {
+    const logs = getDetectionLogs();
+    
+    if (logs.length === 0) {
+        return {
+            totalCount: 0,
+            adoptedCount: 0,
+            skippedCount: 0,
+            modifiedCount: 0,
+            adoptionRate: 0,
+            message: '暂无检测日志'
+        };
+    }
+    
+    const adoptedCount = logs.filter(log => log.userChoice === 'adopted').length;
+    const skippedCount = logs.filter(log => log.userChoice === 'skipped').length;
+    const modifiedCount = logs.filter(log => log.userChoice === 'modified').length;
+    const totalCount = logs.length;
+    const adoptionRate = totalCount > 0 ? (adoptedCount / totalCount * 100).toFixed(1) : 0;
+    
+    return {
+        totalCount,
+        adoptedCount,
+        skippedCount,
+        modifiedCount,
+        adoptionRate,
+        logs: logs.slice(0, 10)
+    };
+}
+
+/**
+ * 显示检测日志
+ */
+async function showDetectionLogs() {
+    const logs = getDetectionLogs();
+    
+    if (logs.length === 0) {
+        vscode.window.showInformationMessage('暂无检测日志');
+        return;
+    }
+    
+    const logItems = logs.map((log, index) => {
+        const time = new Date(log.timestamp).toLocaleString('zh-CN');
+        const choiceLabel = {
+            adopted: '✓ 采纳',
+            skipped: '→ 跳过',
+            modified: '✎ 修改'
+        }[log.userChoice] || '未选择';
+        
+        return {
+            label: `${index + 1}. [${log.detectedType}] ${choiceLabel}`,
+            description: `${log.fileType} | 置信度: ${log.confidence}`,
+            detail: `时间: ${time}\nAST: ${log.astFeatures?.join(', ') || 'N/A'}\nDiff: ${log.matchedKeywords?.join(', ') || 'N/A'}`,
+            timestamp: log.timestamp
+        };
+    });
+    
+    const analysis = analyzeDetectionAccuracy();
+    
+    const options = [
+        { label: '📋 最近检测日志', description: `共 ${logs.length} 条记录`, value: 'view' },
+        { label: '📊 准确率分析', description: `采纳率: ${analysis.adoptionRate}%`, value: 'analysis' },
+        { label: '🗑️ 清空日志', description: '删除所有检测日志', value: 'clear' }
+    ];
+    
+    const selected = await vscode.window.showQuickPick(options, {
+        placeHolder: '选择操作',
+        ignoreFocusOut: true
+    });
+    
+    if (!selected) return;
+    
+    switch (selected.value) {
+        case 'view':
+            const viewSelected = await vscode.window.showQuickPick(logItems, {
+                placeHolder: '查看检测日志',
+                ignoreFocusOut: true
+            });
+            if (viewSelected) {
+                vscode.window.showInformationMessage(
+                    `日志详情：${viewSelected.label}`,
+                    { modal: false, detail: viewSelected.detail }
+                );
+            }
+            break;
+        case 'analysis':
+            await showDetectionAnalysis();
+            break;
+        case 'clear':
+            const confirm = await vscode.window.showWarningMessage(
+                '确定要清空所有检测日志吗？',
+                { modal: true },
+                '确定清空',
+                '取消'
+            );
+            if (confirm === '确定清空') {
+                await clearDetectionLogs();
+                vscode.window.showInformationMessage('已清空所有检测日志');
+            }
+            break;
+    }
+}
+
+/**
+ * 显示检测准确率分析
+ */
+async function showDetectionAnalysis() {
+    const analysis = analyzeDetectionAccuracy();
+    
+    const message = [
+        '📊 智能检测准确率分析',
+        '',
+        '──── 统计概览 ────',
+        `总检测次数：${analysis.totalCount}`,
+        `✓ 采纳：${analysis.adoptedCount} 次`,
+        `→ 跳过：${analysis.skippedCount} 次`,
+        `✎ 修改：${analysis.modifiedCount} 次`,
+        '',
+        '──── 采纳率 ────',
+        `${analysis.adoptionRate}%`,
+        '',
+        analysis.totalCount < 5 ? '💡 提示：检测次数越多，准确率分析越准确' : ''
+    ].filter(Boolean).join('\n');
+    
+    vscode.window.showInformationMessage(message, { modal: false });
 }
 
 /**
@@ -1649,6 +1831,47 @@ async function generateSmartCommit() {
         { modal: false, detail: detailMessage }
     );
 
+    const feedbackOptions = [
+        { label: '✓ 采纳推荐', description: '使用推荐的类型', value: 'adopted' },
+        { label: '🔄 手动修改', description: '选择其他类型', value: 'modified' },
+        { label: '→ 跳过检测', description: '使用手动选择模式', value: 'skipped' }
+    ];
+
+    const userChoice = await vscode.window.showQuickPick(feedbackOptions, {
+        placeHolder: '是否采纳智能检测推荐？',
+        ignoreFocusOut: true
+    });
+
+    let userChoiceResult = 'skipped';
+    
+    if (!userChoice) {
+        return;
+    }
+
+    userChoiceResult = userChoice.value;
+
+    const logData = {
+        detectedType: analysisResult.type,
+        confidence: analysisResult.confidence,
+        fileType: analysisResult.fileType,
+        astFeatures: analysisResult.astFeatures || [],
+        astResult: breakdown?.ast || null,
+        diffResult: breakdown?.diff || null,
+        breakdown: breakdown,
+        userChoice: userChoiceResult,
+        matchedKeywords: analysisResult.matchedKeywords || []
+    };
+
+    await addDetectionLog(logData);
+
+    if (userChoiceResult === 'skipped') {
+        return await showSaoHuaGenerator();
+    }
+
+    if (userChoiceResult === 'modified') {
+        return await showManualTypeSelection(analysisResult.type);
+    }
+
     playSoundEffect('generate');
 
     const styleItems = styles.map(s => ({
@@ -1705,6 +1928,95 @@ async function generateSmartCommit() {
         playSoundEffect('copy');
         await vscode.window.showInformationMessage(
             `${customEmoji}已复制到剪贴板！类型：${PluginState.currentType}${customLabel} ${confidenceEmoji} (智能推荐/${analysisResult.confidence})`,
+            { modal: true, detail: message }
+        );
+    }
+
+    await recordGeneration(PluginState.currentType, PluginState.currentStyle);
+}
+
+/**
+ * 显示手动类型选择（带预选）
+ * @param {string} defaultType 预选的默认类型
+ */
+async function showManualTypeSelection(defaultType) {
+    const defaultStyle = ConfigManager.get('defaultStyle', 'sao');
+    const autoInsert = ConfigManager.get('autoInsert', true);
+    const initialStyle = PluginState.currentStyle || defaultStyle;
+
+    const typeItems = commitTypes.map(t => ({
+        label: t.label,
+        description: t.desc,
+        value: t.value,
+        picked: t.value === defaultType
+    }));
+
+    const selectedType = await vscode.window.showQuickPick(typeItems, {
+        placeHolder: '选择 Commit 类型',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedType) return;
+    
+    PluginState.currentType = selectedType.value;
+    await persistPreferences();
+
+    const styleItems = styles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value,
+        picked: s.value === initialStyle
+    }));
+
+    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
+        placeHolder: '选择风格模式',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedStyle) return;
+    
+    PluginState.currentStyle = selectedStyle.value;
+    await persistPreferences();
+
+    let saoHuaMessage;
+    let usedCustom = false;
+    if (shouldUseCustomSaoHua()) {
+        const customMessage = generateCustomSaoHuaMessage();
+        if (customMessage) {
+            saoHuaMessage = customMessage;
+            usedCustom = true;
+        }
+    }
+    if (!saoHuaMessage) {
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
+    }
+
+    const description = await promptForDescription(saoHuaMessage);
+    const message = composeCommitMessage(PluginState.currentType, saoHuaMessage, description);
+
+    const customLabel = usedCustom ? ' (自定义)' : '';
+    const customEmoji = usedCustom ? '✨ ' : '';
+
+    playSoundEffect('generate');
+
+    if (autoInsert) {
+        const result = await vscode.window.showInformationMessage(
+            `${customEmoji}生成成功！类型：${PluginState.currentType}${customLabel}`,
+            { modal: true, detail: message },
+            '插入到 Git'
+        );
+
+        if (result === '插入到 Git') {
+            await insertToGitInput(message, true);
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
+            vscode.window.showInformationMessage('已复制到剪贴板');
+        }
+    } else {
+        await vscode.env.clipboard.writeText(message);
+        playSoundEffect('copy');
+        await vscode.window.showInformationMessage(
+            `${customEmoji}已复制到剪贴板！类型：${PluginState.currentType}${customLabel}`,
             { modal: true, detail: message }
         );
     }
@@ -2061,7 +2373,10 @@ function activate(context) {
         vscode.commands.registerCommand('gitCommitSaoHua.addCustomSaoHua', addSingleCustomSaoHua),
         vscode.commands.registerCommand('gitCommitSaoHua.clearCustomSaoHua', clearCustomSaoHuaCommand),
         vscode.commands.registerCommand('gitCommitSaoHua.showStatistics', showStatistics),
-        vscode.commands.registerCommand('gitCommitSaoHua.quickSettings', quickSettings)
+        vscode.commands.registerCommand('gitCommitSaoHua.quickSettings', quickSettings),
+        vscode.commands.registerCommand('gitCommitSaoHua.showDetectionLogs', showDetectionLogs),
+        vscode.commands.registerCommand('gitCommitSaoHua.clearDetectionLogs', clearDetectionLogs),
+        vscode.commands.registerCommand('gitCommitSaoHua.analyzeDetectionAccuracy', showDetectionAnalysis)
     ];
 
     context.subscriptions.push(...commands);

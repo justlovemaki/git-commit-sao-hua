@@ -4,12 +4,40 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.15.0 (VSCode 插件)
+- **当前版本**: v1.16.0 (VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
+
+### v1.16.0 - 智能检测日志分析 📋 (本次进化)
+- **改进内容**: 智能检测日志分析功能
+  - 新增智能检测日志记录功能，记录每次检测的时间戳、AST 分析结果、Diff 分析结果、最终决策、置信度、用户选择
+  - 新增用户反馈机制：采纳推荐/手动修改/跳过检测三种反馈选项
+  - 新增检测日志查看命令 `gitCommitSaoHua.showDetectionLogs`，支持查看最近检测记录、准确率分析、清空日志
+  - 新增检测日志清空命令 `gitCommitSaoHua.clearDetectionLogs`
+  - 新增准确率分析命令 `gitCommitSaoHua.analyzeDetectionAccuracy`，统计用户采纳率
+  - 新增配置项 `enableDetectionLogging`（默认 true）控制日志记录开关
+  - 使用 workspaceState 存储日志数据，最多保留 50 条记录
+  - 新增 `showDetectionAnalysis()` 函数展示准确率分析结果
+  - 新增 `showManualTypeSelection()` 函数支持从智能检测切换到手动选择类型
+  - 新增 `addDetectionLog()` 函数记录检测日志
+  - 版本号同步：package.json 和 extension.js 更新到 1.16.0
+  - 文档同步更新：README.md 补充 v1.16.0 新功能说明
+- **风险等级**: 低风险（仅新增日志记录和用户反馈功能，无核心逻辑变更）
+- **收益**: 帮助用户了解智能检测的准确率，收集用户反馈数据，为后续优化智能检测算法提供数据支持
+- ✅ **智能检测日志记录** - 记录每次检测的时间戳、AST 分析结果、Diff 分析结果、最终决策、置信度
+- ✅ **用户反馈收集** - 采纳推荐/手动修改/跳过检测三种反馈选项
+- ✅ **日志查看命令** - 新增 `gitCommitSaoHua.showDetectionLogs` 命令
+- ✅ **日志清空命令** - 新增 `gitCommitSaoHua.clearDetectionLogs` 命令
+- ✅ **准确率分析命令** - 新增 `gitCommitSaoHua.analyzeDetectionAccuracy` 命令
+- ✅ **日志记录配置项** - 新增 `enableDetectionLogging` 配置项（默认 true）
+- ✅ **workspaceState 存储** - 使用 workspaceState 存储日志数据，最多保留 50 条
+- ✅ **showDetectionAnalysis() 函数** - 展示准确率分析结果
+- ✅ **showManualTypeSelection() 函数** - 支持从智能检测切换到手动选择类型
+- ✅ **addDetectionLog() 函数** - 记录检测日志到 workspaceState
+- ✅ **文档同步更新** - README.md 补充 v1.16.0 新功能说明和智能检测日志使用文档
 
 ### v1.15.0 - 智能检测准确率再提升 🧠 (本次进化)
 - **改进内容**: 智能检测准确率再提升功能
