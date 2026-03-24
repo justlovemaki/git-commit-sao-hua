@@ -14,7 +14,7 @@
  * - 智能检测日志记录和准确率分析
  * 
  * @author coding-expert
- * @version 1.16.0
+ * @version 1.17.0
  */
 
 const vscode = require('vscode');
@@ -37,6 +37,16 @@ const RUST_KEYWORDS = ['fn ', 'mod ', 'pub ', 'impl ', 'trait ', 'struct ', 'enu
 const PHP_KEYWORDS = ['function ', 'class ', 'public ', 'private ', 'protected ', 'use ', 'namespace ', 'trait '];
 const RUBY_KEYWORDS = ['def ', 'class ', 'module ', 'include ', 'extend ', 'attr_reader', 'attr_writer', 'attr_accessor'];
 const SWIFT_KEYWORDS = ['func ', 'class ', 'struct ', 'enum ', 'protocol ', 'extension ', 'var ', 'let ', 'import '];
+
+/**
+ * 代码模式检测关键词
+ * 用于检测特定类型的代码变更
+ */
+const DATABASE_PATTERNS = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE', 'EXECUTE'];
+const API_PATTERNS = ['fetch', 'axios', 'http.get', 'http.post', 'http.put', 'http.delete', 'XMLHttpRequest', '$.ajax'];
+const ROUTE_PATTERNS = ['router.get', 'router.post', 'router.put', 'router.delete', '@GetMapping', '@PostMapping', '@Route', 'path:', 'url:'];
+const COMPONENT_PATTERNS = ['template:', 'render(', 'h(', 'createElement', 'jsx', '<div>', '<Component>'];
+const STYLE_PATTERNS = ['display: flex', 'display: grid', 'animation:', 'transition:', 'transform:', '@keyframes', '@media'];
 
 /**
  * 工作区状态键名
@@ -355,10 +365,17 @@ async function showDetectionLogs() {
             modified: '✎ 修改'
         }[log.userChoice] || '未选择';
         
+        const patternStr = log.detectedPatterns 
+            ? Object.entries(log.detectedPatterns)
+                .filter(([_, patterns]) => patterns.length > 0)
+                .map(([key, patterns]) => `${key}: ${patterns.join(', ')}`)
+                .join(' | ')
+            : 'N/A';
+        
         return {
             label: `${index + 1}. [${log.detectedType}] ${choiceLabel}`,
             description: `${log.fileType} | 置信度: ${log.confidence}`,
-            detail: `时间: ${time}\nAST: ${log.astFeatures?.join(', ') || 'N/A'}\nDiff: ${log.matchedKeywords?.join(', ') || 'N/A'}`,
+            detail: `时间: ${time}\nAST: ${log.astFeatures?.join(', ') || 'N/A'}\nDiff: ${log.matchedKeywords?.join(', ') || 'N/A'}\n代码模式: ${patternStr}`,
             timestamp: log.timestamp
         };
     });
@@ -803,6 +820,9 @@ class DiffAnalyzer {
         const rubyMatched = this.matchKeywords(diffContent, RUBY_KEYWORDS);
         const swiftMatched = this.matchKeywords(diffContent, SWIFT_KEYWORDS);
 
+        // 代码模式检测
+        const detectedPatterns = this.detectCodePatterns(diffContent);
+
         const fixScore = fixMatched.length;
         const featScore = featMatched.length;
         const pythonScore = pythonMatched.length;
@@ -867,8 +887,59 @@ class DiffAnalyzer {
             type,
             confidence,
             matchedKeywords: [...new Set(allMatched)],
-            reason
+            reason,
+            detectedPatterns
         };
+    }
+
+    /**
+     * 检测代码模式
+     * @param {string} diffContent diff 内容
+     * @returns {Object} 检测到的代码模式
+     */
+    static detectCodePatterns(diffContent) {
+        const patterns = {
+            database: [],
+            api: [],
+            route: [],
+            component: [],
+            style: []
+        };
+
+        const addedLines = diffContent.split('\n').filter(line => line.startsWith('+') && !line.startsWith('+++'));
+        const addedContent = addedLines.join('\n');
+
+        for (const keyword of DATABASE_PATTERNS) {
+            if (addedContent.toLowerCase().includes(keyword.toLowerCase())) {
+                patterns.database.push(keyword);
+            }
+        }
+
+        for (const keyword of API_PATTERNS) {
+            if (addedContent.includes(keyword)) {
+                patterns.api.push(keyword);
+            }
+        }
+
+        for (const keyword of ROUTE_PATTERNS) {
+            if (addedContent.includes(keyword)) {
+                patterns.route.push(keyword);
+            }
+        }
+
+        for (const keyword of COMPONENT_PATTERNS) {
+            if (addedContent.includes(keyword)) {
+                patterns.component.push(keyword);
+            }
+        }
+
+        for (const keyword of STYLE_PATTERNS) {
+            if (addedContent.includes(keyword)) {
+                patterns.style.push(keyword);
+            }
+        }
+
+        return patterns;
     }
 
     /**
@@ -1273,6 +1344,14 @@ class CommitTypeDetector {
             confidence = confidence === 'low' ? 'medium' : 'high';
         }
 
+        const detectedPatterns = diffResult?.detectedPatterns || {
+            database: [],
+            api: [],
+            route: [],
+            component: [],
+            style: []
+        };
+
         return {
             type: finalType,
             confidence,
@@ -1281,7 +1360,8 @@ class CommitTypeDetector {
             fileType: 'code',
             astFeatures,
             breakdown,
-            weightedScore: topScore
+            weightedScore: topScore,
+            detectedPatterns
         };
     }
 }
@@ -1803,7 +1883,23 @@ async function generateSmartCommit() {
         low: '💡'
     }[analysisResult.confidence] || '💡';
 
-    const { breakdown } = analysisResult;
+    const { breakdown, detectedPatterns } = analysisResult;
+    
+    const patternLabels = {
+        database: '💾 数据库操作',
+        api: '🌐 API/HTTP 请求',
+        route: '🛤️ 路由变更',
+        component: '🧩 组件/模板',
+        style: '🎨 样式布局'
+    };
+    
+    const patternLines = [];
+    for (const [key, label] of Object.entries(patternLabels)) {
+        const patterns = detectedPatterns?.[key] || [];
+        if (patterns.length > 0) {
+            patternLines.push(`${label}: ${patterns.join(', ')}`);
+        }
+    }
     
     const breakdownLines = [];
     if (breakdown?.fileType?.count > 0) {
@@ -1821,6 +1917,9 @@ async function generateSmartCommit() {
         '',
         '──── 分析链路 ────',
         ...breakdownLines,
+        '',
+        patternLines.length > 0 ? '──── 代码模式识别 ────' : '',
+        ...patternLines,
         '',
         '──── 最终结论 ────',
         analysisResult.reason
@@ -1859,7 +1958,8 @@ async function generateSmartCommit() {
         diffResult: breakdown?.diff || null,
         breakdown: breakdown,
         userChoice: userChoiceResult,
-        matchedKeywords: analysisResult.matchedKeywords || []
+        matchedKeywords: analysisResult.matchedKeywords || [],
+        detectedPatterns: analysisResult.detectedPatterns || null
     };
 
     await addDetectionLog(logData);
