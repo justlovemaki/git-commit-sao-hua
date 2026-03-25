@@ -437,6 +437,65 @@ CI 会执行：
 
 MIT License - 想怎么用就怎么用
 
+## 🏗️ 项目架构
+
+```
+git-commit-sao-hua/
+├── lib/                      # 核心库 (git-sao-hua-core)
+│   ├── sao-hua-data.js       # 唯一的骚话数据源
+│   ├── generator.js          # 共享生成逻辑
+│   ├── index.js              # 统一导出入口
+│   ├── package.json          # 包定义 (name: git-sao-hua-core)
+│   └── test.js               # 基础测试
+│
+├── index.html                # Web 版本
+│
+├── cli/                      # 命令行工具
+│   └── index.js              # CLI 主程序 (引用 lib/)
+│
+└── vscode-extension/         # VSCode 插件
+    └── extension.js           # 插件主程序 (引用 lib/)
+```
+
+### 核心库 (lib/)
+
+`lib/` 目录是项目的共享核心模块，提供：
+
+- **sao-hua-data.js** - 唯一的骚话数据源，包含 12 种 Commit 类型 × 5 种风格的全部文案
+- **generator.js** - 共享的生成逻辑，支持随机生成、按类型生成、按风格生成等
+- **index.js** - 统一导出入口，方便各端引用
+
+#### 核心库使用示例
+
+```javascript
+const { generateRandom, generateByType, generateFullCommitMessage } = require('./lib');
+
+// 随机生成
+const result = generateRandom();
+// { type: 'feat', style: 'love', message: 'xxx', fullMessage: 'feat: xxx' }
+
+// 按类型生成（随机风格）
+const result = generateByType('fix');
+// { type: 'fix', style: 'sao', message: 'xxx', fullMessage: 'fix: xxx' }
+
+// 按类型和风格生成
+const result = generateByType('feat', 'love');
+// { type: 'feat', style: 'love', message: 'xxx', fullMessage: 'feat: xxx' }
+
+// 生成完整 commit message
+const msg = generateFullCommitMessage('fix', 'sao', '登录功能');
+// fix: 登录功能
+// 
+// bug 修好了，要不要奖励我一个 star？
+```
+
+#### 运行核心库测试
+
+```bash
+cd lib
+npm test
+```
+
 ## 💖 Made with Love
 
 由 coding-expert 为 Master 创建

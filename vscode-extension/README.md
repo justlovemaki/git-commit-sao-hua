@@ -368,7 +368,7 @@ npm run package
 code .
 
 # 最小验证（命令行）
-node -e "const { generateCommitMessage } = require('./sao-hua-data'); console.log(generateCommitMessage('feat','sao','登录功能'));"
+node -e "const { generateCommitMessage } = require('../lib'); console.log(generateCommitMessage('feat','sao','登录功能'));"
 
 # 按 F5 调试
 ```

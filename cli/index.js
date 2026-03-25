@@ -4,7 +4,7 @@ const readline = require('readline');
 const { execSync, exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const data = require('./sao-hua-data.js');
+const data = require('../lib');
 
 const COLORS = {
     reset: '\x1b[0m',

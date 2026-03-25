@@ -18,7 +18,7 @@
  */
 
 const vscode = require('vscode');
-const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage } = require('./sao-hua-data');
+const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage } = require('../lib');
 
 // ==================== 常量定义 ====================
 
