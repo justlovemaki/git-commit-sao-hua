@@ -4,14 +4,45 @@
 
 - **项目名称**: Git Commit 骚话生成器
 - **GitHub 仓库**: https://github.com/justlovemaki/git-commit-sao-hua
-- **当前版本**: v1.17.0 (VSCode 插件)
+- **当前版本**: v1.18.0 (CLI 工具 + VSCode 插件)
 - **技术栈**: 纯 HTML + CSS + JavaScript（无后端）
 
 ---
 
 ## 🎯 进化历程
 
-### v1.17.0 - 代码模式智能识别 🗂️ (本次进化)
+### v1.18.0 - CLI 命令行工具 💻 (本次进化)
+- **改进内容**: 全新 CLI 命令行工具，让骚话生成器突破 VSCode 限制
+  - 新增 cli/ 目录，包含独立的命令行工具
+  - 支持 `npm install -g git-sao-hua` 全局安装
+  - 随机生成骚话 commit message（直接运行 `git-sao-hua`）
+  - 指定 commit 类型（`-t fix`）和风格（`-s love`）
+  - 列出所有可用类型和风格（`-l/--list`）
+  - 复制到剪贴板（`-c/--copy`，跨平台支持 pbcopy/xclip/clip.exe）
+  - 直接执行 git commit（`-g/--git`，自动检测 staged changes）
+  - 交互模式（`-i/--interactive`，readline 选择类型和风格）
+  - 帮助信息和版本号（`-h/--help`、`-v/--version`）
+  - ANSI 彩色输出（绿色类型、黄色内容、emoji 装饰）
+  - 零依赖！纯 Node.js 内置模块实现
+  - 独立 package.json，包名 git-sao-hua
+  - 完整的 CLI 使用文档（cli/README.md）
+  - 项目 README.md 同步更新，CLI 作为首选使用方式
+- **风险等级**: 低风险（新增独立模块，不影响现有 Web 和 VSCode 插件功能）
+- **收益**: 项目突破 VSCode 限制，覆盖终端用户场景，Vim/Emacs/终端开发者也能用骚话提交
+- ✅ **CLI 入口文件** - cli/index.js（#!/usr/bin/env node）
+- ✅ **随机生成** - 直接运行即可获得随机骚话 commit message
+- ✅ **类型指定** - `-t <type>` 支持 12 种 commit 类型
+- ✅ **风格指定** - `-s <style>` 支持 5 种骚话风格
+- ✅ **类型列表** - `-l/--list` 展示所有可用类型和风格
+- ✅ **剪贴板复制** - `-c/--copy` 跨平台剪贴板支持
+- ✅ **Git 提交** - `-g/--git` 直接执行 git commit -m
+- ✅ **交互模式** - `-i/--interactive` 使用 readline 选择
+- ✅ **ANSI 彩色输出** - 类型绿色、内容黄色、emoji 装饰
+- ✅ **零依赖** - 不使用任何第三方 npm 包
+- ✅ **输入验证** - 无效类型/风格给出友好提示
+- ✅ **文档同步更新** - README.md 新增 CLI 使用方式
+
+### v1.17.0 - 代码模式智能识别 🗂️
 - **改进内容**: 代码模式智能识别功能
   - 新增数据库操作模式检测：SQL 查询、ORM 操作、MongoDB、Redis 等数据库相关代码模式
   - 新增 API/HTTP 请求模式检测：fetch、axios、XMLHttpRequest、GraphQL、REST API 等网络请求相关模式
@@ -496,19 +527,15 @@ php -S localhost:8000
 
 ## 📍 当前状态与下一步建议
 
-### 本轮迭代 (v1.11.0) - 本次进化
-- **改进内容**: 智能检测置信度阈值可配置
-  - 新增 `smartDetection.highConfidenceThreshold` 配置（默认 3，范围 1-10），可自定义高置信度所需的关键词数量
-  - 新增 `smartDetection.mediumConfidenceThreshold` 配置（默认 1，范围 1-5），可自定义中等置信度所需的关键词数量
-  - 新增 `smartDetection.astPriorityEnabled` 配置（默认 true），控制是否启用 AST 分析优先策略
-  - 新增 `smartDetection.diffPriorityEnabled` 配置（默认 true），控制是否启用 Diff 分析优先策略
-  - 新增 `calcConfidence()` 辅助函数，统一使用配置阈值进行置信度判断
-  - 新增 `calcFileTypeConfidence()` 函数，文件类型判断也使用可配置的阈值
-  - ConfigManager 扩展：新增 `getSmartDetectionConfig()` 方法，集中管理智能检测配置
-  - 向后兼容：默认值与当前行为一致，老用户无感知升级
-  - 文档同步更新：README.md 补充配置项说明和置信度等级表格
-- **风险等级**: 低风险（仅配置项扩展和阈值判断逻辑优化，无核心逻辑变更）
-- **收益**: 提升用户自定义能力，让智能检测更灵活，适应不同项目和用户的使用习惯
+### 本轮迭代 (v1.18.0) - 本次进化
+- **改进内容**: CLI 命令行工具
+  - 新增 cli/ 目录，包含独立的命令行骚话生成器
+  - 支持 npm install -g 全局安装，终端直接使用 git-sao-hua 命令
+  - 8 种命令参数：随机生成、类型/风格指定、列表查看、剪贴板复制、git commit、交互模式、帮助、版本
+  - ANSI 彩色输出，零依赖实现
+  - 项目从「Web + VSCode」双平台扩展到「Web + VSCode + CLI」三平台
+- **风险等级**: 低风险（新增独立模块，不影响现有功能）
+- **收益**: 突破 VSCode 限制，覆盖终端用户场景（Vim/Emacs/终端开发者），扩大用户群体
 
 ### 上轮迭代 (v1.9.0)
 - **改进内容**: AST 检测增强 + 多语言关键词支持
@@ -653,6 +680,12 @@ php -S localhost:8000
 - ✅ 样式布局模式检测（v1.17.0）
 - ✅ 双重检测机制（AST + Diff）（v1.17.0）
 - ✅ 模式识别置信度提升（v1.17.0）
+- ✅ CLI 命令行工具（v1.18.0）
+- ✅ npm install -g 全局安装支持（v1.18.0）
+- ✅ 8 种命令参数（随机/类型/风格/列表/复制/git/交互/帮助）（v1.18.0）
+- ✅ ANSI 彩色终端输出（v1.18.0）
+- ✅ 零依赖 CLI 实现（v1.18.0）
+- ✅ 项目三平台覆盖：Web + VSCode + CLI（v1.18.0）
 
 ### 下一步建议
 1. **短期**: 
@@ -669,6 +702,10 @@ php -S localhost:8000
    - ~~智能检测置信度阈值 UI 调节（在插件设置界面提供滑动条）~~ ✅ 已在 v1.14.0 实现
    - ~~智能检测准确率再提升（增强多语言关键词和代码模式检测）~~ ✅ 已在 v1.15.0 实现
    - ~~代码模式智能识别（数据库/API/路由/组件/样式 5 种模式）~~ ✅ 已在 v1.17.0 实现
+   - ~~CLI 命令行工具~~ ✅ 已在 v1.18.0 实现
+   - CLI 发布到 npm（npm publish）
+   - CLI 智能检测集成（复用 VSCode 插件的智能检测逻辑）
+   - VSCode 插件代码模块化拆分（extension.js 2756 行需要拆分）
   2. **中期**:
    - 浏览器插件版本（Chrome/Edge）
    - 微信小程序版本

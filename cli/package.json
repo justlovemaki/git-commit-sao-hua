@@ -1,0 +1,29 @@
+{
+  "name": "git-sao-hua",
+  "version": "1.0.0",
+  "description": "Git Commit 骚话生成器 CLI - 让你的 commit message 骚起来",
+  "main": "index.js",
+  "bin": {
+    "git-sao-hua": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "message",
+    "sao-hua",
+    "cli",
+    "chinese"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justlovemaki/git-commit-sao-hua"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  }
+}
