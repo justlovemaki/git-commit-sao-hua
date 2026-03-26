@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install dependencies
+      run: |
+        cd lib && npm install
+        cd ../cli && npm install
+    
+    - name: Run core library tests
+      run: |
+        cd lib
+        npm test
+    
+    - name: Run CLI tests
+      run: |
+        cd cli
+        npm test
+    
+    - name: Test CLI help
+      run: |
+        cd cli
+        node index.js --help
+    
+    - name: Test CLI list
+      run: |
+        cd cli
+        node index.js --list
+    
+    - name: Test CLI random generation
+      run: |
+        cd cli
+        node index.js
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Check JavaScript syntax
+      run: |
+        node --check lib/index.js
+        node --check lib/generator.js
+        node --check lib/sao-hua-data.js
+        node --check lib/smart-detector.js
+        node --check lib/test.js
+        node --check cli/index.js
+
+  publish-npm-core:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Publish git-sao-hua-core to npm
+      run: |
+        cd lib
+        npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-npm-cli:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Publish git-sao-hua to npm
+      run: |
+        cd cli
+        npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

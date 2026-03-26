@@ -1,20 +1,34 @@
 {
   "name": "git-sao-hua-core",
-  "version": "1.0.0",
-  "description": "Git Commit 骚话生成器核心库",
+  "version": "1.20.0",
+  "description": "Git Commit 骚话生成器核心库 - 支持智能检测 commit 类型",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "publish:npm": "npm publish --access public"
   },
   "keywords": [
     "git",
     "commit",
     "sao-hua",
-    "commit-message"
+    "commit-message",
+    "chinese",
+    "smart-detection"
   ],
   "author": "coding-expert",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justlovemaki/git-commit-sao-hua"
+  },
   "engines": {
     "node": ">=8.0.0"
-  }
+  },
+  "files": [
+    "index.js",
+    "generator.js",
+    "sao-hua-data.js",
+    "smart-detector.js",
+    "test.js"
+  ]
 }
