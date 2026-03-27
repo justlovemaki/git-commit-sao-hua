@@ -227,7 +227,52 @@ const saoHuaDB = {
 - 不会收集任何个人信息
 - 开源透明，代码可审查
 
-## 🔌 VSCode 插件打包
+## 🔌 VSCode 插件
+
+在 VSCode 中享受最便捷的骚话生成体验！
+
+### 📦 安装方式
+
+#### 方式一：VSCode Marketplace（推荐）⭐
+
+1. 打开 VSCode
+2. 按 `Ctrl+Shift+X` 打开扩展面板
+3. 搜索 **"Git Commit 骚话生成器"** 或 **"git-commit-sao-hua"**
+4. 点击安装
+
+或直接访问：[VSCode Marketplace 页面](https://marketplace.visualstudio.com/items?itemName=coding-expert.git-commit-sao-hua)
+
+#### 方式二：手动安装 VSIX
+
+1. 从 [GitHub Releases](https://github.com/justlovemaki/git-commit-sao-hua/releases) 下载最新版的 `.vsix` 文件
+2. 在 VSCode 中按 `Ctrl+Shift+P` 打开命令面板
+3. 输入 `Extensions: Install from VSIX...`
+4. 选择下载的 `.vsix` 文件
+
+#### 方式三：命令行安装
+
+```bash
+# 下载 VSIX
+wget https://github.com/justlovemaki/git-commit-sao-hua/releases/latest/download/git-commit-sao-hua.vsix
+
+# 安装
+code --install-extension git-commit-sao-hua.vsix
+```
+
+### 🚀 快速开始
+
+安装完成后：
+
+1. 打开任意 Git 仓库
+2. 按 `Ctrl+Shift+P` 打开命令面板
+3. 输入 `Git Commit 骚话` 查看可用命令
+4. 选择 `生成骚话 Commit` 开始使用
+
+**快捷键**：
+- `Ctrl+Shift+G` - 随机生成骚话
+- `Ctrl+Shift+S` - 查看使用统计
+
+---
 
 插件源码位于 `vscode-extension/`。
 

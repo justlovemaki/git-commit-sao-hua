@@ -37,6 +37,7 @@
 |---------|------|------|
 | **Web 体验页** | ✅ 完成 | 单 HTML 文件，可直接打开使用 |
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
+| **VSCode Marketplace 发布** | ✅ 发布准备完成 | 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 |
 | **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、剪贴板、git commit、**智能检测 --auto** |
 | **智能检测（VSCode）** | ✅ 完成 | AST 分析 + Diff 关键词 + 代码模式识别 + 置信度 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + **智能检测模块**统一抽取，三端共用，29 个测试用例 |
@@ -76,6 +77,7 @@
 1. **Web 页面骚话数据独立** — index.html 内嵌骚话数据，未引用 lib/（单文件设计限制）
 2. **Web 页面过大** — index.html 124KB 单文件
 3. **NPM_TOKEN 配置** — 需在 GitHub Secrets 中添加 NPM_TOKEN 以启用 CI/CD 自动发布
+4. **VSCE_PAT 配置** — 需在 GitHub Secrets 中添加 VSCE_PAT 以启用 VSCode Marketplace 自动发布
 
 ---
 
@@ -85,16 +87,17 @@
 - ~~**npm 发布**：将 lib/ (git-sao-hua-core) 和 cli/ (git-sao-hua) 发布到 npm~~ ✅ 配置就绪 + CI/CD 自动发布
 - ~~**CLI 集成智能检测**：将 VSCode 的检测逻辑移植到 lib/，CLI 支持 `--auto` 自动检测~~ ✅ 已完成
 - ~~**GitHub Action CI**：添加 CI 工作流，自动运行测试~~ ✅ 已完成
+- ~~**VSCode Marketplace 发布准备**：添加 marketplace 元数据、CHANGELOG、发布工作流~~ ✅ 已完成（v1.18.0）
 
 ### 下一步（待执行）
 - **配置 NPM_TOKEN**：在 GitHub 仓库 Secrets 中添加 NPM_TOKEN，CI 将自动发布
-- **VSCode Marketplace 发布**：正式上架 VSCode 插件商店
+- **配置 VSCE_PAT**：在 GitHub 仓库 Secrets 中添加 VSCE_PAT，启用自动发布到 Marketplace
+- **首次正式发布**：手动触发发布工作流，上架 VSCode 插件商店
 
 ### 中期（4-10 轮）— 生态扩展
 - **GitHub Action 骚话**：提供 Action，CI 中自动生成骚话 commit message
 - **骚话社区贡献**：支持用户提交自定义骚话 PR，自动格式校验
 - **多语言骚话**：英文 / 日文骚话支持
-- **VSCode Marketplace 发布**：正式上架 VSCode 插件商店
 
 ### 远期愿景
 - 成为 Git 提交信息领域最有趣的开源工具
@@ -106,8 +109,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
-| -1 | 2026-03-26 | 🚀 大演进 | 智能检测共享 + npm 发布准备 v1.20.0 — CLI 支持 --auto 智能检测 + CI/CD 工作流 | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-25 | 🚀 大演进 | 核心库抽取 v1.19.0 — 三端共享 lib/ + 29 测试用例 | 不变（Stage 3 内架构跃迁） |
-| -3 | 2026-03-25 | 🚀 大演进 | CLI 命令行工具 v1.18.0 — 突破 VSCode 限制 | Stage 2→3 |
-| -4 | 2026-03-23 | 🔧 中迭代 | 代码模式智能识别 v1.17.0 | 不变 |
+| 最新 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
+| -1 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
+| -2 | 2026-03-26 | 🚀 大演进 | 智能检测共享 + npm 发布准备 v1.20.0 — CLI 支持 --auto 智能检测 + CI/CD 工作流 | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-25 | 🚀 大演进 | 核心库抽取 v1.19.0 — 三端共享 lib/ + 29 测试用例 | 不变（Stage 3 内架构跃迁） |
+| -4 | 2026-03-25 | 🚀 大演进 | CLI 命令行工具 v1.18.0 — 突破 VSCode 限制 | Stage 2→3 |

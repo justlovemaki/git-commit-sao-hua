@@ -243,9 +243,13 @@
     ]
   },
   "scripts": {
-    "check": "node -e \"const fs=require('fs'); const required=['extension.js','README.md','LICENSE','icon.png']; const missing=required.filter(f=>!fs.existsSync(f)); if(missing.length){console.error('Missing required files:', missing.join(', ')); process.exit(1);} console.log('Extension files look good.');\"",
+    "check": "node -e \"const fs=require('fs'); const required=['extension.js','README.md','LICENSE','icon.png','CHANGELOG.md']; const missing=required.filter(f=>!fs.existsSync(f)); if(missing.length){console.error('Missing required files:', missing.join(', ')); process.exit(1);} console.log('Extension files look good.');\"",
     "package": "npx @vscode/vsce package --out git-commit-sao-hua.vsix",
-    "package:ci": "npm run check && npm run package"
+    "package:ci": "npm run check && npm run package",
+    "publish": "npx @vscode/vsce publish",
+    "publish:patch": "npx @vscode/vsce publish patch",
+    "publish:minor": "npx @vscode/vsce publish minor",
+    "publish:major": "npx @vscode/vsce publish major"
   },
   "repository": {
     "type": "git",
@@ -256,6 +260,27 @@
   },
   "license": "MIT",
   "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#6f42c1",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/github/v/release/justlovemaki/git-commit-sao-hua?label=Release&color=6f42c1",
+      "href": "https://github.com/justlovemaki/git-commit-sao-hua/releases",
+      "description": "GitHub Release"
+    },
+    {
+      "url": "https://img.shields.io/github/license/justlovemaki/git-commit-sao-hua?color=blue",
+      "href": "https://github.com/justlovemaki/git-commit-sao-hua/blob/main/LICENSE",
+      "description": "License"
+    },
+    {
+      "url": "https://img.shields.io/github/stars/justlovemaki/git-commit-sao-hua?style=social",
+      "href": "https://github.com/justlovemaki/git-commit-sao-hua",
+      "description": "GitHub Stars"
+    }
+  ],
   "devDependencies": {
     "@vscode/vsce": "^3.7.1"
   }

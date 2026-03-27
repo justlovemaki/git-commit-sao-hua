@@ -1,0 +1,113 @@
+name: Publish VSCode Extension to Marketplace
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type (patch/minor/major)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vscode-extension-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Publish to VSCode Marketplace
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vscode-extension
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate extension files
+        run: npm run check
+
+      - name: Bump version (workflow dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          npm version ${{ github.event.inputs.version_type }} -m "chore: release %s [skip ci]"
+
+      - name: Get version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Package VSCode extension
+        run: npm run package
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-commit-sao-hua-${{ steps.version.outputs.version }}.vsix
+          path: vscode-extension/git-commit-sao-hua.vsix
+          if-no-files-found: error
+
+      - name: Publish to VSCode Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx @vscode/vsce publish --packagePath git-commit-sao-hua.vsix
+
+      - name: Create/Update GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## 🎉 Git Commit 骚话生成器 v${{ steps.version.outputs.version }}
+
+            ### 📦 安装方式
+
+            #### VSCode Marketplace
+            在 VSCode 扩展商店中搜索 "Git Commit 骚话生成器" 或访问：
+            https://marketplace.visualstudio.com/items?itemName=coding-expert.git-commit-sao-hua
+
+            #### 手动安装
+            下载下方附件中的 `.vsix` 文件，在 VSCode 中运行：
+            ```bash
+            code --install-extension git-commit-sao-hua.vsix
+            ```
+
+            ### 🚀 更新内容
+            详见 [CHANGELOG.md](https://github.com/justlovemaki/git-commit-sao-hua/blob/main/vscode-extension/CHANGELOG.md)
+
+            ---
+            **Full Changelog**: https://github.com/justlovemaki/git-commit-sao-hua/compare/v${{ steps.version.outputs.version }}...v${{ steps.version.outputs.version }}
+          artifacts: vscode-extension/git-commit-sao-hua.vsix
+          artifactErrorsFailBuild: true
+          allowUpdates: true
+          commit: ${{ github.sha }}
+          generateReleaseNotes: true
+
+      - name: Push version bump (workflow dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push --follow-tags
