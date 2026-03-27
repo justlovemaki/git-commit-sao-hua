@@ -14,7 +14,7 @@
  * - 智能检测日志记录和准确率分析
  * 
  * @author coding-expert
- * @version 1.17.0
+ * @version 1.20.0
  */
 
 const vscode = require('vscode');
