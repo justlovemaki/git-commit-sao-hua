@@ -1,0 +1,38 @@
+name: 'Git Commit 骚话生成器'
+description: '在 CI/CD 中自动生成骚气满满的 commit message'
+author: 'coding-expert'
+branding:
+  icon: 'message-circle'
+  color: 'purple'
+
+inputs:
+  type:
+    description: 'Commit 类型 (feat/fix/docs/style/refactor/test/chore/perf/ci/build/revert/hotfix)，可选，默认自动检测'
+    required: false
+    default: ''
+  style:
+    description: '骚话风格 (normal/professional/casual/poetic/meme)，可选，默认 random'
+    required: false
+    default: ''
+  language:
+    description: '语言 (zh/en/ja)，可选，默认 zh'
+    required: false
+    default: 'zh'
+  commit-message:
+    description: '传统 commit message，用于智能检测类型（可选）'
+    required: false
+    default: ''
+
+outputs:
+  commit-message:
+    description: '生成的骚话 commit message'
+  type:
+    description: '实际使用的 commit 类型'
+  style:
+    description: '实际使用的骚话风格'
+  language:
+    description: '实际使用的语言'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

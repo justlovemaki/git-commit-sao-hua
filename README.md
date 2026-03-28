@@ -37,6 +37,7 @@
 - 👍 **用户反馈机制** - 采纳/跳过/手动修改三种反馈（v1.16.0）
 - 🗂️ **代码模式识别** - 数据库/API/路由/组件/样式 5 种模式检测（v1.17.0）
 - 💻 **CLI 命令行工具** - 终端直接生成骚话 commit message，支持交互模式和一键提交（v1.18.0）
+- 🤖 **GitHub Action** - 在 CI/CD 中自动生成骚话 commit message（v1.22.0）
 
 ## 🚀 快速开始
 
@@ -64,6 +65,29 @@ git-sao-hua -t feat -s love --lang zh
 ```
 
 详细文档见 [cli/README.md](cli/README.md)
+
+### 方式四：GitHub Action（v1.22.0 新增 🎉）
+
+在你的 CI/CD 工作流中自动生成骚话 commit message：
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  
+  - name: Generate Saohua Commit Message
+    uses: ./action
+    id: saohua
+    with:
+      type: feat          # 可选：commit 类型，默认自动检测
+      style: casual       # 可选：骚话风格 (normal/professional/casual/poetic/meme)
+      language: zh        # 可选：语言 (zh/en/ja)
+      commit-message: "feat: add new feature"  # 可选：用于智能检测
+  
+  - name: Show Result
+    run: echo "${{ steps.saohua.outputs.commit-message }}"
+```
+
+详细文档见 [action/README.md](action/README.md)
 
 ### 方式二：直接打开
 

@@ -23,11 +23,12 @@
 
 原因：
 - 核心功能（骚话生成 + 智能检测）已稳定
-- 三端（Web / VSCode / CLI）均已实现
+- 四端（Web / VSCode / CLI / GitHub Action）均已实现
 - ✅ 核心库已抽取完成，三端共享 lib/，代码复用问题已解决
 - ✅ 智能检测模块已共享至 lib/，CLI 支持 --auto 智能检测
 - ✅ CI/CD 工作流已配置，npm 发布准备就绪
-- 下一步应聚焦：执行 npm publish、GitHub Action 骚话、国际化
+- ✅ GitHub Action 已实现，可在 CI/CD 中自动生成骚话 commit message
+- 下一步应聚焦：执行 npm publish、VSCode Marketplace 发布
 
 ---
 
@@ -39,6 +40,7 @@
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
 | **VSCode Marketplace 发布** | ✅ 发布准备完成 | 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 |
 | **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、剪贴板、git commit、**智能检测 --auto** |
+| **GitHub Action** | ✅ 完成 | 在 CI/CD 中自动生成骚话 commit message，支持类型/风格/语言参数（v1.22.0 新增）|
 | **智能检测（VSCode）** | ✅ 完成 | AST 分析 + Diff 关键词 + 代码模式识别 + 置信度 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + **智能检测模块**统一抽取，三端共用，29 个测试用例 |
 | **自动化测试** | ✅ 基础完成 | lib/test.js 29 个用例，覆盖数据完整性、生成逻辑、验证 |
@@ -63,12 +65,16 @@
 ├── cli/                        — CLI 命令行工具（引用 lib/）
 │   ├── index.js                — CLI 入口
 │   └── package.json            — 包名 git-sao-hua
-└── vscode-extension/           — VSCode 插件（引用 lib/）
-    ├── extension.js            — 插件主逻辑
-    └── package.json            — 插件配置
+├── vscode-extension/           — VSCode 插件（引用 lib/）
+│   ├── extension.js            — 插件主逻辑
+│   └── package.json            — 插件配置
+└── action/                     — GitHub Action（引用 lib/）
+    ├── action.yml              — Action 入口配置
+    ├── index.js                — Action 执行逻辑
+    └── package.json            — 依赖配置
 ```
 
-架构已从「三端各自为战」升级为「统一核心 + 多端适配」模式。
+架构已从「三端各自为战」升级为「统一核心 + 多端适配」模式，现已扩展至四端（Web / VSCode / CLI / GitHub Action）。
 
 ---
 
@@ -95,7 +101,7 @@
 - **首次正式发布**：手动触发发布工作流，上架 VSCode 插件商店
 
 ### 中期（4-10 轮）— 生态扩展
-- **GitHub Action 骚话**：提供 Action，CI 中自动生成骚话 commit message
+- ~~**GitHub Action 骚话**：提供 Action，CI 中自动生成骚话 commit message~~ ✅ 已完成（v1.22.0）
 - **骚话社区贡献**：支持用户提交自定义骚话 PR，自动格式校验
 - ~~**多语言骚话**：英文 / 日文骚话支持~~ ✅ 已完成
 
@@ -109,8 +115,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
-| -1 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-26 | 🚀 大演进 | 智能检测共享 + npm 发布准备 v1.20.0 — CLI 支持 --auto 智能检测 + CI/CD 工作流 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
+| -1 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
+| -2 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |

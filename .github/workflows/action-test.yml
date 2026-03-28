@@ -1,0 +1,53 @@
+name: Test GitHub Action
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'action/**'
+      - '.github/workflows/action-test.yml'
+  pull_request:
+    paths:
+      - 'action/**'
+      - '.github/workflows/action-test.yml'
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Test Action - Random Generation
+      uses: ./action
+      id: random
+      with:
+        language: zh
+    
+    - name: Show Random Result
+      run: |
+        echo "Random: ${{ steps.random.outputs.commit-message }}"
+    
+    - name: Test Action - Specific Type
+      uses: ./action
+      id: feat
+      with:
+        type: feat
+        style: casual
+        language: zh
+    
+    - name: Show Feat Result
+      run: |
+        echo "Feat: ${{ steps.feat.outputs.commit-message }}"
+    
+    - name: Test Action - English
+      uses: ./action
+      id: en
+      with:
+        language: en
+        style: meme
+    
+    - name: Show English Result
+      run: |
+        echo "English: ${{ steps.en.outputs.commit-message }}"
