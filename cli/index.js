@@ -17,10 +17,12 @@ const COLORS = {
     dim: '\x1b[2m'
 };
 
-const VERSION = '1.20.0';
+const VERSION = '1.21.0';
 
 const VALID_TYPES = ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix'];
 const VALID_STYLES = ['love', 'sao', 'zha', 'chu', 'fo'];
+const VALID_LANGUAGES = ['zh-CN', 'en'];
+const DEFAULT_LANGUAGE = 'zh-CN';
 
 function green(text) {
     return COLORS.green + text + COLORS.reset;
@@ -87,25 +89,27 @@ function smartDetectType() {
     }
 }
 
-function generateMessage(type, style) {
+function generateMessage(type, style, language = DEFAULT_LANGUAGE) {
     let msgType = type;
     let msgStyle = style;
+    const langData = data.saoHuaData[language] || data.saoHuaData[DEFAULT_LANGUAGE];
 
     if (!msgType) {
-        const random = data.getRandomSaoHua();
+        const random = data.getRandomSaoHua(language);
         msgType = random.type;
         msgStyle = random.style;
     } else if (!msgStyle) {
-        const styleKeys = Object.keys(data.saoHuaData[msgType]);
+        const styleKeys = Object.keys(langData[msgType]);
         msgStyle = styleKeys[getRandomInt(styleKeys.length)];
     }
 
-    const message = data.getSaoHua(msgType, msgStyle);
+    const message = data.getSaoHua(msgType, msgStyle, language);
     return {
         type: msgType,
         style: msgStyle,
         message: message,
-        fullMessage: `${msgType}: ${message}`
+        fullMessage: `${msgType}: ${message}`,
+        language: language
     };
 }
 
@@ -201,6 +205,7 @@ function showHelp() {
     console.log('  ' + green('-c, --copy') + '             生成后复制到剪贴板');
     console.log('  ' + green('-g, --git') + '              直接执行 git commit');
     console.log('  ' + green('-i, --interactive') + '      交互模式');
+    console.log('  ' + green('--lang <lang>') + '          设置语言 (zh-CN/en, 默认: zh-CN)');
     console.log('  ' + green('-h, --help') + '             显示帮助信息');
     console.log('  ' + green('-v, --version') + '         显示版本号');
     console.log('');
@@ -211,6 +216,8 @@ function showHelp() {
     console.log('  git-sao-hua -t fix');
     console.log(dim('\n  # 指定类型和风格'));
     console.log('  git-sao-hua -t feat -s love');
+    console.log(dim('\n  # 生成英文骚话'));
+    console.log('  git-sao-hua --lang en');
     console.log(dim('\n  # 智能检测类型并生成'));
     console.log('  git-sao-hua -a');
     console.log(dim('\n  # 生成并复制到剪贴板'));
@@ -302,7 +309,8 @@ function parseArgs() {
         interactive: false,
         auto: false,
         help: false,
-        version: false
+        version: false,
+        language: DEFAULT_LANGUAGE
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -322,6 +330,8 @@ function parseArgs() {
             options.interactive = true;
         } else if (arg === '-a' || arg === '--auto') {
             options.auto = true;
+        } else if (arg === '--lang' || arg === '--language') {
+            options.language = args[++i] || DEFAULT_LANGUAGE;
         } else if (arg === '-h' || arg === '--help') {
             options.help = true;
         } else if (arg === '-v' || arg === '--version') {
@@ -331,6 +341,12 @@ function parseArgs() {
             showHelp();
             process.exit(1);
         }
+    }
+
+    if (options.language && !VALID_LANGUAGES.includes(options.language)) {
+        console.log(red(`无效语言：${options.language}`));
+        console.log(dim(`有效语言：${VALID_LANGUAGES.join(', ')}`));
+        options.language = DEFAULT_LANGUAGE;
     }
 
     return options;
@@ -389,7 +405,8 @@ async function main() {
         style = result.style;
     }
 
-    const msgObj = generateMessage(type, style);
+    const language = options.language;
+    const msgObj = generateMessage(type, style, language);
     printMessage(msgObj);
 
     if (options.copy) {

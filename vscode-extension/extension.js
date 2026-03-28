@@ -18,7 +18,7 @@
  */
 
 const vscode = require('vscode');
-const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage } = require('../lib');
+const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage, validateLanguage, getSupportedLanguages, defaultLanguage } = require('../lib');
 
 // ==================== 常量定义 ====================
 
@@ -55,6 +55,7 @@ const STYLE_PATTERNS = ['display: flex', 'display: grid', 'animation:', 'transit
 const STATE_KEYS = {
     type: 'gitCommitSaoHua.currentType',
     style: 'gitCommitSaoHua.currentStyle',
+    language: 'gitCommitSaoHua.language',
     descriptionHistory: 'gitCommitSaoHua.descriptionHistory',
     customSaoHua: 'gitCommitSaoHua.customSaoHua',
     statistics: 'gitCommitSaoHua.statistics',
@@ -178,6 +179,7 @@ class ConfigManager {
         return {
             defaultStyle: 'sao',
             defaultType: 'feat',
+            defaultLanguage: defaultLanguage,
             autoInsert: true,
             enableSoundEffects: true,
             customSaoHuaProbability: 0.3,
@@ -213,6 +215,7 @@ class ConfigManager {
 const PluginState = {
     currentType: 'feat',
     currentStyle: 'sao',
+    currentLanguage: defaultLanguage,
     extensionContext: null
 };
 
@@ -494,9 +497,10 @@ async function showStatistics() {
     const topStyles = getTopItems(stats.styleUsage, 3);
     const lastTime = formatLastGeneratedTime(stats.lastGeneratedAt);
 
-    // 构建类型和风格标签映射
-    const typeLabels = Object.fromEntries(commitTypes.map(t => [t.value, t.label]));
-    const styleLabels = Object.fromEntries(styles.map(s => [s.value, `${s.emoji} ${s.label}`]));
+    const currentTypes = getCurrentLanguageCommitTypes();
+    const currentStyles = getCurrentLanguageStyles();
+    const typeLabels = Object.fromEntries(currentTypes.map(t => [t.value, t.label]));
+    const styleLabels = Object.fromEntries(currentStyles.map(s => [s.value, `${s.emoji} ${s.label}`]));
 
     const statsItems = [
         { label: `$(number) 总生成次数：${totalCount}`, kind: vscode.QuickPickItemKind.Separator },
@@ -1371,13 +1375,24 @@ class CommitTypeDetector {
 /**
  * 恢复用户偏好设置
  */
+function getCurrentLanguage() {
+    const savedLanguage = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.language);
+    if (savedLanguage && validateLanguage(savedLanguage)) {
+        return savedLanguage;
+    }
+    const configLanguage = ConfigManager.get('defaultLanguage', defaultLanguage);
+    return validateLanguage(configLanguage) ? configLanguage : defaultLanguage;
+}
+
 function restorePreferences() {
     const defaults = ConfigManager.getDefaults();
     const savedType = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.type);
     const savedStyle = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.style);
+    const savedLanguage = PluginState.extensionContext?.workspaceState.get(STATE_KEYS.language);
 
     PluginState.currentType = isValidType(savedType) ? savedType : defaults.defaultType;
     PluginState.currentStyle = isValidStyle(savedStyle) ? savedStyle : defaults.defaultStyle;
+    PluginState.currentLanguage = validateLanguage(savedLanguage) ? savedLanguage : (validateLanguage(ConfigManager.get('defaultLanguage', defaultLanguage)) ? ConfigManager.get('defaultLanguage', defaultLanguage) : defaultLanguage);
 }
 
 /**
@@ -1385,8 +1400,10 @@ function restorePreferences() {
  */
 function resetPreferencesToConfig() {
     const defaults = ConfigManager.getDefaults();
+    const configLanguage = ConfigManager.get('defaultLanguage', defaultLanguage);
     PluginState.currentType = defaults.defaultType;
     PluginState.currentStyle = defaults.defaultStyle;
+    PluginState.currentLanguage = validateLanguage(configLanguage) ? configLanguage : defaultLanguage;
 }
 
 /**
@@ -1396,6 +1413,7 @@ async function persistPreferences() {
     if (!PluginState.extensionContext) return;
     await PluginState.extensionContext.workspaceState.update(STATE_KEYS.type, PluginState.currentType);
     await PluginState.extensionContext.workspaceState.update(STATE_KEYS.style, PluginState.currentStyle);
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.language, PluginState.currentLanguage);
 }
 
 /**
@@ -1405,6 +1423,7 @@ async function clearPersistedPreferences() {
     if (!PluginState.extensionContext) return;
     await PluginState.extensionContext.workspaceState.update(STATE_KEYS.type, undefined);
     await PluginState.extensionContext.workspaceState.update(STATE_KEYS.style, undefined);
+    await PluginState.extensionContext.workspaceState.update(STATE_KEYS.language, undefined);
 }
 
 /**
@@ -1413,7 +1432,8 @@ async function clearPersistedPreferences() {
  * @returns {boolean} 是否有效
  */
 function isValidType(type) {
-    return commitTypes.some(item => item.value === type);
+    const currentTypes = getCurrentLanguageCommitTypes();
+    return currentTypes.some(item => item.value === type);
 }
 
 /**
@@ -1422,7 +1442,8 @@ function isValidType(type) {
  * @returns {boolean} 是否有效
  */
 function isValidStyle(styleKey) {
-    return styles.some(item => item.value === styleKey);
+    const currentStyles = getCurrentLanguageStyles();
+    return currentStyles.some(item => item.value === styleKey);
 }
 
 /**
@@ -1431,8 +1452,20 @@ function isValidStyle(styleKey) {
  * @returns {string} 风格标签
  */
 function getStyleLabel(styleKey) {
-    const style = styles.find(s => s.value === styleKey);
+    const currentLang = getCurrentLanguage();
+    const langStyles = styles[currentLang] || styles[defaultLanguage];
+    const style = langStyles.find(s => s.value === styleKey);
     return style ? `${style.emoji} ${style.label}` : styleKey;
+}
+
+function getCurrentLanguageCommitTypes() {
+    const currentLang = getCurrentLanguage();
+    return commitTypes[currentLang] || commitTypes[defaultLanguage];
+}
+
+function getCurrentLanguageStyles() {
+    const currentLang = getCurrentLanguage();
+    return styles[currentLang] || styles[defaultLanguage];
 }
 
 // ==================== 自定义骚话管理 ====================
@@ -1511,10 +1544,12 @@ async function importCustomSaoHua(jsonData) {
             return { success: false, count: 0, message: '数据格式错误：不是数组' };
         }
 
+        const currentTypes = getCurrentLanguageCommitTypes();
+        const currentStyles = getCurrentLanguageStyles();
         const validItems = importedList.filter(item => 
             item.type && item.style && item.content && 
-            commitTypes.some(t => t.value === item.type) &&
-            styles.some(s => s.value === item.style)
+            currentTypes.some(t => t.value === item.type) &&
+            currentStyles.some(s => s.value === item.style)
         );
 
         const existingList = getCustomSaoHuaList();
@@ -1974,7 +2009,8 @@ async function generateSmartCommit() {
 
     playSoundEffect('generate');
 
-    const styleItems = styles.map(s => ({
+    const currentStyles1 = getCurrentLanguageStyles();
+    const styleItems = currentStyles1.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value,
         picked: s.value === initialStyle
@@ -2000,7 +2036,7 @@ async function generateSmartCommit() {
         }
     }
     if (!saoHuaMessage) {
-        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle, PluginState.currentLanguage);
     }
 
     const description = await promptForDescription(saoHuaMessage);
@@ -2044,7 +2080,8 @@ async function showManualTypeSelection(defaultType) {
     const autoInsert = ConfigManager.get('autoInsert', true);
     const initialStyle = PluginState.currentStyle || defaultStyle;
 
-    const typeItems = commitTypes.map(t => ({
+    const currentTypes2 = getCurrentLanguageCommitTypes();
+    const typeItems = currentTypes2.map(t => ({
         label: t.label,
         description: t.desc,
         value: t.value,
@@ -2061,7 +2098,8 @@ async function showManualTypeSelection(defaultType) {
     PluginState.currentType = selectedType.value;
     await persistPreferences();
 
-    const styleItems = styles.map(s => ({
+    const currentStyles2 = getCurrentLanguageStyles();
+    const styleItems = currentStyles2.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value,
         picked: s.value === initialStyle
@@ -2087,7 +2125,7 @@ async function showManualTypeSelection(defaultType) {
         }
     }
     if (!saoHuaMessage) {
-        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle, PluginState.currentLanguage);
     }
 
     const description = await promptForDescription(saoHuaMessage);
@@ -2156,7 +2194,8 @@ async function showSaoHuaGenerator() {
     }
 
     // 手动选择模式
-    const typeItems = commitTypes.map(t => ({
+    const currentTypes3 = getCurrentLanguageCommitTypes();
+    const typeItems = currentTypes3.map(t => ({
         label: t.label,
         description: t.desc,
         value: t.value,
@@ -2173,7 +2212,8 @@ async function showSaoHuaGenerator() {
     PluginState.currentType = selectedType.value;
     await persistPreferences();
 
-    const styleItems = styles.map(s => ({
+    const currentStyles3 = getCurrentLanguageStyles();
+    const styleItems = currentStyles3.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value,
         picked: s.value === initialStyle
@@ -2199,7 +2239,7 @@ async function showSaoHuaGenerator() {
         }
     }
     if (!saoHuaMessage) {
-        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle);
+        saoHuaMessage = getSaoHua(PluginState.currentType, PluginState.currentStyle, PluginState.currentLanguage);
     }
 
     const description = await promptForDescription(saoHuaMessage);
@@ -2292,7 +2332,8 @@ async function showCustomSaoHuaManager() {
  * 添加单条自定义骚话
  */
 async function addSingleCustomSaoHua() {
-    const typeItems = commitTypes.map(t => ({
+    const currentTypes4 = getCurrentLanguageCommitTypes();
+    const typeItems = currentTypes4.map(t => ({
         label: t.label,
         description: t.desc,
         value: t.value
@@ -2305,7 +2346,8 @@ async function addSingleCustomSaoHua() {
 
     if (!selectedType) return;
 
-    const styleItems = styles.map(s => ({
+    const currentStyles4 = getCurrentLanguageStyles();
+    const styleItems = currentStyles4.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value
     }));
@@ -2507,7 +2549,7 @@ async function generateRandomCommit() {
     }
 
     if (!saoHuaMessage) {
-        result = getRandomSaoHua();
+        result = getRandomSaoHua(PluginState.currentLanguage);
         PluginState.currentType = result.type;
         PluginState.currentStyle = result.style;
         await persistPreferences();
@@ -2546,7 +2588,8 @@ async function generateRandomCommit() {
  * 选择 Commit 类型
  */
 async function selectType() {
-    const items = commitTypes.map(t => ({
+    const currentTypes5 = getCurrentLanguageCommitTypes();
+    const items = currentTypes5.map(t => ({
         label: t.label,
         description: t.desc,
         value: t.value
@@ -2567,7 +2610,8 @@ async function selectType() {
  * 选择风格模式
  */
 async function selectStyle() {
-    const items = styles.map(s => ({
+    const currentStyles5 = getCurrentLanguageStyles();
+    const items = currentStyles5.map(s => ({
         label: `${s.emoji} ${s.label}`,
         value: s.value
     }));
@@ -2589,7 +2633,7 @@ async function selectStyle() {
 async function resetPreferences() {
     resetPreferencesToConfig();
     await clearPersistedPreferences();
-    vscode.window.showInformationMessage(`已重置偏好：${PluginState.currentType} / ${getStyleLabel(PluginState.currentStyle)}`);
+    vscode.window.showInformationMessage(`已重置偏好：${PluginState.currentType} / ${getStyleLabel(PluginState.currentStyle)} / ${PluginState.currentLanguage}`);
 }
 
 /**
@@ -2646,8 +2690,23 @@ async function clearCustomSaoHuaCommand() {
 async function quickSettings() {
     const config = vscode.workspace.getConfiguration('gitCommitSaoHua');
     const smartConfig = ConfigManager.getSmartDetectionConfig();
+    const currentLang = getCurrentLanguage();
+    const supportedLangs = getSupportedLanguages();
+    const langLabels = { 'zh-CN': '简体中文', 'en-US': 'English' };
 
     const settingsItems = [
+        {
+            label: '$(globe) 语言设置',
+            description: `当前：${langLabels[currentLang] || currentLang}`,
+            detail: '选择生成骚话的语言',
+            settingKey: 'defaultLanguage',
+            currentValue: currentLang,
+            type: 'language',
+            options: supportedLangs.map(lang => ({
+                label: langLabels[lang] || lang,
+                value: lang
+            }))
+        },
         {
             label: '$(gear) 高置信度阈值',
             description: `当前：${smartConfig.highConfidenceThreshold} (范围 1-10)`,
@@ -2703,7 +2762,21 @@ async function quickSettings() {
 
     let newValue;
 
-    if (selected.type === 'number') {
+    if (selected.type === 'language') {
+        const langSelected = await vscode.window.showQuickPick(selected.options, {
+            placeHolder: `当前：${langLabels[currentLang] || currentLang}`,
+            ignoreFocusOut: true
+        });
+
+        if (!langSelected) return;
+        newValue = langSelected.value;
+        await config.update(selected.settingKey, newValue, vscode.ConfigurationTarget.Workspace);
+        PluginState.currentLanguage = newValue;
+        await persistPreferences();
+        const settingLabel = selected.label.replace(/^\$\([^)]+\)\s*/, '');
+        vscode.window.showInformationMessage(`✓ ${settingLabel}：已设置为 ${langLabels[newValue] || newValue}`);
+        return;
+    } else if (selected.type === 'number') {
         const input = await vscode.window.showInputBox({
             placeHolder: `输入新值 (${selected.min}-${selected.max})`,
             value: selected.currentValue.toString(),

@@ -11,6 +11,7 @@
 - 🔄 **无限生成** - 不满意？再换一个！
 - 📱 **响应式设计** - 手机电脑都能用
 - 🎨 **精美 UI** - 程序员暗色主题 + 亮色主题切换
+- 🌍 **国际化支持 (i18n)** - 支持中文/英文/日文/韩文等多种语言
 
 ### 🆕 新增功能
 - 🌓 **主题切换** - 暗色/亮色主题自由切换
@@ -56,6 +57,10 @@ git-sao-hua -i
 
 # 生成并直接 git commit
 git-sao-hua -g
+
+# 指定输出语言 (支持: en, zh, ja, ko, es, fr, de, ru)
+git-sao-hua --lang en
+git-sao-hua -t feat -s love --lang zh
 ```
 
 详细文档见 [cli/README.md](cli/README.md)
@@ -271,6 +276,37 @@ code --install-extension git-commit-sao-hua.vsix
 **快捷键**：
 - `Ctrl+Shift+G` - 随机生成骚话
 - `Ctrl+Shift+S` - 查看使用统计
+
+### 语言设置 / Language Settings
+
+支持多语言界面 / Supports multiple languages:
+
+| Language | Code | 说明 |
+|----------|------|------|
+| English | `en` | English interface |
+| 中文 | `zh` | 中文界面 |
+| 日本語 | `ja` | 日本語インターフェース |
+| 한국어 | `ko` | 한국어 인터페이스 |
+| Español | `es` | Interfaz en español |
+| Français | `fr` | Interface française |
+| Deutsch | `de` | Deutsche Oberfläche |
+| Русский | `ru` | Русский интерфейс |
+
+**VSCode 插件设置方式 / VSCode Extension Settings:**
+
+1. 打开 VSCode 设置 / Open VSCode Settings: `Ctrl+,`
+2. 搜索 / Search: `gitCommitSaoHua.language`
+3. 选择语言代码 / Select language code: `en`, `zh`, `ja`, `ko`, `es`, `fr`, `de`, `ru`
+4. 重启 VSCode 生效 / Restart VSCode to apply
+
+**CLI 设置方式 / CLI Settings:**
+
+```bash
+# 通过 --lang 参数指定语言 / Specify language via --lang flag
+git-sao-hua --lang en
+git-sao-hua -t feat -s love --lang zh
+git-sao-hua --lang ja
+```
 
 ---
 
