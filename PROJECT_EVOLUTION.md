@@ -115,15 +115,17 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
-| -1 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| -1 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
+| -2 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
 
 ---
 
 ## 8. 本次进化详情（2026-03-29）
+
+### 进化记录 #1（早间）
 
 **进化类型：** 🔖 版本号同步
 
@@ -143,7 +145,33 @@ chore: 四端版本号统一同步至 v1.22.0 🔖
 **关闭的 Issues：** 
 - 无开放 Issues（本次为维护性同步）
 
+---
+
+### 进化记录 #2（本轮）
+
+**进化类型：** 🔧 中迭代（发布准备增强）
+
+**改动内容：**
+- 新增 `RELEASE_CHECKLIST.md` — 完整的发布前检查清单文档
+- 包含 GitHub Secrets 配置指南、版本号检查、测试验证、文档完整性检查
+- 包含完整的发布流程（npm + VSCode Marketplace）
+- 包含发布后验证步骤和故障排查指南
+- PROJECT_EVOLUTION.md: 更新本轮进化记录
+
+**提交信息：**
+```
+docs: 添加发布准备检查清单 RELEASE_CHECKLIST.md 📋
+
+为正式发布到 npm 和 VSCode Marketplace 提供完整的检查清单，
+包含 Secrets 配置、测试验证、发布流程、故障排查等完整指南。
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动完善发布文档）
+
 **下一步建议：**
-- 配置 NPM_TOKEN 到 GitHub Secrets，启用 npm 自动发布
-- 配置 VSCE_PAT 到 GitHub Secrets，启用 VSCode Marketplace 自动发布
-- 考虑首次正式发布到 npm 和 VSCode Marketplace
+- **大演进方向**：骚话社区贡献系统 — 支持用户提交自定义骚话 PR，自动格式校验
+- **中迭代方向**：
+  1. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
+  2. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
+  3. 添加 npm/VSCode Marketplace 徽章到 README.md
