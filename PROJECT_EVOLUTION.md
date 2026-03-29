@@ -40,7 +40,7 @@
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
 | **VSCode Marketplace 发布** | ✅ 发布准备完成 | 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 |
 | **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、剪贴板、git commit、**智能检测 --auto** |
-| **GitHub Action** | ✅ 完成 | 在 CI/CD 中自动生成骚话 commit message，支持类型/风格/语言参数（v1.22.0 新增）|
+| **GitHub Action** | ✅ 完成 | 在 CI/CD 中自动生成骚话 commit message，支持类型/风格/语言参数（v1.22.0 新增，版本号已统一）|
 | **智能检测（VSCode）** | ✅ 完成 | AST 分析 + Diff 关键词 + 代码模式识别 + 置信度 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + **智能检测模块**统一抽取，三端共用，29 个测试用例 |
 | **自动化测试** | ✅ 基础完成 | lib/test.js 29 个用例，覆盖数据完整性、生成逻辑、验证 |
@@ -115,8 +115,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
-| -1 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
+| -1 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
+| -2 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
+| -5 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
