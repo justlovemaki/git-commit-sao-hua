@@ -120,4 +120,30 @@
 | -2 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
 | -3 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
 | -4 | 2026-03-27 | 🚀 大演进 | VSCode Marketplace 发布准备 v1.18.0 — 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 | 不变（Stage 3 内功能完善） |
-| -5 | 2026-03-26 | 🚀 大演进 | CI/CD + 测试修复 v1.20.0 — GitHub Actions 自动发布配置 + 测试用例版本号断言修复 | 不变（Stage 3 内功能完善） |
+
+---
+
+## 8. 本次进化详情（2026-03-29）
+
+**进化类型：** 🔖 版本号同步
+
+**改动内容：**
+- lib/package.json: v1.20.0 → v1.22.0
+- cli/package.json: v1.20.0 → v1.22.0
+- vscode-extension/package.json: v1.21.0 → v1.22.0
+- action/package.json: v1.0.0 → v1.22.0
+- vscode-extension/CHANGELOG.md: 新增 v1.22.0 更新日志条目
+- PROJECT_EVOLUTION.md: 更新进化记录表格
+
+**提交信息：**
+```
+chore: 四端版本号统一同步至 v1.22.0 🔖
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（本次为维护性同步）
+
+**下一步建议：**
+- 配置 NPM_TOKEN 到 GitHub Secrets，启用 npm 自动发布
+- 配置 VSCE_PAT 到 GitHub Secrets，启用 VSCode Marketplace 自动发布
+- 考虑首次正式发布到 npm 和 VSCode Marketplace
