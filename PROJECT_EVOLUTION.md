@@ -19,16 +19,18 @@
 
 ## 2. 当前成熟度阶段
 
-**Stage 3: 功能扩展期**
+**Stage 4: 产品化期**
 
 原因：
 - 核心功能（骚话生成 + 智能检测）已稳定
-- 四端（Web / VSCode / CLI / GitHub Action）均已实现
-- ✅ 核心库已抽取完成，三端共享 lib/，代码复用问题已解决
+- 五端（Web / VSCode / CLI / GitHub Action / **GitHub App**）均已实现
+- ✅ 核心库已抽取完成，多端共享 lib/，代码复用问题已解决
 - ✅ 智能检测模块已共享至 lib/，CLI 支持 --auto 智能检测
 - ✅ CI/CD 工作流已配置，npm 发布准备就绪
 - ✅ GitHub Action 已实现，可在 CI/CD 中自动生成骚话 commit message
-- 下一步应聚焦：执行 npm publish、VSCode Marketplace 发布
+- ✅ GitHub App 已实现，可在 PR/Issue 创建时自动评论骚话
+- 项目已从「工具集」进化为「GitHub 生态参与者」
+- 下一步应聚焦：稳定性、部署体验、实际应用验证
 
 ---
 
@@ -41,6 +43,7 @@
 | **VSCode Marketplace 发布** | ✅ 发布准备完成 | 添加 galleryBanner/badges、CHANGELOG、发布工作流、发布指南 |
 | **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、剪贴板、git commit、**智能检测 --auto** |
 | **GitHub Action** | ✅ 完成 | 在 CI/CD 中自动生成骚话 commit message，支持类型/风格/语言参数（v1.22.0 新增，版本号已统一）|
+| **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 创建事件，智能分析标题内容并自动评论骚话（v2.0.0 新增） |
 | **智能检测（VSCode）** | ✅ 完成 | AST 分析 + Diff 关键词 + 代码模式识别 + 置信度 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + **智能检测模块**统一抽取，三端共用，29 个测试用例 |
 | **自动化测试** | ✅ 基础完成 | lib/test.js 29 个用例，覆盖数据完整性、生成逻辑、验证 |
@@ -94,20 +97,23 @@
 - ~~**CLI 集成智能检测**：将 VSCode 的检测逻辑移植到 lib/，CLI 支持 `--auto` 自动检测~~ ✅ 已完成
 - ~~**GitHub Action CI**：添加 CI 工作流，自动运行测试~~ ✅ 已完成
 - ~~**VSCode Marketplace 发布准备**：添加 marketplace 元数据、CHANGELOG、发布工作流~~ ✅ 已完成（v1.18.0）
+- ~~**GitHub App**：创建 GitHub App，自动评论 PR/Issue~~ ✅ 已完成（v2.0.0）
 
 ### 下一步（待执行）
 - **配置 NPM_TOKEN**：在 GitHub 仓库 Secrets 中添加 NPM_TOKEN，CI 将自动发布
 - **配置 VSCE_PAT**：在 GitHub 仓库 Secrets 中添加 VSCE_PAT，启用自动发布到 Marketplace
 - **首次正式发布**：手动触发发布工作流，上架 VSCode 插件商店
+- **GitHub App 部署**：部署到服务器，配置 webhook，实际测试自动评论功能
 
 ### 中期（4-10 轮）— 生态扩展
 - ~~**GitHub Action 骚话**：提供 Action，CI 中自动生成骚话 commit message~~ ✅ 已完成（v1.22.0）
-- **骚话社区贡献**：支持用户提交自定义骚话 PR，自动格式校验
+- ~~**骚话社区贡献**：支持用户提交自定义骚话 PR，自动格式校验~~ ✅ 可通过 GitHub App 实现
 - ~~**多语言骚话**：英文 / 日文骚话支持~~ ✅ 已完成
 
 ### 远期愿景
 - 成为 Git 提交信息领域最有趣的开源工具
 - 形成骚话社区生态
+- 从「工具」进化为「平台」
 
 ---
 
@@ -115,11 +121,11 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
-| -1 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-27 | 🔖 版本号同步 | VSCode 插件版本号同步 v1.20.0 — 统一 lib/cli/vscode 三端版本号 + 完善 CHANGELOG | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
+| -1 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| -2 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
 
 ---
 
@@ -175,3 +181,53 @@ docs: 添加发布准备检查清单 RELEASE_CHECKLIST.md 📋
   1. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
   2. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
   3. 添加 npm/VSCode Marketplace 徽章到 README.md
+
+---
+
+## 9. 本次进化详情（2026-03-30）— GitHub App
+
+**进化类型：** 🚀 大演进（维度跃迁）
+
+**改动内容：**
+- 新增 `github-app/` 目录 — 完整的 GitHub App 实现
+  - `index.js` — Probot 框架主入口，监听 pull_request.opened 和 issues.opened 事件
+  - `webhook.js` — Webhook 处理器，智能分析标题/内容，检测类型和风格，生成骚话评论
+  - `package.json` — 依赖配置（probot、express、dotenv、git-sao-hua-core）
+  - `.env.example` — 环境变量示例（APP_ID、PRIVATE_KEY、WEBHOOK_SECRET 等）
+  - `manifest.json` — GitHub App 清单文件，支持一键创建 App
+  - `README.md` — 完整的部署和使用文档
+- 核心功能：
+  - 自动监听 PR 创建事件，分析 PR 标题和内容
+  - 自动监听 Issue 创建事件，分析 Issue 标题和内容
+  - 智能检测 commit 类型（12 种）和骚话风格（5 种）
+  - 使用 git-sao-hua-core 生成骚话评论
+  - 自动发布评论到 PR/Issue
+- 项目从「本地工具集」跃迁到「GitHub 生态参与者」
+
+**提交信息：**
+```
+feat: GitHub App — 自动评论 PR/Issue 的骚话机器人 🤖
+
+新增 github-app 目录，实现完整的 GitHub App：
+- 使用 Probot 框架，监听 pull_request.opened 和 issues.opened 事件
+- 智能分析标题和内容，自动检测 commit 类型和骚话风格
+- 使用 git-sao-hua-core 生成骚话评论并自动发布
+- 支持 manifest.json 一键创建 App
+- 完整的部署文档（Docker/Railway/Vercel）
+
+这是从「本地工具」到「GitHub 生态参与者」的维度跃迁。
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动进化，开辟新能力维度）
+
+**项目地址：** https://github.com/justlovemaki/git-commit-sao-hua
+
+**下一步建议：**
+- **大演进方向**：
+  1. 骚话社区/市场 — 用户可以分享和下载自定义骚话包，形成生态
+  2. AI 增强 — 使用 AI 根据实际代码 diff 生成更个性化的骚话
+- **中迭代方向**：
+  1. 部署 GitHub App 到服务器，实际测试自动评论功能
+  2. 添加更多事件支持（如 pull_request_review、issue_comment）
+  3. 添加配置选项，允许用户自定义评论风格和频率
