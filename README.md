@@ -2,6 +2,11 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
+[![npm version](https://badge.fury.io/js/git-sao-hua-core.svg)](https://www.npmjs.com/package/git-sao-hua-core)
+[![VSCode Extension](https://img.shields.io/badge/VSCode-Extension-blue?logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=coding-expert.git-sao-hua)
+[![GitHub Action](https://img.shields.io/badge/GitHub-Action-2088FF?logo=github-actions)](https://github.com/justlovemaki/git-commit-sao-hua/actions)
+[![GitHub App](https://img.shields.io/badge/GitHub-App-black?logo=github)](https://github.com/apps/git-sao-hua)
+
 ## ✨ 功能特点
 
 ### 核心功能
@@ -38,6 +43,7 @@
 - 🗂️ **代码模式识别** - 数据库/API/路由/组件/样式 5 种模式检测（v1.17.0）
 - 💻 **CLI 命令行工具** - 终端直接生成骚话 commit message，支持交互模式和一键提交（v1.18.0）
 - 🤖 **GitHub Action** - 在 CI/CD 中自动生成骚话 commit message（v1.22.0）
+- 🐙 **GitHub App** - 自动监听 PR/Issue 创建，智能分析并自动评论骚话（v2.0.0）
 
 ## 🚀 快速开始
 
