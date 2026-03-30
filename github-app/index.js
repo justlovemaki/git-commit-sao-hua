@@ -1,12 +1,11 @@
-const { Probot, LogLevel } = require('probot');
-const { handlePullRequest } = require('./webhook');
 require('dotenv').config();
+const { Probot } = require('probot');
+const { handlePullRequest } = require('./webhook');
 
 const probot = new Probot({
     appId: process.env.APP_ID,
     privateKey: process.env.PRIVATE_KEY,
     webhookSecret: process.env.WEBHOOK_SECRET,
-    logLevel: LogLevel.INFO,
 });
 
 probot.on('pull_request.opened', async (context) => {
@@ -59,13 +58,9 @@ probot.on('issues.opened', async (context) => {
     }
 });
 
-module.exports = (app) => {
-    app.log.info('GitHub Saohua App loaded!');
-};
+module.exports = probot;
 
 if (require.main === module) {
     const port = process.env.PORT || 3000;
-    probot.server?.listen(port, () => {
-        console.log(`Server is running on port ${port}`);
-    });
+    probot.start();
 }
