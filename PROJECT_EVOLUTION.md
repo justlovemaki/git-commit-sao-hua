@@ -121,11 +121,11 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
-| -1 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
-| -2 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-28 | 🚀 大演进 | 国际化支持 v1.21.0 — 多语言（中/英/日）骚话支持 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
+| -1 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
+| -2 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| -3 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
 
 ---
 
@@ -231,3 +231,53 @@ feat: GitHub App — 自动评论 PR/Issue 的骚话机器人 🤖
   1. 部署 GitHub App 到服务器，实际测试自动评论功能
   2. 添加更多事件支持（如 pull_request_review、issue_comment）
   3. 添加配置选项，允许用户自定义评论风格和频率
+
+---
+
+## 10. 本次进化详情（2026-03-30）— GitHub App 测试与文档完善
+
+**进化类型：** 🔧 中迭代（质量提升）
+
+**改动内容：**
+- 新增 `github-app/test.js` — 完整的单元测试套件
+  - 类型检测测试（6 个用例）：验证 detectType 函数正确识别 12 种 commit 类型
+  - 风格检测测试（6 个用例）：验证 detectStyle 函数正确识别 5 种骚话风格
+  - 评论生成测试（3 个用例）：验证 PR/Issue 评论生成逻辑
+  - 集成测试（2 个用例）：验证完整工作流
+  - 总计 17 个测试用例，全部通过 ✅
+- 优化 `github-app/index.js` — 简化启动逻辑
+  - 移除冗余的 logLevel 配置
+  - 简化 module.exports 导出，直接导出 probot 实例
+  - 使用 probot.start() 替代手动 server.listen
+  - 符合 Probot 最佳实践
+- 更新 `README.md` — 添加项目徽章和功能说明
+  - 添加 4 个徽章：npm version、VSCode Extension、GitHub Action、GitHub App
+  - 在新增功能列表中补充 GitHub App（v2.0.0）
+  - 让项目能力矩阵更加完整醒目
+
+**提交信息：**
+```
+refactor: 简化 GitHub App 启动逻辑，使用 probot.start() 统一启动 🚀
+test: 添加 GitHub App 单元测试，覆盖类型检测/风格检测/评论生成 ✅
+docs: 更新 README.md，添加 GitHub App 徽章和功能说明 🐙
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动完善测试和文档）
+
+**测试覆盖：**
+- 类型检测：fix/feat/docs/refactor/test 等关键词识别
+- 风格检测：love/sao/zha/chu/fo 等关键词识别
+- 评论生成：PR/Issue 前缀区分、标题引用、footer 签名
+- 完整工作流：从事件接收到评论发布的端到端验证
+
+**下一步建议：**
+- **大演进方向**：
+  1. 骚话社区/市场 — 用户可以分享和下载自定义骚话包，形成生态
+  2. AI 增强 — 使用 AI 根据实际代码 diff 生成更个性化的骚话
+- **中迭代方向**：
+  1. 部署 GitHub App 到服务器，实际测试自动评论功能
+  2. 添加更多事件支持（如 pull_request_review、issue_comment）
+  3. 添加配置选项，允许用户自定义评论风格和频率
+  4. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
+  5. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
