@@ -96,21 +96,87 @@ ngrok http 3000
 
 ## 部署到服务器
 
-### Docker 部署
+### Docker 部署（推荐）
 
-```dockerfile
-FROM node:18-alpine
+#### 快速启动
 
-WORKDIR /app
+```bash
+# 1. 复制环境变量文件
+cp .env.example .env
 
-COPY package*.json ./
-RUN npm install --production
+# 2. 编辑 .env 填入配置
+vim .env
 
-COPY . .
+# 3. 启动服务
+docker-compose up -d
 
-EXPOSE 3000
+# 4. 查看日志
+docker-compose logs -f
+```
 
-CMD ["npm", "start"]
+#### 使用 Makefile（可选）
+
+项目提供了 Makefile 简化常用操作：
+
+```bash
+make help              # 显示所有可用命令
+make setup             # 初始化环境（复制 .env.example）
+make verify            # 验证环境配置
+make build             # 构建 Docker 镜像
+make up                # 启动服务
+make down              # 停止服务
+make logs              # 查看日志
+make restart           # 重启服务
+make clean             # 清理构建缓存
+```
+
+#### 生产环境部署
+
+```bash
+# 构建优化镜像
+docker-compose build --no-cache
+
+# 启动服务
+docker-compose up -d
+
+# 验证运行状态
+docker-compose ps
+```
+
+#### 配置说明
+
+| 环境变量 | 说明 | 必需 |
+|---------|------|------|
+| APP_ID | GitHub App ID（在 App 设置页查看） | 是 |
+| PRIVATE_KEY | 私钥内容（点击 "Generate a new private key" 下载） | 是 |
+| WEBHOOK_SECRET | Webhook 密钥（自定义设置） | 是 |
+| CLIENT_ID | Client ID（在 App 设置页查看） | 是 |
+| CLIENT_SECRET | Client Secret（在 App 设置页查看） | 是 |
+| PORT | 服务端口（默认 3000） | 否 |
+
+#### 管理命令
+
+```bash
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+
+# 重启服务
+docker-compose restart
+
+# 重新构建镜像
+docker-compose build --no-cache
+```
+
+#### 自定义端口
+
+修改 `docker-compose.yml` 中的端口映射：
+
+```yaml
+ports:
+  - "8080:3000"  # 将容器 3000 端口映射到主机 8080
 ```
 
 ### Railway 部署
@@ -177,6 +243,28 @@ A: 确保 `.env` 中的 `WEBHOOK_SECRET` 与 GitHub App 设置中的 Webhook sec
 ### Q: 如何只对特定仓库启用？
 
 A: 在 GitHub App 设置中的 "Install" 页面，选择安装到特定仓库。
+
+### Q: Docker 容器启动失败？
+
+A: 检查以下几点：
+1. 确认 `.env` 文件存在且配置正确
+2. 查看日志：`docker-compose logs -f`
+3. 确认端口 3000 未被占用
+4. 检查 PRIVATE_KEY 格式是否正确（包含 BEGIN/END 标记）
+
+### Q: 如何查看服务运行状态？
+
+A: 使用以下命令：
+```bash
+# 查看容器状态
+docker-compose ps
+
+# 查看实时日志
+docker-compose logs -f
+
+# 进入容器调试
+docker-compose exec app sh
+```
 
 ## 相关项目
 
