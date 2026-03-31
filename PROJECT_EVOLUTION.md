@@ -103,7 +103,8 @@
 - **配置 NPM_TOKEN**：在 GitHub 仓库 Secrets 中添加 NPM_TOKEN，CI 将自动发布
 - **配置 VSCE_PAT**：在 GitHub 仓库 Secrets 中添加 VSCE_PAT，启用自动发布到 Marketplace
 - **首次正式发布**：手动触发发布工作流，上架 VSCode 插件商店
-- **GitHub App 部署**：部署到服务器，配置 webhook，实际测试自动评论功能
+- **GitHub App 部署测试**：部署到服务器/Railway，配置 webhook，实际测试自动评论功能
+- **Docker 镜像推送**：触发 CI 工作流，将 GitHub App 镜像推送到 ghcr.io
 
 ### 中期（4-10 轮）— 生态扩展
 - ~~**GitHub Action 骚话**：提供 Action，CI 中自动生成骚话 commit message~~ ✅ 已完成（v1.22.0）
@@ -121,11 +122,11 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
-| -1 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
-| -2 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
-| -3 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-28 | 🚀 大演进 | GitHub Action v1.22.0 — 在 CI/CD 中自动生成骚话 commit message | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 — 添加 Dockerfile/docker-compose/Makefile/CI 工作流，从「本地开发」到「生产部署」 | 不变（Stage 4 内部署能力提升） |
+| -1 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
+| -2 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
+| -3 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| -4 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
 
 ---
 
@@ -281,3 +282,58 @@ docs: 更新 README.md，添加 GitHub App 徽章和功能说明 🐙
   3. 添加配置选项，允许用户自定义评论风格和频率
   4. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
   5. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
+
+---
+
+## 11. 本次进化详情（2026-03-31）— GitHub App Docker 部署完善
+
+**进化类型：** 🔧 中迭代（部署能力提升）
+
+**改动内容：**
+- 新增 `github-app/Dockerfile` — 基于 node:20-alpine 的轻量级生产镜像
+- 新增 `github-app/docker-compose.yml` — 一键启动服务，支持环境变量配置
+- 新增 `github-app/.dockerignore` — 排除 node_modules/测试文件，优化构建体积
+- 新增 `github-app/Makefile` — 简化常用操作（help/setup/build/up/down/logs/clean/verify）
+- 新增 `.github/workflows/github-app-docker.yml` — CI/CD 自动构建推送镜像到 ghcr.io
+- 更新 `github-app/README.md` — 补充 Docker 部署说明、Makefile 使用指南、常见问题排查
+- 核心改进：
+  - 从「本地开发」到「生产部署」的关键一步
+  - 支持一键容器化部署，降低运维成本
+  - CI/CD 自动构建镜像，版本追踪清晰
+  - Makefile 提供统一的操作入口，提升开发者体验
+
+**提交信息：**
+```
+feat: GitHub App Docker 部署完善 — 添加 Dockerfile/Makefile/CI 工作流 🐳
+
+- 添加 Dockerfile 和 docker-compose.yml，支持一键容器化部署
+- 添加 Makefile 简化常用操作（build/up/down/logs/clean）
+- 添加 .dockerignore 优化构建体积
+- 添加 GitHub Actions 工作流自动构建推送镜像到 ghcr.io
+- 更新 README 补充 Docker 部署说明和 Makefile 使用指南
+- 添加常见问题排查（Docker 容器启动失败/日志查看等）
+
+这是 GitHub App 从「本地开发」到「生产部署」的关键一步。
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动完善部署能力）
+
+**部署能力增强：**
+- Docker 镜像：基于 Alpine，体积小，启动快
+- Makefile：10+ 个快捷命令，覆盖开发/部署/运维全流程
+- CI/CD：推送 main 分支或发布 Release 时自动构建镜像
+- 镜像仓库：ghcr.io/justlovemaki/git-commit-sao-hua/github-app
+
+**下一步建议：**
+- **大演进方向**：
+  1. 骚话社区/市场 — 用户可以分享和下载自定义骚话包，形成生态
+  2. AI 增强 — 使用 AI 根据实际代码 diff 生成更个性化的骚话
+- **中迭代方向**：
+  1. 部署 GitHub App 到 Railway/服务器，实际测试自动评论功能
+  2. 触发 Docker CI 工作流，验证镜像自动构建推送
+  3. 添加更多事件支持（如 pull_request_review、issue_comment）
+  4. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
+  5. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
+
+**项目地址：** https://github.com/justlovemaki/git-commit-sao-hua
