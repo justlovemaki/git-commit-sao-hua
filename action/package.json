@@ -1,7 +1,7 @@
 {
   "name": "git-commit-sao-hua-action",
-  "version": "1.22.0",
-  "description": "GitHub Action for generating sao hua commit messages",
+  "version": "1.23.0",
+  "description": "GitHub Action for generating sao hua commit messages (with AI support)",
   "main": "dist/index.js",
   "scripts": {
     "build": "ncc build index.js -o dist",
