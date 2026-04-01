@@ -122,11 +122,12 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 — 添加 Dockerfile/docker-compose/Makefile/CI 工作流，从「本地开发」到「生产部署」 | 不变（Stage 4 内部署能力提升） |
-| -1 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
-| -2 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
-| -3 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
-| -4 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-04-01 | 🔧 中迭代 | GitHub App CI 测试自动化 — 修复 package.json 测试脚本 + 添加 github-app-test.yml 工作流，从「本地测试」到「CI 自动化」 | 不变（Stage 4 内质量提升） |
+| -1 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 — 添加 Dockerfile/docker-compose/Makefile/CI 工作流，从「本地开发」到「生产部署」 | 不变（Stage 4 内部署能力提升） |
+| -2 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
+| -3 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
+| -4 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| -5 | 2026-03-29 | 🔖 版本号同步 | 四端版本统一 v1.22.0 — lib/cli/vscode/action 全部同步至 v1.22.0 + CHANGELOG 更新 | 不变（Stage 3 内功能完善） |
 
 ---
 
@@ -324,6 +325,74 @@ feat: GitHub App Docker 部署完善 — 添加 Dockerfile/Makefile/CI 工作流
 - Makefile：10+ 个快捷命令，覆盖开发/部署/运维全流程
 - CI/CD：推送 main 分支或发布 Release 时自动构建镜像
 - 镜像仓库：ghcr.io/justlovemaki/git-commit-sao-hua/github-app
+
+**下一步建议：**
+- **大演进方向**：
+  1. 骚话社区/市场 — 用户可以分享和下载自定义骚话包，形成生态
+  2. AI 增强 — 使用 AI 根据实际代码 diff 生成更个性化的骚话
+- **中迭代方向**：
+  1. 部署 GitHub App 到 Railway/服务器，实际测试自动评论功能
+  2. 触发 Docker CI 工作流，验证镜像自动构建推送
+  3. 添加更多事件支持（如 pull_request_review、issue_comment）
+  4. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
+  5. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
+
+**项目地址：** https://github.com/justlovemaki/git-commit-sao-hua
+
+---
+
+## 12. 本次进化详情（2026-04-01）— GitHub App CI 测试自动化
+
+**进化类型：** 🔧 中迭代（质量提升）
+
+**改动内容：**
+- 修复 `github-app/package.json` — 将测试脚本从 `echo "No tests yet"` 改为实际运行 `node test.js`
+- 新增 `.github/workflows/github-app-test.yml` — GitHub App 专用 CI 测试工作流
+  - 支持 Node.js 18.x/20.x 多版本测试
+  - 包含依赖安装、测试执行、语法检查三步
+  - 添加 Docker 构建验证步骤（仅 main 分支推送时触发）
+  - 路径过滤：仅当 github-app/ 目录变更时触发
+- 运行测试验证：17 个测试用例全部通过 ✅
+  - 类型检测测试：6 个用例（fix/feat/docs/refactor/test 等）
+  - 风格检测测试：6 个用例（love/sao/zha/chu/fo 等）
+  - 评论生成测试：3 个用例（PR/Issue 评论、空内容处理）
+  - 集成测试：2 个用例（完整工作流验证）
+- 核心改进：
+  - 从「本地手动测试」到「CI 自动化测试」的质量提升
+  - 每次推送/PR 自动验证代码质量
+  - 多 Node.js 版本覆盖，确保兼容性
+  - Docker 构建验证，提前发现部署问题
+
+**提交信息：**
+```
+test: 添加 GitHub App CI 测试工作流，修复 package.json 测试脚本 ✅
+
+- 修复 github-app/package.json 测试脚本，从 'echo' 改为实际运行 test.js
+- 新增 .github/workflows/github-app-test.yml CI 工作流
+  - 支持 Node.js 18.x/20.x 多版本测试
+  - 包含依赖安装、测试执行、语法检查
+  - 添加 Docker 构建验证步骤（仅 main 分支）
+- 运行测试验证：17 个测试用例全部通过 ✅
+
+这是 GitHub App 从「有测试」到「CI 自动化测试」的质量提升。
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动完善 CI/CD 质量保障）
+
+**测试覆盖：**
+- lib/ 核心库：49 个测试用例 ✅
+- github-app/：17 个测试用例 ✅
+- 总计：66 个测试用例，全部通过
+
+**CI/CD 工作流矩阵：**
+| 工作流 | 触发条件 | 测试内容 |
+|--------|---------|---------|
+| ci.yml | 全项目推送/PR | lib/ + cli/ 测试 + npm 发布 |
+| github-app-test.yml | github-app/ 变更 | GitHub App 测试 + Docker 构建验证 |
+| github-app-docker.yml | main 推送/Release | Docker 镜像构建推送 ghcr.io |
+| action-test.yml | action/ 变更 | GitHub Action 测试 |
+| vscode-*.yml | vscode-extension/ 变更 | VSCode 插件打包/发布 |
 
 **下一步建议：**
 - **大演进方向**：
