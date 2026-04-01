@@ -1,0 +1,56 @@
+name: GitHub App Test
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'github-app/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'github-app/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install dependencies
+      run: |
+        cd github-app
+        npm install
+    
+    - name: Run GitHub App tests
+      run: |
+        cd github-app
+        npm test
+    
+    - name: Check JavaScript syntax
+      run: |
+        node --check github-app/index.js
+        node --check github-app/webhook.js
+        node --check github-app/test.js
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image (verification)
+      run: |
+        cd github-app
+        docker build -t git-commit-sao-hua/github-app:test .
