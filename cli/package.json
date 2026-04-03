@@ -1,6 +1,6 @@
 {
   "name": "git-sao-hua",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "Git Commit 骚话生成器 CLI - 让你的 commit message 骚起来 (支持智能检测 + AI 生成)",
   "main": "index.js",
   "bin": {

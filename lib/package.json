@@ -1,6 +1,6 @@
 {
   "name": "git-sao-hua-core",
-  "version": "1.23.0",
+  "version": "1.25.0",
   "description": "Git Commit 骚话生成器核心库 - 支持智能检测和 AI 生成",
   "main": "index.js",
   "scripts": {

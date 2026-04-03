@@ -2,6 +2,46 @@
 
 让每次 Git 提交都充满爱意（或骚气）！
 
+## [1.25.0] - 2026-04-03
+
+### Added
+- AI 智能生成模式：支持调用 AI API 基于实际代码 diff 生成个性化骚话
+- 新增命令 `gitCommitSaoHua.generateAI`：一键 AI 生成
+- Fallback 机制：AI 失败时自动降级到模板生成，保证稳定性
+
+### Changed
+- 生成器界面新增"AI 生成"选项，与"智能检测"、"手动选择"并列
+
+## [1.24.0] - 2026-04-02
+
+### 🔧 中迭代：CLI AI 集成
+- **CLI --ai 参数**：新增 `--ai` 选项，支持 AI 生成个性化骚话 commit message
+- **智能 diff 获取**：自动获取 git diff --cached 或 git diff HEAD 作为 AI 输入
+- **Fallback 机制**：AI 失败时自动降级到传统模板生成
+- **帮助文档更新**：showHelp() 添加 --ai 参数说明和示例
+- **全端版本同步**：lib/cli/vscode/action/github-app 五端版本统一为 v1.24.0
+
+### 📦 技术更新
+- 共享核心库 lib/ v1.24.0（ai-generator.js 已存在，CLI 现在支持调用）
+- CLI v1.24.0（新增 generateAIMessage 函数和 --ai 参数）
+- VSCode 插件 v1.24.0
+- GitHub Action v1.24.0
+- GitHub App v1.24.0
+
+### 💡 使用示例
+```bash
+# 使用 AI 生成个性化骚话
+git-sao-hua --ai
+
+# AI 生成并指定风格
+git-sao-hua --ai -s love
+
+# AI 生成并直接提交
+git-sao-hua --ai -g
+```
+
+---
+
 ## [1.23.0] - 2026-04-01
 
 ### 🚀 大演进：AI 智能生成

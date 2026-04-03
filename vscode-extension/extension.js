@@ -19,6 +19,7 @@
 
 const vscode = require('vscode');
 const { commitTypes, styles, getSaoHua, getRandomSaoHua, generateCommitMessage, validateLanguage, getSupportedLanguages, defaultLanguage } = require('../lib');
+const aiGenerator = require('../lib/ai-generator.js');
 
 // ==================== 常量定义 ====================
 
@@ -1879,6 +1880,108 @@ function playSoundEffect(type) {
     }
 }
 
+// ==================== AI 生成 ====================
+
+/**
+ * AI 智能生成 Commit 骚话
+ * 基于实际代码 diff 分析，使用 AI 生成个性化骚话
+ * Fallback 机制：AI 失败时降级到传统模板生成
+ */
+async function generateAICommit() {
+    const defaultStyle = ConfigManager.get('defaultStyle', 'sao');
+    const autoInsert = ConfigManager.get('autoInsert', true);
+    const initialStyle = PluginState.currentStyle || defaultStyle;
+
+    vscode.window.setStatusBarMessage('🧠 正在调用 AI 分析代码变更...', 2000);
+
+    // 获取 Git diff 内容
+    const diffContent = await GitExtensionManager.getDiffContent();
+
+    if (!diffContent || diffContent.trim().length === 0) {
+        vscode.window.showWarningMessage('未检测到 Git 变更，无法使用 AI 生成');
+        return await showSaoHuaGenerator();
+    }
+
+    // 风格选择
+    const currentStyles = getCurrentLanguageStyles();
+    const styleItems = currentStyles.map(s => ({
+        label: `${s.emoji} ${s.label}`,
+        value: s.value,
+        picked: s.value === initialStyle
+    }));
+
+    const selectedStyle = await vscode.window.showQuickPick(styleItems, {
+        placeHolder: '选择 AI 生成风格',
+        ignoreFocusOut: true
+    });
+
+    if (!selectedStyle) return;
+
+    const style = selectedStyle.value;
+
+    try {
+        // 调用 AI 生成
+        const result = await aiGenerator.generateWithAI(diffContent, {
+            language: PluginState.currentLanguage,
+            style: style,
+            enableFallback: true
+        });
+
+        if (!result.success) {
+            throw new Error(result.message || 'AI 生成失败');
+        }
+
+        // 记录使用的类型和风格
+        if (result.type) {
+            PluginState.currentType = result.type;
+            await persistPreferences();
+        }
+        PluginState.currentStyle = style;
+        await persistPreferences();
+
+        const fallbackLabel = result.isFallback ? ' (模板生成)' : ' (AI 生成)';
+        const fallbackEmoji = result.isFallback ? '📝' : '🤖';
+
+        // 提示用户添加详细描述
+        const description = await promptForDescription(result.message);
+        const message = composeCommitMessage(result.type, result.message, description);
+
+        playSoundEffect('generate');
+
+        if (autoInsert) {
+            const commitResult = await vscode.window.showInformationMessage(
+                `${fallbackEmoji}生成成功！类型：${result.type}${fallbackLabel}`,
+                { modal: true, detail: message },
+                '插入到 Git'
+            );
+
+            if (commitResult === '插入到 Git') {
+                await insertToGitInput(message, true);
+            } else {
+                await vscode.env.clipboard.writeText(message);
+                playSoundEffect('copy');
+                vscode.window.showInformationMessage('已复制到剪贴板');
+            }
+        } else {
+            await vscode.env.clipboard.writeText(message);
+            playSoundEffect('copy');
+            await vscode.window.showInformationMessage(
+                `${fallbackEmoji}已复制到剪贴板！类型：${result.type}${fallbackLabel}`,
+                { modal: true, detail: message }
+            );
+        }
+
+        await recordGeneration(result.type, style);
+
+    } catch (error) {
+        console.error('[GitSaoHua] AI 生成失败:', error);
+        vscode.window.showErrorMessage(`AI 生成失败：${error.message}`);
+        
+        // Fallback 到手动选择模式
+        return await showSaoHuaGenerator();
+    }
+}
+
 // ==================== 智能生成 ====================
 
 /**
@@ -2179,6 +2282,7 @@ async function showSaoHuaGenerator() {
     // 模式选择
     const modeItems = [
         { label: '$(search) 智能检测', description: '自动分析 Git 变更，推荐 Commit 类型', value: 'smart' },
+        { label: '$(sparkles) AI 生成', description: '调用 AI 基于代码 diff 生成个性化骚话', value: 'ai' },
         { label: '$(list-flat) 手动选择', description: '手动选择 Commit 类型', value: 'manual' }
     ];
 
@@ -2191,6 +2295,10 @@ async function showSaoHuaGenerator() {
 
     if (selectedMode.value === 'smart') {
         return await generateSmartCommit();
+    }
+
+    if (selectedMode.value === 'ai') {
+        return await generateAICommit();
     }
 
     // 手动选择模式
@@ -2505,6 +2613,7 @@ function activate(context) {
     const commands = [
         vscode.commands.registerCommand('gitCommitSaoHua.generate', showSaoHuaGenerator),
         vscode.commands.registerCommand('gitCommitSaoHua.generateSmart', generateSmartCommit),
+        vscode.commands.registerCommand('gitCommitSaoHua.generateAI', generateAICommit),
         vscode.commands.registerCommand('gitCommitSaoHua.generateRandom', generateRandomCommit),
         vscode.commands.registerCommand('gitCommitSaoHua.selectType', selectType),
         vscode.commands.registerCommand('gitCommitSaoHua.selectStyle', selectStyle),

@@ -127,12 +127,12 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-01 | 🚀 大演进 | AI 智能生成模块 — 新增 ai-generator.js，实现基于 diff 分析的 AI 骚话生成 + fallback 机制，从「模板生成」到「AI 个性化生成」 | Stage 4 → Stage 5（平台期） |
-| -1 | 2026-04-01 | 🔧 中迭代 | GitHub App CI 测试自动化 — 修复 package.json 测试脚本 + 添加 github-app-test.yml 工作流，从「本地测试」到「CI 自动化」 | 不变（Stage 4 内质量提升） |
-| -2 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 — 添加 Dockerfile/docker-compose/Makefile/CI 工作流，从「本地开发」到「生产部署」 | 不变（Stage 4 内部署能力提升） |
-| -3 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
-| -4 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
-| -5 | 2026-03-29 | 🔧 中迭代 | 发布准备检查清单 — 新增 RELEASE_CHECKLIST.md，包含 Secrets 配置/测试验证/发布流程/故障排查完整指南 | 不变（Stage 3 内功能完善） |
+| 最新 | 2026-04-02 | 🔧 中迭代 | CLI AI 集成 — 新增 --ai 参数和 generateAIMessage 函数，CLI 可调用 AI 生成个性化骚话，fallback 机制保证稳定性 | 不变（Stage 5 内能力完善） |
+| -1 | 2026-04-01 | 🚀 大演进 | AI 智能生成模块 — 新增 ai-generator.js，实现基于 diff 分析的 AI 骚话生成 + fallback 机制，从「模板生成」到「AI 个性化生成」 | Stage 4 → Stage 5（平台期） |
+| -2 | 2026-04-01 | 🔧 中迭代 | GitHub App CI 测试自动化 — 修复 package.json 测试脚本 + 添加 github-app-test.yml 工作流，从「本地测试」到「CI 自动化」 | 不变（Stage 4 内质量提升） |
+| -3 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 — 添加 Dockerfile/docker-compose/Makefile/CI 工作流，从「本地开发」到「生产部署」 | 不变（Stage 4 内部署能力提升） |
+| -4 | 2026-03-30 | 🔧 中迭代 | GitHub App 测试与文档完善 — 添加 17 个单元测试 + 简化启动逻辑 + README 徽章 | 不变（Stage 4 内质量提升） |
+| -5 | 2026-03-30 | 🚀 大演进 | GitHub App — 创建 github-app 目录，实现自动评论 PR/Issue 的 GitHub App，从「本地工具」跃迁到「GitHub 生态参与者」 | Stage 3 → Stage 4（产品化期） |
 
 ---
 
@@ -470,9 +470,91 @@ feat: AI 智能生成模块 — 基于 diff 分析的 AI 骚话生成器 🧠
   2. AI 模型微调 — 使用项目历史数据微调 AI 模型，生成更符合项目风格的骚话
 - **中迭代方向**：
   1. 配置 AI_API_KEY 到 GitHub Secrets，测试 AI 生成功能
-  2. 在 CLI 中添加 --ai 参数，支持 AI 生成模式
+  2. 在 CLI 中添加 --ai 参数，支持 AI 生成模式 ✅ 已完成 (v1.24.0)
   3. 在 VSCode 插件中添加 AI 生成开关和配置
   4. 部署 GitHub App 到 Railway/服务器，实际测试自动评论功能
   5. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
   6. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
+
+---
+
+## 14. 本次进化详情（2026-04-02）— CLI AI 集成
+
+**进化类型：** 🔧 中迭代（能力完善）
+
+**改动内容：**
+- 更新 `cli/index.js` — 新增 AI 生成功能集成
+  - 引入 `../lib/ai-generator.js` 模块
+  - 新增 `generateAIMessage(type, style, language)` 异步函数
+  - 自动获取 git diff --cached 或 git diff HEAD 作为 AI 输入
+  - 调用 `aiGenerator.generateWithAI()` 生成个性化骚话
+  - Fallback 机制：AI 失败时自动降级到传统模板生成
+  - 更新 `printMessage()` 显示 AI 生成标识
+- 更新 `parseArgs()` — 新增 `--ai` 选项解析
+- 更新 `showHelp()` — 添加 `--ai` 参数说明和使用示例
+- 更新 `main()` — 处理 `--ai` 逻辑，调用 AI 生成或传统生成
+- 同步所有端版本号至 v1.24.0：
+  - cli/package.json: v1.23.0 → v1.24.0
+  - lib/package.json: v1.23.0 → v1.24.0
+  - vscode-extension/package.json: v1.23.0 → v1.24.0
+  - action/package.json: v1.23.0 → v1.24.0
+  - github-app/package.json: v1.23.0 → v1.24.0
+- 更新 `vscode-extension/CHANGELOG.md` — 添加 v1.24.0 更新日志
+- 更新 `PROJECT_EVOLUTION.md` — 记录本轮进化
+
+**核心能力：**
+- **CLI AI 生成**：`git-sao-hua --ai` 一键调用 AI 生成个性化骚话
+- **智能 diff 获取**：自动检测 staged changes 或工作区变更
+- **Fallback 保障**：AI API 失败/超时无 key 时自动降级到模板生成
+- **风格可选**：支持 `--ai -s <style>` 指定骚话风格
+- **无缝集成**：与现有 `-g`、`-c` 等参数完全兼容
+
+**提交信息：**
+```
+feat: CLI 集成 AI 生成模式 — 新增 --ai 参数支持 AI 骚话生成 🧠
+
+- 新增 generateAIMessage 函数，调用 lib/ai-generator.js
+- 自动获取 git diff 作为 AI 输入，fallback 机制保证稳定性
+- 更新 parseArgs 添加 --ai 选项，showHelp 添加说明
+- 同步所有端版本号至 v1.24.0
+
+这是 AI 模块从「已实现」到「可用」的关键一步。
+```
+
+**关闭的 Issues：** 
+- 无开放 Issues（主动完善 AI 能力落地）
+
+**使用示例：**
+```bash
+# 使用 AI 生成个性化骚话
+git-sao-hua --ai
+
+# AI 生成并指定风格
+git-sao-hua --ai -s love
+
+# AI 生成并直接提交
+git-sao-hua --ai -g
+
+# AI 生成并复制到剪贴板
+git-sao-hua --ai -c
+```
+
+**测试验证：**
+- CLI 语法检查通过
+- `--ai` 参数解析正确
+- Fallback 机制正常工作（无 AI_API_KEY 时降级到模板生成）
+- 与现有参数（-t/-s/-g/-c 等）兼容
+
+**项目地址：** https://github.com/justlovemaki/git-commit-sao-hua
+
+**下一步建议：**
+- **大演进方向**：
+  1. 骚话社区/市场 — 用户可以分享和下载自定义骚话包，形成生态
+  2. AI 模型微调 — 使用项目历史数据微调 AI 模型，生成更符合项目风格的骚话
+- **中迭代方向**：
+  1. 在 VSCode 插件中添加 AI 生成开关和配置
+  2. 配置 AI_API_KEY 到 GitHub Secrets，测试 AI 生成功能
+  3. 部署 GitHub App 到 Railway/服务器，实际测试自动评论功能
+  4. 配置 NPM_TOKEN 到 GitHub Secrets，触发首次 npm 自动发布
+  5. 配置 VSCE_PAT 到 GitHub Secrets，触发首次 VSCode Marketplace 发布
 

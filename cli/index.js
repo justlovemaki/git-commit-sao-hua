@@ -5,6 +5,7 @@ const { execSync, exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const data = require('../lib');
+const aiGenerator = require('../lib/ai-generator.js');
 
 const COLORS = {
     reset: '\x1b[0m',
@@ -17,7 +18,7 @@ const COLORS = {
     dim: '\x1b[2m'
 };
 
-const VERSION = '1.21.0';
+const VERSION = '1.24.0';
 
 const VALID_TYPES = ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix'];
 const VALID_STYLES = ['love', 'sao', 'zha', 'chu', 'fo'];
@@ -113,6 +114,59 @@ function generateMessage(type, style, language = DEFAULT_LANGUAGE) {
     };
 }
 
+/**
+ * AI 生成 Commit 消息
+ * @param {string} type - commit 类型
+ * @param {string} style - 骚话风格
+ * @param {string} language - 语言
+ * @returns {Promise<{type: string, style: string, message: string, fullMessage: string, language: string, isAI: boolean}>}
+ */
+async function generateAIMessage(type, style, language = DEFAULT_LANGUAGE) {
+    try {
+        console.log(cyan('🧠 正在调用 AI 生成个性化骚话...'));
+        
+        // 获取 git diff
+        let diffContent = '';
+        try {
+            diffContent = execSync('git diff --cached', { encoding: 'utf8', stdio: 'pipe' });
+        } catch (e) {
+            // 没有 staged changes 时尝试获取工作区 diff
+            try {
+                diffContent = execSync('git diff HEAD', { encoding: 'utf8', stdio: 'pipe' });
+            } catch (e2) {
+                diffContent = '';
+            }
+        }
+        
+        // 调用 AI 生成
+        const aiResult = await aiGenerator.generateWithAI(diffContent, {
+            type: type || 'feat',
+            style: style || 'sao',
+            language: language
+        });
+        
+        if (aiResult && aiResult.message) {
+            console.log(cyan('✓ AI 生成成功'));
+            return {
+                type: aiResult.type || type || 'feat',
+                style: aiResult.style || style || 'sao',
+                message: aiResult.message,
+                fullMessage: `${aiResult.type || type || 'feat'}: ${aiResult.message}`,
+                language: language,
+                isAI: true
+            };
+        }
+    } catch (e) {
+        console.log(yellow(`⚠ AI 生成失败：${e.message}`));
+    }
+    
+    // Fallback 到传统模板生成
+    console.log(yellow('⚠ 降级到模板生成模式'));
+    const fallback = generateMessage(type, style, language);
+    fallback.isAI = false;
+    return fallback;
+}
+
 function copyToClipboard(text) {
     const platform = process.platform;
     let cmd = '';
@@ -201,6 +255,7 @@ function showHelp() {
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
     console.log('  ' + green('-s, --style <style>') + '    指定骚话风格');
     console.log('  ' + green('-a, --auto') + '             智能检测 commit 类型 (v1.20.0 新增)');
+    console.log('  ' + green('--ai') + '                   使用 AI 生成个性化骚话 (v1.24.0 新增)');
     console.log('  ' + green('-l, --list') + '             列出所有可用类型和风格');
     console.log('  ' + green('-c, --copy') + '             生成后复制到剪贴板');
     console.log('  ' + green('-g, --git') + '              直接执行 git commit');
@@ -220,6 +275,10 @@ function showHelp() {
     console.log('  git-sao-hua --lang en');
     console.log(dim('\n  # 智能检测类型并生成'));
     console.log('  git-sao-hua -a');
+    console.log(dim('\n  # 使用 AI 生成个性化骚话'));
+    console.log('  git-sao-hua --ai');
+    console.log(dim('\n  # AI 生成并指定风格'));
+    console.log('  git-sao-hua --ai -s love');
     console.log(dim('\n  # 生成并复制到剪贴板'));
     console.log('  git-sao-hua -c');
     console.log(dim('\n  # 生成并直接提交'));
@@ -308,6 +367,7 @@ function parseArgs() {
         git: false,
         interactive: false,
         auto: false,
+        ai: false,
         help: false,
         version: false,
         language: DEFAULT_LANGUAGE
@@ -330,6 +390,8 @@ function parseArgs() {
             options.interactive = true;
         } else if (arg === '-a' || arg === '--auto') {
             options.auto = true;
+        } else if (arg === '--ai') {
+            options.ai = true;
         } else if (arg === '--lang' || arg === '--language') {
             options.language = args[++i] || DEFAULT_LANGUAGE;
         } else if (arg === '-h' || arg === '--help') {
@@ -406,7 +468,15 @@ async function main() {
     }
 
     const language = options.language;
-    const msgObj = generateMessage(type, style, language);
+    
+    // AI 生成模式
+    let msgObj;
+    if (options.ai) {
+        msgObj = await generateAIMessage(type, style, language);
+    } else {
+        msgObj = generateMessage(type, style, language);
+    }
+    
     printMessage(msgObj);
 
     if (options.copy) {

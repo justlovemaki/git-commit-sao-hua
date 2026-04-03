@@ -1,6 +1,6 @@
 {
   "name": "github-sao-hua-app",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "GitHub App - 自动用骚话评论 PR 和 Issue (with AI support)",
   "main": "index.js",
   "scripts": {
