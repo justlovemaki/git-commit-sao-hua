@@ -279,6 +279,37 @@ GET /api/stats
 npm test
 ```
 
+## Swagger API 文档
+
+本服务集成了 Swagger UI，提供交互式 API 文档和 Playground。
+
+### 访问方式
+
+- **Swagger UI**: http://localhost:3000/docs
+- **OpenAPI JSON**: http://localhost:3000/api/openapi.json
+
+### Swagger UI 功能
+
+- 📖 可视化 API 文档
+- 🧪 在线 API 测试 (Playground)
+- 📋 请求/响应示例查看
+- 📥 OpenAPI 规范下载
+
+### OpenAPI 规范
+
+完整的 OpenAPI 3.0 规范包含以下端点:
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | /api/health | 健康检查 |
+| GET | /api/saohua | 随机骚话生成 |
+| GET | /api/saohua/:type | 按类型生成 |
+| GET | /api/saohua/:type/:style | 按类型+风格生成 |
+| POST | /api/saohua/ai | AI 智能生成 |
+| GET | /api/types | 获取所有类型 |
+| GET | /api/styles | 获取所有风格 |
+| GET | /api/stats | 获取统计数据 |
+
 ## 许可证
 
 MIT

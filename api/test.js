@@ -35,6 +35,13 @@ async function get(path) {
     return { status: response.status, data };
 }
 
+async function getRaw(path) {
+    const url = process.env.TEST_URL || BASE_URL;
+    const response = await fetch(`${url}${path}`);
+    const data = await response.text();
+    return { status: response.status, data };
+}
+
 async function post(path, body) {
     const url = process.env.TEST_URL || BASE_URL;
     const response = await fetch(`${url}${path}`, {
@@ -199,6 +206,20 @@ const tests = {
         assert(res.data.data !== undefined, 'Should have data field');
         assert(res.data.meta !== undefined, 'Should have meta field');
         assert(res.data.meta.timestamp !== undefined, 'Should have timestamp');
+    },
+
+    async testSwaggerDocsAccess() {
+        const res = await getRaw('/docs');
+        assert(res.status === 200, 'Swagger docs should return 200');
+        assert(res.data.includes('swagger-ui'), 'Should contain swagger UI');
+    },
+
+    async testOpenAPISpec() {
+        const res = await getRaw('/api/openapi.json');
+        assert(res.status === 200, 'OpenAPI spec should return 200');
+        assert(res.data.includes('"openapi"'), 'Should be valid OpenAPI JSON');
+        assert(res.data.includes('"paths"'), 'Should have paths');
+        assert(res.data.includes('/api/health'), 'Should have health endpoint');
     },
 
     async testAllTypes() {

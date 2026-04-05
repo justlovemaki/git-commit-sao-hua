@@ -3,14 +3,21 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import swaggerUi from 'swagger-ui-express';
 
 import saoHuaCore from '../lib/index.js';
+import swaggerSpec from './swagger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api/openapi.json', (req, res) => {
+    res.json(swaggerSpec);
+});
 
 app.use(cors({
     origin: '*',

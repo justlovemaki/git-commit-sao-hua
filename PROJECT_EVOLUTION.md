@@ -20,7 +20,7 @@
 
 ## 2. 当前成熟度阶段
 
-**Stage 5: 平台期（API 服务化）**
+**Stage 5: 平台期（API 服务化 + 开发者体验）**
 
 原因：
 - 核心功能（骚话生成 + 智能检测 + AI 生成）已稳定
@@ -28,7 +28,8 @@
 - ✅ REST API 服务已实现，从「本地工具」跃迁到「可调用平台服务」
 - ✅ API 支持全部核心能力：随机生成、类型生成、风格生成、AI 生成
 - ✅ 完善的工程化：Rate Limiting、CORS、Docker 部署、CI 测试
-- 项目已从「工具集」进化为「开放平台」
+- ✅ OpenAPI 3.0 文档 + Swagger UI 交互式 Playground，开发者可在线调试
+- 项目已从「工具集」进化为「开放平台」，并具备开发者自助接入能力
 
 ---
 
@@ -42,9 +43,10 @@
 | **GitHub Action** | ✅ 完成 | CI/CD 中自动生成骚话 commit message |
 | **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 并评论骚话 |
 | **REST API** | ✅ 完成 | Express.js HTTP 服务，支持全部生成能力 + AI + 统计（v1.25.0 新增） |
+| **API 文档 (Swagger)** | ✅ 完成 | OpenAPI 3.0 规范 + Swagger UI 交互式 Playground + JSON spec 端点 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI 生成，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
-| **自动化测试** | ✅ 完善 | lib/ 64 用例 + api/ 23 用例 + github-app/ 17 用例 = 104 个测试 |
+| **自动化测试** | ✅ 完善 | lib/ 64 用例 + api/ 25 用例 + github-app/ 17 用例 = 106 个测试 |
 | **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
 
@@ -72,7 +74,7 @@
 └── github-app/                 — GitHub App（引用 lib/）
 ```
 
-架构为「统一核心 + 多端适配」模式，六端共享 lib/ 核心库。REST API 是首个对外暴露 HTTP 接口的服务端，实现从「本地工具」到「可调用平台」的跃迁。
+架构为「统一核心 + 多端适配」模式，六端共享 lib/ 核心库。REST API 是首个对外暴露 HTTP 接口的服务端，实现从「本地工具」到「可调用平台」的跃迁。API 层集成 Swagger UI（/docs）和 OpenAPI 3.0 JSON（/api/openapi.json），提供完整的交互式文档体验。
 
 ---
 
@@ -89,7 +91,7 @@
 ### 近期（1-3 轮）
 - 部署 REST API 到 Railway/Vercel，验证生产环境
 - 配置 NPM_TOKEN / VSCE_PAT，启用自动发布
-- API 添加 Swagger/OpenAPI 文档
+- API 添加认证机制（API Key / OAuth）
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 用户分享和下载自定义骚话包
@@ -107,8 +109,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-05 | 🚀 大演进 | REST API 服务 — 新增 api/ 目录，Express.js 8 端点 + 23 测试 + Docker + CI，从「工具集」到「可调用平台」 | Stage 5 内维度跃迁（服务化） |
-| -1 | 2026-04-02 | 🔧 中迭代 | CLI AI 集成 — 新增 --ai 参数，CLI 可调用 AI 生成骚话 | 不变 |
-| -2 | 2026-04-01 | 🚀 大演进 | AI 智能生成模块 — 新增 ai-generator.js，从「模板生成」到「AI 个性化生成」 | Stage 4 → Stage 5 |
-| -3 | 2026-04-01 | 🔧 中迭代 | GitHub App CI 测试自动化 | 不变 |
-| -4 | 2026-03-31 | 🔧 中迭代 | GitHub App Docker 部署完善 | 不变 |
+| 最新 | 2026-04-05 | 🔧 中迭代 | OpenAPI/Swagger 文档 — 新增 swagger.js + Swagger UI Playground + OpenAPI JSON 端点，API 从「能用」到「好用」 | 不变 |
+| -1 | 2026-04-05 | 🚀 大演进 | REST API 服务 — 新增 api/ 目录，Express.js 8 端点 + 23 测试 + Docker + CI，从「工具集」到「可调用平台」 | Stage 5 内维度跃迁（服务化） |
+| -2 | 2026-04-02 | 🔧 中迭代 | CLI AI 集成 — 新增 --ai 参数，CLI 可调用 AI 生成骚话 | 不变 |
+| -3 | 2026-04-01 | 🚀 大演进 | AI 智能生成模块 — 新增 ai-generator.js，从「模板生成」到「AI 个性化生成」 | Stage 4 → Stage 5 |
+| -4 | 2026-04-01 | 🔧 中迭代 | GitHub App CI 测试自动化 | 不变 |
