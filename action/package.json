@@ -1,6 +1,6 @@
 {
   "name": "git-commit-sao-hua-action",
-  "version": "1.24.0",
+  "version": "1.25.0",
   "description": "GitHub Action for generating sao hua commit messages (with AI support)",
   "main": "dist/index.js",
   "scripts": {

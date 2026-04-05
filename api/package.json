@@ -1,0 +1,36 @@
+{
+  "name": "git-sao-hua-api",
+  "version": "1.25.0",
+  "description": "Git Commit 骚话生成器 REST API 服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node test.js",
+    "test:coverage": "node test.js --coverage"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "sao-hua",
+    "rest-api",
+    "express"
+  ],
+  "author": "coding-expert",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justlovemaki/git-commit-sao-hua"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.5",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {},
+  "type": "module"
+}
