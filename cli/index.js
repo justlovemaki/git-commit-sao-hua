@@ -18,7 +18,9 @@ const COLORS = {
     dim: '\x1b[2m'
 };
 
-const VERSION = '1.24.0';
+const VERSION = '1.26.0';
+const hookManager = require('../lib/hook-manager.js');
+const configModule = require('../lib/config.js');
 
 const VALID_TYPES = ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix'];
 const VALID_STYLES = ['love', 'sao', 'zha', 'chu', 'fo'];
@@ -250,6 +252,8 @@ function showHelp() {
     console.log('');
     console.log(bold('用法:'));
     console.log('  git-sao-hua [选项]');
+    console.log('  git-sao-hua hook <install|uninstall|status>');
+    console.log('  git-sao-hua init');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -263,6 +267,12 @@ function showHelp() {
     console.log('  ' + green('--lang <lang>') + '          设置语言 (zh-CN/en, 默认: zh-CN)');
     console.log('  ' + green('-h, --help') + '             显示帮助信息');
     console.log('  ' + green('-v, --version') + '         显示版本号');
+    console.log('');
+    console.log(bold('子命令:'));
+    console.log('  ' + green('hook install') + '           在当前 Git 仓库安装 prepare-commit-msg hook');
+    console.log('  ' + green('hook uninstall') + '         卸载 hook');
+    console.log('  ' + green('hook status') + '            查看 hook 安装状态');
+    console.log('  ' + green('init') + '                   在当前目录创建 .saohuarc.json 配置文件（交互式）');
     console.log('');
     console.log(bold('示例:'));
     console.log(dim('  # 随机生成一条骚话'));
@@ -285,6 +295,10 @@ function showHelp() {
     console.log('  git-sao-hua -g');
     console.log(dim('\n  # 交互模式'));
     console.log('  git-sao-hua -i');
+    console.log(dim('\n  # 安装 Git Hook（自动在每次 commit 时追加骚话）'));
+    console.log('  git-sao-hua hook install');
+    console.log(dim('\n  # 创建项目配置文件'));
+    console.log('  git-sao-hua init');
 }
 
 function showList() {
@@ -414,7 +428,168 @@ function parseArgs() {
     return options;
 }
 
+/**
+ * 处理 hook 子命令
+ * @param {string} action - install/uninstall/status
+ */
+function handleHookCommand(action) {
+    const cwd = process.cwd();
+
+    switch (action) {
+        case 'install': {
+            console.log(cyan('🔧 正在安装 prepare-commit-msg hook...'));
+            const result = hookManager.install(cwd);
+            if (result.success) {
+                console.log(green('✓ ' + result.message));
+                console.log(dim('  每次 git commit 将自动追加骚话注释'));
+                console.log(dim('  设置 GIT_SAO_HUA_SKIP=true 可临时跳过'));
+
+                // 提示配置文件
+                const configPath = configModule.getConfigPath(cwd);
+                if (!fs.existsSync(configPath)) {
+                    console.log('');
+                    console.log(yellow('💡 提示：运行 git-sao-hua init 创建配置文件来自定义骚话行为'));
+                }
+            } else {
+                console.log(red('✗ ' + result.message));
+                process.exit(1);
+            }
+            break;
+        }
+        case 'uninstall': {
+            console.log(cyan('🔧 正在卸载 hook...'));
+            const result = hookManager.uninstall(cwd);
+            if (result.success) {
+                console.log(green('✓ ' + result.message));
+            } else {
+                console.log(red('✗ ' + result.message));
+                process.exit(1);
+            }
+            break;
+        }
+        case 'status': {
+            const status = hookManager.getStatus(cwd);
+            console.log('');
+            console.log(bold('Hook 状态:'));
+            console.log('  Git 仓库: ' + (status.isGitRepo ? green('✓ 是') : red('✗ 否')));
+            console.log('  Hook 安装: ' + (status.installed ? green('✓ 已安装') : yellow('✗ 未安装')));
+            if (status.hookPath) {
+                console.log('  Hook 路径: ' + dim(status.hookPath));
+            }
+            console.log('  原有 Hook 备份: ' + (status.hasBackup ? green('✓ 有') : dim('无')));
+            console.log('  配置文件: ' + (status.configLoaded ? green('✓ .saohuarc.json') : dim('未创建')));
+            console.log('');
+            break;
+        }
+        default:
+            console.log(red(`未知的 hook 操作：${action}`));
+            console.log(dim('可用操作：install, uninstall, status'));
+            process.exit(1);
+    }
+}
+
+/**
+ * 处理 init 子命令 - 交互式创建 .saohuarc.json
+ */
+async function handleInitCommand() {
+    const cwd = process.cwd();
+    const configPath = configModule.getConfigPath(cwd);
+
+    if (fs.existsSync(configPath)) {
+        console.log(yellow('⚠ 配置文件已存在：' + configPath));
+        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+        const answer = await askQuestion(rl, '是否覆盖？(y/N) ');
+        rl.close();
+        if (answer.trim().toLowerCase() !== 'y') {
+            console.log(dim('已取消'));
+            return;
+        }
+    }
+
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+    console.log('');
+    console.log(bold('====== 初始化 .saohuarc.json ======'));
+    console.log('');
+
+    // 选择风格
+    console.log(bold('请选择默认骚话风格:'));
+    data.styles.forEach((s, i) => {
+        console.log(`  ${green((i + 1).toString())}. ${s.value} - ${s.emoji} ${s.label}`);
+    });
+    let styleAnswer = await askQuestion(rl, '\n请输入编号 (默认 2-sao): ');
+    let styleIdx = parseInt(styleAnswer.trim()) - 1;
+    let selectedStyle = (styleIdx >= 0 && styleIdx < data.styles.length)
+        ? data.styles[styleIdx].value : 'sao';
+
+    // 选择语言
+    console.log('');
+    console.log(bold('请选择默认语言:'));
+    console.log('  ' + green('1') + '. zh-CN (中文)');
+    console.log('  ' + green('2') + '. en (English)');
+    let langAnswer = await askQuestion(rl, '\n请输入编号 (默认 1-zh-CN): ');
+    let selectedLang = langAnswer.trim() === '2' ? 'en' : 'zh-CN';
+
+    // 骚话位置
+    console.log('');
+    console.log(bold('骚话追加位置:'));
+    console.log('  ' + green('1') + '. suffix - 在 commit message 末尾追加注释（推荐）');
+    console.log('  ' + green('2') + '. prefix - 在 commit message 前面添加');
+    console.log('  ' + green('3') + '. replace - 替换整个 commit message');
+    let formatAnswer = await askQuestion(rl, '\n请输入编号 (默认 1-suffix): ');
+    const formatMap = { '1': 'suffix', '2': 'prefix', '3': 'replace' };
+    let selectedFormat = formatMap[formatAnswer.trim()] || 'suffix';
+
+    // 智能检测
+    let autoAnswer = await askQuestion(rl, '\n是否启用智能检测 commit 类型？(Y/n) ');
+    let selectedAuto = autoAnswer.trim().toLowerCase() !== 'n';
+
+    // AI 生成
+    let aiAnswer = await askQuestion(rl, '是否使用 AI 生成骚话？(y/N) ');
+    let selectedAI = aiAnswer.trim().toLowerCase() === 'y';
+
+    // Emoji
+    let emojiAnswer = await askQuestion(rl, '是否包含 emoji？(Y/n) ');
+    let selectedEmoji = emojiAnswer.trim().toLowerCase() !== 'n';
+
+    rl.close();
+
+    const newConfig = {
+        style: selectedStyle,
+        language: selectedLang,
+        auto: selectedAuto,
+        ai: selectedAI,
+        format: selectedFormat,
+        emoji: selectedEmoji
+    };
+
+    const success = configModule.saveConfig(cwd, newConfig);
+    if (success) {
+        console.log('');
+        console.log(green('✓ 配置文件已创建：' + configPath));
+        console.log('');
+        console.log(bold('配置内容:'));
+        console.log(dim(JSON.stringify(newConfig, null, 2)));
+        console.log('');
+        console.log(yellow('💡 提示：运行 git-sao-hua hook install 安装 Git Hook'));
+    } else {
+        console.log(red('✗ 配置文件创建失败'));
+        process.exit(1);
+    }
+}
+
 async function main() {
+    // 处理子命令（hook / init）
+    const args = process.argv.slice(2);
+    if (args[0] === 'hook') {
+        handleHookCommand(args[1] || 'status');
+        return;
+    }
+    if (args[0] === 'init') {
+        await handleInitCommand();
+        return;
+    }
+
     const options = parseArgs();
 
     if (options.help) {

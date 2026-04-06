@@ -47,6 +47,72 @@
 - 🐙 **GitHub App** - 自动监听 PR/Issue 创建，智能分析并自动评论骚话（v2.0.0）
 - 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制和 Docker 部署（v1.25.0）
 
+## 🔗 Git Hook 自动集成（v1.26.0 新增 🎉）
+
+安装 Git Hook 后，每次 `git commit` 自动在 commit message 末尾追加骚话注释！
+
+### 快速开始
+
+```bash
+# 1. 在当前 Git 仓库安装 Hook
+git-sao-hua hook install
+
+# 2. (可选) 创建配置文件自定义行为
+git-sao-hua init
+
+# 3. 正常提交即可
+git add . && git commit -m "feat: 新功能"
+# commit message 末尾会自动追加: # 🎉 骚话: xxx
+```
+
+### Hook 命令
+
+```bash
+git-sao-hua hook install     # 安装 prepare-commit-msg hook
+git-sao-hua hook uninstall   # 卸载 hook
+git-sao-hua hook status      # 查看 hook 安装状态
+git-sao-hua init             # 交互式创建 .saohuarc.json 配置文件
+```
+
+### 配置文件 `.saohuarc.json`
+
+在仓库根目录创建 `.saohuarc.json` 可以自定义骚话行为：
+
+```json
+{
+  "style": "sao",        // 默认风格: love/sao/zha/chu/fo
+  "language": "zh-CN",   // 默认语言: zh-CN/en
+  "auto": true,          // 是否启用智能检测 commit 类型
+  "ai": false,           // 是否使用 AI 生成
+  "format": "suffix",    // 骚话位置: suffix(末尾注释)/prefix(前缀)/replace(替换)
+  "emoji": true          // 是否包含 emoji
+}
+```
+
+| 配置项 | 说明 | 可选值 | 默认值 |
+|--------|------|--------|--------|
+| `style` | 骚话风格 | `love`/`sao`/`zha`/`chu`/`fo` | `sao` |
+| `language` | 语言 | `zh-CN`/`en` | `zh-CN` |
+| `auto` | 智能检测 | `true`/`false` | `true` |
+| `ai` | AI 生成 | `true`/`false` | `false` |
+| `format` | 骚话位置 | `suffix`/`prefix`/`replace` | `suffix` |
+| `emoji` | 包含 emoji | `true`/`false` | `true` |
+
+### 跳过骚话
+
+```bash
+# 单次跳过
+GIT_SAO_HUA_SKIP=true git commit -m "serious commit"
+```
+
+### Hook 安全机制
+
+- ✅ 安装前自动备份已有 hook（保存为 `.bak`）
+- ✅ 链式调用原有 hook，不会破坏已有工作流
+- ✅ 卸载时自动恢复备份的 hook
+- ✅ CLI 不可用时静默退出，不影响正常提交
+- ✅ 仅处理 message/template 来源的 commit，merge/squash/amend 不干扰
+
 ## 🚀 快速开始
 
 ### 方式一：CLI 命令行（v1.18.0 新增 🎉）
@@ -557,6 +623,8 @@ git-commit-sao-hua/
 ├── lib/                      # 核心库 (git-sao-hua-core)
 │   ├── sao-hua-data.js       # 唯一的骚话数据源
 │   ├── generator.js          # 共享生成逻辑
+│   ├── hook-manager.js     # Git Hook 管理器 (v1.26.0)
+│   ├── config.js            # 项目配置系统 (v1.26.0)
 │   ├── index.js              # 统一导出入口
 │   ├── package.json          # 包定义 (name: git-sao-hua-core)
 │   └── test.js               # 基础测试
@@ -618,6 +686,13 @@ npm test
 **让代码不再枯燥，让提交充满乐趣！** 🎉
 
 ## 🎯 版本历史
+
+### v1.26.0
+- 🔗 **Git Hook 集成** - 安装 prepare-commit-msg hook，每次 commit 自动追加骚话
+- ⚙️ **项目配置系统** - `.saohuarc.json` 配置文件支持自定义骚话风格、语言、位置等
+- 🔧 **CLI 新命令** - `hook install/uninstall/status` 管理 hook，`init` 交互式创建配置
+- 🔄 **Hook 安全机制** - 自动备份已有 hook 并链式调用，卸载时恢复原有 hook
+- 🚫 **跳过机制** - 设置 `GIT_SAO_HUA_SKIP=true` 可临时跳过骚话生成
 
 ### v1.17.0
 - 🗂️ **代码模式识别** - 新增 5 种智能模式检测

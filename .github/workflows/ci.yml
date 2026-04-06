@@ -69,6 +69,8 @@ jobs:
         node --check lib/generator.js
         node --check lib/sao-hua-data.js
         node --check lib/smart-detector.js
+        node --check lib/config.js
+        node --check lib/hook-manager.js
         node --check lib/test.js
         node --check cli/index.js
 
