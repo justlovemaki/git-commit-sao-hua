@@ -18,9 +18,10 @@ const COLORS = {
     dim: '\x1b[2m'
 };
 
-const VERSION = '1.26.0';
+const VERSION = '1.27.0';
 const hookManager = require('../lib/hook-manager.js');
 const configModule = require('../lib/config.js');
+const pluginManager = require('../lib/plugin-manager.js');
 
 const VALID_TYPES = ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix'];
 const VALID_STYLES = ['love', 'sao', 'zha', 'chu', 'fo'];
@@ -254,6 +255,7 @@ function showHelp() {
     console.log('  git-sao-hua [选项]');
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
+    console.log('  git-sao-hua plugin <list|create|install|remove>');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -273,6 +275,10 @@ function showHelp() {
     console.log('  ' + green('hook uninstall') + '         卸载 hook');
     console.log('  ' + green('hook status') + '            查看 hook 安装状态');
     console.log('  ' + green('init') + '                   在当前目录创建 .saohuarc.json 配置文件（交互式）');
+    console.log('  ' + green('plugin list') + '            列出已安装的插件 (v1.27.0 新增)');
+    console.log('  ' + green('plugin create [name]') + '    创建插件模板 (v1.27.0 新增)');
+    console.log('  ' + green('plugin install <path>') + '   安装插件 (v1.27.0 新增)');
+    console.log('  ' + green('plugin remove <name>') + '    删除插件 (v1.27.0 新增)');
     console.log('');
     console.log(bold('示例:'));
     console.log(dim('  # 随机生成一条骚话'));
@@ -299,6 +305,14 @@ function showHelp() {
     console.log('  git-sao-hua hook install');
     console.log(dim('\n  # 创建项目配置文件'));
     console.log('  git-sao-hua init');
+    console.log(dim('\n  # 列出已安装的插件'));
+    console.log('  git-sao-hua plugin list');
+    console.log(dim('\n  # 创建插件模板'));
+    console.log('  git-sao-hua plugin create my-pack');
+    console.log(dim('\n  # 安装插件'));
+    console.log('  git-sao-hua plugin install ./my-plugin.json');
+    console.log(dim('\n  # 删除插件'));
+    console.log('  git-sao-hua plugin remove my-pack');
 }
 
 function showList() {
@@ -578,8 +592,103 @@ async function handleInitCommand() {
     }
 }
 
+/**
+ * 处理 plugin 子命令
+ * @param {string} action - list/create/install/remove
+ * @param {string[]} args - 额外参数
+ */
+function handlePluginCommand(action, args = []) {
+    switch (action) {
+        case 'list': {
+            console.log('');
+            console.log(bold('====== 已安装的插件 ======'));
+            const plugins = pluginManager.listPlugins();
+            if (plugins.length === 0) {
+                console.log(yellow('  暂无已安装的插件'));
+                console.log(dim('  运行 git-sao-hua plugin create 创建新插件'));
+                console.log(dim('  运行 git-sao-hua plugin install <path> 安装插件'));
+            } else {
+                plugins.forEach((p, i) => {
+                    console.log(`\n  ${green((i + 1).toString() + '. ' + p.name)}`);
+                    console.log(`     版本: ${p.version}`);
+                    if (p.description) console.log(`     描述: ${p.description}`);
+                    if (p.author) console.log(`     作者: ${p.author}`);
+                    console.log(`     路径: ${dim(p.path)}`);
+                });
+            }
+            console.log('');
+            break;
+        }
+        case 'create': {
+            const name = args[0] || 'my-sao-hua-pack';
+            console.log(cyan('正在创建插件模板...'));
+            const result = pluginManager.createPluginTemplate(null, { name });
+            if (result.success) {
+                console.log(green('✓ 插件模板已创建: ' + result.path));
+                console.log(dim('  编辑此文件添加你的自定义骚话'));
+            } else {
+                console.log(red('✗ 创建失败: ' + result.error));
+                process.exit(1);
+            }
+            break;
+        }
+        case 'install': {
+            const sourcePath = args[0];
+            if (!sourcePath) {
+                console.log(red('错误：请指定插件路径'));
+                console.log(dim('用法: git-sao-hua plugin install <path>'));
+                process.exit(1);
+            }
+            console.log(cyan('正在安装插件...'));
+            const result = pluginManager.installPlugin(sourcePath);
+            if (result.success) {
+                console.log(green('✓ 插件安装成功: ' + result.plugin.name));
+                console.log(dim('  版本: ' + result.plugin.version));
+                console.log(dim('  路径: ' + result.path));
+            } else {
+                console.log(red('✗ 安装失败: ' + result.error));
+                process.exit(1);
+            }
+            break;
+        }
+        case 'remove': {
+            const pluginName = args[0];
+            if (!pluginName) {
+                console.log(red('错误：请指定插件名称'));
+                console.log(dim('用法: git-sao-hua plugin remove <name>'));
+                console.log(dim('查看插件列表: git-sao-hua plugin list'));
+                process.exit(1);
+            }
+            console.log(cyan('正在删除插件...'));
+            const result = pluginManager.removePlugin(pluginName);
+            if (result.success) {
+                console.log(green('✓ 插件已删除: ' + pluginName));
+            } else {
+                console.log(red('✗ 删除失败: ' + result.error));
+                process.exit(1);
+            }
+            break;
+        }
+        default:
+            console.log(red('未知的 plugin 操作：' + (action || '')));
+            console.log('');
+            console.log(bold('用法:'));
+            console.log('  ' + green('git-sao-hua plugin list') + '        列出已安装的插件');
+            console.log('  ' + green('git-sao-hua plugin create [name]') + ' 创建插件模板');
+            console.log('  ' + green('git-sao-hua plugin install <path>') + ' 安装插件');
+            console.log('  ' + green('git-sao-hua plugin remove <name>') + ' 删除插件');
+            console.log('');
+            console.log(dim('示例:'));
+            console.log('  git-sao-hua plugin list');
+            console.log('  git-sao-hua plugin create my-pack');
+            console.log('  git-sao-hua plugin install ./my-plugin.json');
+            console.log('  git-sao-hua plugin remove my-pack');
+            process.exit(1);
+    }
+}
+
 async function main() {
-    // 处理子命令（hook / init）
+    // 处理子命令（hook / init / plugin）
     const args = process.argv.slice(2);
     if (args[0] === 'hook') {
         handleHookCommand(args[1] || 'status');
@@ -587,6 +696,10 @@ async function main() {
     }
     if (args[0] === 'init') {
         await handleInitCommand();
+        return;
+    }
+    if (args[0] === 'plugin') {
+        handlePluginCommand(args[1], args.slice(2));
         return;
     }
 
