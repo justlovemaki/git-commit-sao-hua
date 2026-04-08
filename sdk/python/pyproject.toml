@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-saohua"
+version = "0.1.0"
+description = "Python SDK for Git Saohua API — 让每一次 git commit 都带着灵魂"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "justlovemaki", email = "justlovemaki@users.noreply.github.com"},
+]
+keywords = ["git", "commit", "saohua", "funny", "sdk"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/justlovemaki/git-commit-sao-hua"
+Repository = "https://github.com/justlovemaki/git-commit-sao-hua"
+Documentation = "https://github.com/justlovemaki/git-commit-sao-hua/tree/main/sdk/python"
+"Bug Tracker" = "https://github.com/justlovemaki/git-commit-sao-hua/issues"
+
+[tool.setuptools.packages.find]
+include = ["git_saohua*"]
