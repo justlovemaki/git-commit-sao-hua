@@ -53,6 +53,16 @@ async function post(path, body) {
     return { status: response.status, data };
 }
 
+async function del(path) {
+    const url = process.env.TEST_URL || BASE_URL;
+    const response = await fetch(`${url}${path}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await response.json();
+    return { status: response.status, data };
+}
+
 const tests = {
     async testHealthEndpoint() {
         const res = await get('/api/health');
@@ -238,6 +248,103 @@ const tests = {
             const typeRes = await get(`/api/saohua/fix/${style}`);
             assert(typeRes.status === 200, `Style ${style} should work`);
         }
+    },
+
+    // === 插件系统测试 ===
+
+    async testPluginsList() {
+        const res = await get('/api/plugins');
+        assert(res.status === 200, 'Plugins list should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(Array.isArray(res.data.data.plugins), 'Plugins should be array');
+        assert(typeof res.data.data.count === 'number', 'Should have count');
+    },
+
+    async testPluginInstallSuccess() {
+        const plugin = {
+            name: 'test-api-plugin',
+            version: '1.0.0',
+            description: 'API 测试插件',
+            data: {
+                'zh-CN': {
+                    'feat': {
+                        'love': ['测试插件骚话']
+                    }
+                }
+            }
+        };
+        const res = await post('/api/plugins/install', plugin);
+        assert(res.status === 200, 'Install should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.name === 'test-api-plugin', 'Should return plugin name');
+    },
+
+    async testPluginInstallDuplicate() {
+        const plugin = {
+            name: 'test-api-plugin',
+            version: '1.0.0',
+            description: '重复插件',
+            data: { 'zh-CN': {} }
+        };
+        const res = await post('/api/plugins/install', plugin);
+        assert(res.status === 400, 'Duplicate install should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginInstallInvalid() {
+        const res = await post('/api/plugins/install', { name: 'bad' });
+        assert(res.status === 400, 'Invalid plugin should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginInstallEmpty() {
+        const res = await post('/api/plugins/install', {});
+        assert(res.status === 400, 'Empty body should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginReload() {
+        const res = await post('/api/plugins/reload', {});
+        assert(res.status === 200, 'Reload should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.reloaded === true, 'Should have reloaded: true');
+    },
+
+    async testPluginCreateTemplate() {
+        const res = await post('/api/plugins/create', {
+            name: 'test-template-plugin',
+            version: '2.0.0',
+            description: '测试模板',
+            author: 'tester'
+        });
+        assert(res.status === 200, 'Create template should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.success === true, 'Result should be success');
+    },
+
+    async testPluginCreateNoName() {
+        const res = await post('/api/plugins/create', {});
+        assert(res.status === 400, 'No name should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginDeleteSuccess() {
+        const res = await del('/api/plugins/test-api-plugin');
+        assert(res.status === 200, 'Delete should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.name === 'test-api-plugin', 'Should return deleted name');
+    },
+
+    async testPluginDeleteNotExist() {
+        const res = await del('/api/plugins/nonexistent-plugin');
+        assert(res.status === 400, 'Delete nonexistent should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginDeleteTemplate() {
+        const res = await del('/api/plugins/test-template-plugin');
+        assert(res.status === 200, 'Delete template should return 200');
+        assert(res.data.success === true, 'Should have success: true');
     }
 };
 

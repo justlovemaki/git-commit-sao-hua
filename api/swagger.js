@@ -5,7 +5,7 @@ const options = {
         openapi: '3.0.3',
         info: {
             title: 'Git Saohua API',
-            version: '1.25.0',
+            version: '1.28.0',
             description: 'Git Commit 骚话生成器 REST API 服务 - 提供骚话生成、类型管理、风格选择等功能',
             contact: {
                 name: 'API Support',
@@ -27,7 +27,8 @@ const options = {
             { name: 'Saohua', description: '骚话生成端点' },
             { name: 'Types', description: '类型管理端点' },
             { name: 'Styles', description: '风格管理端点' },
-            { name: 'Stats', description: '统计数据端点' }
+            { name: 'Stats', description: '统计数据端点' },
+            { name: 'Plugins', description: '插件管理端点' }
         ],
         components: {
             schemas: {
@@ -237,6 +238,91 @@ const options = {
                             description: '语言 (可选)',
                             enum: ['zh-CN', 'en'],
                             default: 'zh-CN'
+                        }
+                    }
+                },
+                PluginsData: {
+                    type: 'object',
+                    properties: {
+                        plugins: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string', example: 'my-plugin' },
+                                    version: { type: 'string', example: '1.0.0' },
+                                    description: { type: 'string', example: '自定义插件' },
+                                    author: { type: 'string', example: 'developer' },
+                                    messages: { type: 'object', example: { fix: { love: ['message1'] } } }
+                                }
+                            }
+                        },
+                        count: {
+                            type: 'integer',
+                            example: 3
+                        }
+                    }
+                },
+                PluginInstallRequest: {
+                    type: 'object',
+                    required: ['name', 'messages'],
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: '插件名称',
+                            example: 'my-custom-plugin'
+                        },
+                        version: {
+                            type: 'string',
+                            description: '插件版本',
+                            example: '1.0.0'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '插件描述',
+                            example: '自定义插件'
+                        },
+                        author: {
+                            type: 'string',
+                            description: '作者',
+                            example: 'developer'
+                        },
+                        messages: {
+                            type: 'object',
+                            description: '骚话消息内容',
+                            example: {
+                                fix: {
+                                    love: ['修复 bug 也是爱你的表现'],
+                                    sao: ['修 bug 和撩你，我都在行']
+                                }
+                            }
+                        }
+                    }
+                },
+                PluginCreateRequest: {
+                    type: 'object',
+                    required: ['name'],
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: '插件名称',
+                            example: 'my-plugin'
+                        },
+                        version: {
+                            type: 'string',
+                            description: '插件版本',
+                            default: '1.0.0',
+                            example: '1.0.0'
+                        },
+                        description: {
+                            type: 'string',
+                            description: '插件描述',
+                            example: '自定义插件描述'
+                        },
+                        author: {
+                            type: 'string',
+                            description: '作者',
+                            example: 'developer'
                         }
                     }
                 }
@@ -744,6 +830,276 @@ const options = {
                                         meta: {
                                             timestamp: '2024-01-01T00:00:00.000Z',
                                             message: '获取统计数据成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins': {
+                get: {
+                    tags: ['Plugins'],
+                    summary: '获取插件列表',
+                    description: '获取所有已安装插件列表',
+                    operationId: 'listPlugins',
+                    responses: {
+                        '200': {
+                            description: '成功获取插件列表',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            {
+                                                properties: {
+                                                    data: { $ref: '#/components/schemas/PluginsData' }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            plugins: [
+                                                { name: 'my-plugin', version: '1.0.0', description: '自定义插件' }
+                                            ],
+                                            count: 1
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '获取插件列表成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins/install': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '安装插件',
+                    description: '安装新插件，验证后写入 plugins 目录',
+                    operationId: 'installPlugin',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginInstallRequest' },
+                                example: {
+                                    name: 'my-custom-plugin',
+                                    version: '1.0.0',
+                                    description: '自定义插件',
+                                    author: 'developer',
+                                    messages: {
+                                        fix: {
+                                            love: ['修复 bug 也是爱你的表现']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件安装成功',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/SuccessResponse' },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            name: 'my-custom-plugin',
+                                            path: '/home/user/.saohua/plugins/my-custom-plugin.json'
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件安装成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '插件验证失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' },
+                                    example: {
+                                        success: false,
+                                        error: '插件验证失败: 缺少必要字段',
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins/{name}': {
+                delete: {
+                    tags: ['Plugins'],
+                    summary: '删除插件',
+                    description: '删除指定名称的插件',
+                    operationId: 'removePlugin',
+                    parameters: [
+                        {
+                            name: 'name',
+                            in: 'path',
+                            description: '插件名称',
+                            required: true,
+                            schema: {
+                                type: 'string'
+                            },
+                            example: 'my-custom-plugin'
+                        }
+                    ],
+                    responses: {
+                        '200': {
+                            description: '插件删除成功',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/SuccessResponse' },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            name: 'my-custom-plugin'
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件删除成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '请求参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins/create': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '创建插件模板',
+                    description: '创建新的插件模板文件',
+                    operationId: 'createPluginTemplate',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginCreateRequest' },
+                                example: {
+                                    name: 'my-plugin',
+                                    version: '1.0.0',
+                                    description: '我的自定义插件',
+                                    author: 'developer'
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件模板创建成功',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/SuccessResponse' },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            path: '/home/user/.saohua/plugins/my-plugin.json',
+                                            content: { name: 'my-plugin', version: '1.0.0' }
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件模板创建成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '请求参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins/reload': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '重新加载插件数据',
+                    description: '重新加载所有插件数据到缓存',
+                    operationId: 'reloadPluginData',
+                    responses: {
+                        '200': {
+                            description: '插件数据重新加载成功',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/SuccessResponse' },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            reloaded: true
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件数据重新加载成功~'
                                         }
                                     }
                                 }

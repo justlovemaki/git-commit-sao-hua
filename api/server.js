@@ -4,6 +4,9 @@ import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import swaggerUi from 'swagger-ui-express';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
@@ -221,6 +224,112 @@ app.get('/api/stats', (req, res) => {
         }, '获取统计数据成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('获取统计数据失败: ' + error.message));
+    }
+});
+
+app.get('/api/plugins', (req, res) => {
+    try {
+        const plugins = saoHuaCore.listPlugins();
+        res.json(successResponse({
+            plugins,
+            count: plugins.length
+        }, '获取插件列表成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('获取插件列表失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugins/install', (req, res) => {
+    try {
+        const body = req.body;
+        
+        if (!body || !body.name) {
+            return res.status(400).json(errorResponse('请提供插件内容~'));
+        }
+        
+        const validation = saoHuaCore.validatePlugin(body);
+        if (!validation.valid) {
+            return res.status(400).json(errorResponse('插件验证失败: ' + validation.error));
+        }
+        
+        const pluginsDir = saoHuaCore.PluginManager.ensurePluginsDir();
+        const pluginPath = join(pluginsDir, `${body.name}.json`);
+        
+        if (fs.existsSync(pluginPath)) {
+            return res.status(400).json(errorResponse(`插件 ${body.name} 已存在`));
+        }
+        
+        fs.writeFileSync(pluginPath, JSON.stringify(body, null, 2), 'utf8');
+        
+        saoHuaCore.reloadPluginData();
+        
+        res.json(successResponse({
+            name: body.name,
+            path: pluginPath
+        }, '插件安装成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件安装失败: ' + error.message));
+    }
+});
+
+app.delete('/api/plugins/:name', (req, res) => {
+    try {
+        const { name } = req.params;
+        
+        if (!name) {
+            return res.status(400).json(errorResponse('请提供插件名称~'));
+        }
+        
+        const result = saoHuaCore.removePlugin(name);
+        if (!result.success) {
+            return res.status(400).json(errorResponse('插件删除失败: ' + result.error));
+        }
+        
+        saoHuaCore.reloadPluginData();
+        
+        res.json(successResponse({
+            name
+        }, '插件删除成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件删除失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugins/create', (req, res) => {
+    try {
+        const { name, version, description, author } = req.body;
+        
+        if (!name) {
+            return res.status(400).json(errorResponse('请提供插件名称~'));
+        }
+        
+        const result = saoHuaCore.createPluginTemplate(null, {
+            name,
+            version: version || '1.0.0',
+            description: description || '',
+            author: author || ''
+        });
+        
+        if (!result.success) {
+            return res.status(500).json(errorResponse('插件模板创建失败: ' + result.error));
+        }
+        
+        saoHuaCore.reloadPluginData();
+        
+        res.json(successResponse(result, '插件模板创建成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件模板创建失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugins/reload', (req, res) => {
+    try {
+        saoHuaCore.reloadPluginData();
+        res.json(successResponse({
+            reloaded: true
+        }, '插件数据重新加载成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件数据重新加载失败: ' + error.message));
     }
 });
 
