@@ -31,6 +31,19 @@ const options = {
             { name: 'Plugins', description: '插件管理端点' }
         ],
         components: {
+            securitySchemes: {
+                ApiKeyAuth: {
+                    type: 'apiKey',
+                    in: 'header',
+                    name: 'X-API-Key',
+                    description: 'API Key 认证，通过 X-API-Key header 传递'
+                },
+                BearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    description: 'Bearer Token 认证，通过 Authorization: Bearer <token> header 传递'
+                }
+            },
             schemas: {
                 SuccessResponse: {
                     type: 'object',
@@ -898,8 +911,12 @@ const options = {
                 post: {
                     tags: ['Plugins'],
                     summary: '安装插件',
-                    description: '安装新插件，验证后写入 plugins 目录',
+                    description: '安装新插件，验证后写入 plugins 目录\n\n**需要认证**: 必须提供有效的 API Key 或 Bearer Token',
                     operationId: 'installPlugin',
+                    security: [
+                        { ApiKeyAuth: [] },
+                        { BearerAuth: [] }
+                    ],
                     requestBody: {
                         required: true,
                         content: {
@@ -969,8 +986,12 @@ const options = {
                 delete: {
                     tags: ['Plugins'],
                     summary: '删除插件',
-                    description: '删除指定名称的插件',
+                    description: '删除指定名称的插件\n\n**需要认证**: 必须提供有效的 API Key 或 Bearer Token',
                     operationId: 'removePlugin',
+                    security: [
+                        { ApiKeyAuth: [] },
+                        { BearerAuth: [] }
+                    ],
                     parameters: [
                         {
                             name: 'name',
@@ -1025,8 +1046,12 @@ const options = {
                 post: {
                     tags: ['Plugins'],
                     summary: '创建插件模板',
-                    description: '创建新的插件模板文件',
+                    description: '创建新的插件模板文件\n\n**需要认证**: 必须提供有效的 API Key 或 Bearer Token',
                     operationId: 'createPluginTemplate',
+                    security: [
+                        { ApiKeyAuth: [] },
+                        { BearerAuth: [] }
+                    ],
                     requestBody: {
                         required: true,
                         content: {
@@ -1084,8 +1109,12 @@ const options = {
                 post: {
                     tags: ['Plugins'],
                     summary: '重新加载插件数据',
-                    description: '重新加载所有插件数据到缓存',
+                    description: '重新加载所有插件数据到缓存\n\n**需要认证**: 必须提供有效的 API Key 或 Bearer Token',
                     operationId: 'reloadPluginData',
+                    security: [
+                        { ApiKeyAuth: [] },
+                        { BearerAuth: [] }
+                    ],
                     responses: {
                         '200': {
                             description: '插件数据重新加载成功',

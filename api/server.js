@@ -10,6 +10,7 @@ import os from 'os';
 
 import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
+import { requireAuth } from './auth-middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -239,7 +240,7 @@ app.get('/api/plugins', (req, res) => {
     }
 });
 
-app.post('/api/plugins/install', (req, res) => {
+app.post('/api/plugins/install', requireAuth, (req, res) => {
     try {
         const body = req.body;
         
@@ -272,7 +273,7 @@ app.post('/api/plugins/install', (req, res) => {
     }
 });
 
-app.delete('/api/plugins/:name', (req, res) => {
+app.delete('/api/plugins/:name', requireAuth, (req, res) => {
     try {
         const { name } = req.params;
         
@@ -295,7 +296,7 @@ app.delete('/api/plugins/:name', (req, res) => {
     }
 });
 
-app.post('/api/plugins/create', (req, res) => {
+app.post('/api/plugins/create', requireAuth, (req, res) => {
     try {
         const { name, version, description, author } = req.body;
         
@@ -322,7 +323,7 @@ app.post('/api/plugins/create', (req, res) => {
     }
 });
 
-app.post('/api/plugins/reload', (req, res) => {
+app.post('/api/plugins/reload', requireAuth, (req, res) => {
     try {
         saoHuaCore.reloadPluginData();
         res.json(successResponse({

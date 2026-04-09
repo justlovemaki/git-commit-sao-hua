@@ -272,6 +272,70 @@ GET /api/stats
 |------|------|--------|
 | PORT | 服务端口 | 3000 |
 | NODE_ENV | 运行环境 | development |
+| SAOHUA_API_KEYS | API 认证密钥（逗号分隔的多个密钥） | 无（不启用认证） |
+
+## 🔐 API 认证
+
+为了保护插件管理等写入端点，API 支持两种认证方式：
+
+### 认证方式
+
+1. **API Key 认证** - 通过 `X-API-Key` header
+2. **Bearer Token 认证** - 通过 `Authorization: Bearer <token>` header
+
+### 配置密钥
+
+在启动服务前，设置环境变量 `SAOHUA_API_KEYS`：
+
+```bash
+# 单个密钥
+export SAOHUA_API_KEYS="my-secret-api-key"
+
+# 多个密钥（逗号分隔）
+export SAOHUA_API_KEYS="key1,key2,key3"
+```
+
+### 使用示例
+
+```bash
+# 使用 API Key
+curl -X POST http://localhost:3000/api/plugins/install \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: my-secret-api-key" \
+  -d '{"name": "my-plugin", ...}'
+
+# 使用 Bearer Token
+curl -X POST http://localhost:3000/api/plugins/install \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer my-secret-api-key" \
+  -d '{"name": "my-plugin", ...}'
+```
+
+### 受保护的端点
+
+以下端点需要认证：
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| POST | /api/plugins/install | 安装插件 |
+| DELETE | /api/plugins/:name | 删除插件 |
+| POST | /api/plugins/create | 创建插件模板 |
+| POST | /api/plugins/reload | 重新加载插件数据 |
+
+### 无需认证的端点
+
+所有读取端点（GET 请求）无需认证，包括：
+
+- GET /api/health
+- GET /api/saohua
+- GET /api/types
+- GET /api/styles
+- GET /api/stats
+- GET /api/plugins
+
+### 开发模式
+
+如果未设置 `SAOHUA_API_KEYS` 环境变量，认证将自动跳过，方便本地开发。
 
 ## 测试
 
