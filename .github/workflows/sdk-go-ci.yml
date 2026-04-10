@@ -1,0 +1,71 @@
+name: Go SDK CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'sdk/go/**'
+      - '.github/workflows/sdk-go-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'sdk/go/**'
+      - '.github/workflows/sdk-go-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22', '1.23']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Download dependencies
+        run: |
+          cd sdk/go
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd sdk/go
+          go test ./tests/ -v
+
+      - name: Run example build
+        run: |
+          cd sdk/go
+          go build -o /dev/null ./examples/
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Check formatting
+        run: |
+          cd sdk/go
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "The following files need gofmt:" >&2
+            echo "$files" >&2
+            exit 1
+          fi
+
+      - name: Run vet
+        run: |
+          cd sdk/go
+          go vet ./...

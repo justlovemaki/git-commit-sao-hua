@@ -148,6 +148,30 @@ python -m pytest tests/ -v
 python -m unittest tests.test_client -v
 ```
 
+## CI/CD
+
+Python SDK 使用 GitHub Actions 自动测试和发布：
+
+| Workflow | 触发 | 说明 |
+|----------|------|------|
+| [sdk-python-ci.yml](../../.github/workflows/sdk-python-ci.yml) | push/PR | 多 Python 版本测试 (3.8-3.12) |
+| [sdk-python-publish.yml](../../.github/workflows/sdk-python-publish.yml) | release / workflow_dispatch | 发布到 PyPI 或 TestPyPI |
+
+### 发布到 PyPI
+
+发布时会触发 [sdk-python-publish.yml](../../.github/workflows/sdk-python-publish.yml)：
+
+1. **自动发布**：创建 GitHub Release 时自动发布到 PyPI
+2. **手动发布**：访问 Actions → sdk-python-publish → Run workflow
+
+**所需的 Secrets：**
+- `PYPI_TOKEN` — 从 https://pypi.org/account/api-tokens/ 生成
+- `TEST_PYPI_TOKEN` — 从 https://test.pypi.org/manage/account/token/ 生成（仅 TestPyPI 测试发布使用）
+
+### TestPyPI 测试
+
+使用 workflow_dispatch 并勾选 "test_pypi" 可发布到 TestPyPI 进行测试。
+
 ## 环境要求
 
 - Python >= 3.8

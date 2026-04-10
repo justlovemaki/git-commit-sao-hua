@@ -49,8 +49,9 @@
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
 | **Python SDK** | ✅ 完成 | 类型化客户端，覆盖全部 API 端点，21 个测试全通过 |
 | **Go SDK** | ✅ 完成 | 类型化客户端（resty），覆盖全部 API 端点，18 个测试用例，支持上下文 |
-| **自动化测试** | ✅ 完善 | lib/ 116 用例 + api/ 36 用例 + Python SDK 21 用例 + Go SDK 18 用例，全部通过 |
-| **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 |
+| **SDK 发布流水线** | ✅ 完成 | Python SDK 多版本 CI + PyPI/TestPyPI 发布骨架，Go SDK 多版本 CI + tag 驱动 Draft Release |
+| **自动化测试** | ✅ 完善 | lib/ 116 用例 + api/ 36 用例 + Python SDK 21 用例 + Go SDK 18 用例，工作流已覆盖跨语言 SDK |
+| **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 + SDK 发布流程 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
 | **API 认证机制** | ✅ 完成 | 支持 API Key + Bearer Token 双认证，保护插件管理写入端点 |
 
@@ -101,10 +102,10 @@
 ## 5. 已知问题与技术债
 
 1. **Web 页面骚话数据独立** — index.html 内嵌骚话数据，未引用 lib/（单文件设计限制）
-2. **NPM_TOKEN / VSCE_PAT 配置** — 需在 GitHub Secrets 中添加以启用自动发布
+2. **NPM_TOKEN / VSCE_PAT / PyPI Secrets 配置** — 需在 GitHub Secrets 中补齐发布凭据，自动发布链路才能真正启用
 3. **API 服务需实际部署** — 需部署到 Railway / Vercel / 云服务器验证生产环境表现
-4. **API 认证机制** — 插件管理端点目前无认证保护，生产环境需要 API Key / OAuth
-5. **Python SDK 尚未发布到 PyPI** — 需配置 PyPI token 后发布
+4. **Python SDK 尚未正式发布到 PyPI** — 已具备自动发布工作流，仍需配置凭据并跑通首个正式版本
+5. **Go SDK 缺少版本标签发布实践** — 已补齐 tag 驱动 release 工作流，仍需跑通首个 `sdk/go/v*` 标签发布验证
 
 ---
 
@@ -113,13 +114,14 @@
 ### 近期（1-3 轮）
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
 - ✅ **Go SDK 封装** — 第二个跨语言 SDK，扩展 Go 开发者生态
-- Python SDK CI 集成 — 自动化测试 + PyPI 发布流水线
+- ✅ **SDK 发布流水线** — Python SDK CI + PyPI/TestPyPI 发布骨架、Go SDK CI + tag release 流程已补齐
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
 - 插件远程安装 — 支持从 URL / npm / GitHub 安装插件
 - WebSocket 实时推送骚话
 - CLI 交互式模式（TUI）
+- SDK 示例站点 / 多语言文档门户 — 降低第三方接入门槛
 
 ### 远期愿景
 - 成为 Git 提交信息领域最有趣的开源工具
@@ -132,9 +134,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |
-| -1 | 2026-04-08 | 🚀 大演进 | Python SDK — 新增 sdk/python/ 目录，完整客户端 + 13 个 API 方法 + dataclass 模型 + 异常体系 + 21 个测试 + 使用示例 + README，从「JS 单一生态」到「跨语言平台」 | Stage 5 内维度跃迁（跨语言生态） |
-| -1 | 2026-04-08 | 🔧 中迭代 | REST API 集成插件系统 — 新增 5 个插件 CRUD 端点 + Swagger 文档 + 11 个测试用例，API 测试达 36 个全通过 | Stage 5 内能力补全（API 全开放） |
-| -2 | 2026-04-07 | 🚀 大演进 | 插件系统 — 新增 plugin-manager.js，支持自定义骚话包创建/安装/删除/列表，generator 自动加载插件数据，CLI 新增 plugin 子命令，116 测试全通过 | Stage 5 内维度跃迁（可扩展生态） |
-| -3 | 2026-04-06 | 🚀 大演进 | Git Hook 集成 + 配置系统 — 新增 config.js/hook-manager.js/CLI 子命令(hook/init)，从「手动调用」到「无感嵌入工作流」 | Stage 5 内维度跃迁（工作流嵌入） |
-| -4 | 2026-04-05 | 🔧 中迭代 | OpenAPI/Swagger 文档 — 新增 swagger.js + Swagger UI Playground + OpenAPI JSON 端点 | 不变 |
+| 最新 | 2026-04-10 | 🔧 中迭代 | SDK 发布流水线 — 新增 Python SDK CI、PyPI/TestPyPI 发布工作流，以及 Go SDK CI、tag 驱动 Draft Release；补齐 RELEASE_CHECKLIST 与 SDK 文档，从「已有 SDK 代码」推进到「具备自动验证与发布骨架」 | Stage 5 内能力补全（生态交付能力） |
+| -1 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |
+| -2 | 2026-04-08 | 🚀 大演进 | Python SDK — 新增 sdk/python/ 目录，完整客户端 + 13 个 API 方法 + dataclass 模型 + 异常体系 + 21 个测试 + 使用示例 + README，从「JS 单一生态」到「跨语言平台」 | Stage 5 内维度跃迁（跨语言生态） |
+| -3 | 2026-04-08 | 🔧 中迭代 | REST API 集成插件系统 — 新增 5 个插件 CRUD 端点 + Swagger 文档 + 11 个测试用例，API 测试达 36 个全通过 | Stage 5 内能力补全（API 全开放） |
+| -4 | 2026-04-07 | 🚀 大演进 | 插件系统 — 新增 plugin-manager.js，支持自定义骚话包创建/安装/删除/列表，generator 自动加载插件数据，CLI 新增 plugin 子命令，116 测试全通过 | Stage 5 内维度跃迁（可扩展生态） |

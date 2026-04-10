@@ -16,6 +16,8 @@
 |------------|------|------|
 | `NPM_TOKEN` | npm 自动发布（lib/ 和 cli/） | ⬜ 待配置 |
 | `VSCE_PAT` | VSCode Marketplace 自动发布 | ⬜ 待配置 |
+| `PYPI_TOKEN` | PyPI 自动发布（Python SDK） | ⬜ 待配置 |
+| `TEST_PYPI_TOKEN` | TestPyPI 自动发布（Python SDK 测试发布） | ⬜ 待配置 |
 
 **配置步骤：**
 1. 访问 https://github.com/justlovemaki/git-commit-sao-hua/settings/secrets/actions
@@ -136,6 +138,45 @@ git push origin v1.22.0
 2. 点击 "Run workflow"
 3. 选择版本更新类型（patch/minor/major）
 4. 点击 "Run workflow"
+
+---
+
+### 第五步：发布 Python SDK（自动）
+
+#### 方式 A：通过 GitHub Release 触发（推荐）
+
+```bash
+# 触发 workflow：sdk-python-publish.yml
+# 当发布 GitHub Release 时自动发布到 PyPI
+```
+
+#### 方式 B：手动触发 Workflow
+
+1. 访问 https://github.com/justlovemaki/git-commit-sao-hua/actions/workflows/sdk-python-publish.yml
+2. 点击 "Run workflow"
+3. 如需发布到 TestPyPI，勾选 "test_pypi"
+4. 点击 "Run workflow"
+
+**所需的 Secrets：**
+- `PYPI_TOKEN` — 从 https://pypi.org/account/api-tokens/ 生成
+- `TEST_PYPI_TOKEN` — 从 https://test.pypi.org/manage/account/token/ 生成（仅 TestPyPI 测试发布使用）
+
+---
+
+### 第六步：发布 Go SDK（自动）
+
+#### 触发方式
+
+```bash
+# 打标签并推送
+git tag sdk/go/v1.0.0
+git push origin sdk/go/v1.0.0
+```
+
+**说明：**
+- Go SDK 通过 `sdk/go/v*` 标签触发
+- 自动运行测试 + 打包示例 + 创建 Draft Release
+- 不上传到 registry（Go 模块直接从 GitHub 导入）
 
 ---
 

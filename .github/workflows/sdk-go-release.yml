@@ -1,0 +1,64 @@
+name: Go SDK Release
+
+on:
+  push:
+    tags:
+      - 'sdk/go/v*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.21', '1.22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Run tests
+        run: |
+          cd sdk/go
+          go test ./tests/ -v
+
+  build-examples:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build examples
+        run: |
+          cd sdk/go
+          mkdir -p dist
+          go build -o dist/examples ./examples/
+
+      - name: Upload example artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-sdk-example
+          path: sdk/go/dist/examples
+
+      - name: Create Draft Release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          files: sdk/go/dist/examples
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

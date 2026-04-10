@@ -159,6 +159,30 @@ cd sdk/go
 go test ./tests/ -v
 ```
 
+## CI/CD
+
+Go SDK 使用 GitHub Actions 自动测试和发布：
+
+| Workflow | 触发 | 说明 |
+|----------|------|------|
+| [sdk-go-ci.yml](../../.github/workflows/sdk-go-ci.yml) | push/PR | 多 Go 版本测试 (1.21-1.23) |
+| [sdk-go-release.yml](../../.github/workflows/sdk-go-release.yml) | tag (sdk/go/v*) | 测试 + 打包示例 + 创建 Draft Release |
+
+### 发布
+
+Go SDK 通过 tag 触发发布：
+
+```bash
+# 创建版本标签
+git tag sdk/go/v1.0.0
+git push origin sdk/go/v1.0.0
+```
+
+**说明：**
+- 使用 `sdk/go/v*` 格式的标签触发
+- 自动运行测试 + 打包示例二进制 + 创建 Draft Release
+- Go 模块直接从 GitHub 导入，无需发布到 registry
+
 ## 环境要求
 
 - Go >= 1.21
