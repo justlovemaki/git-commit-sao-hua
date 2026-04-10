@@ -27,6 +27,7 @@
 - 七端（Web / VSCode / CLI / GitHub Action / GitHub App / REST API / Git Hook）均已实现
 - 插件系统 + REST API 插件管理端点已完成
 - ✅ **Python SDK** 已发布，从「JS 单一生态」到「跨语言平台」，Python 开发者可通过 `pip install git-saohua` 直接使用全部 API 能力
+- ✅ **Go SDK** 已发布，从「Python 单跨语言」到「Go+Python 双跨语言生态」，Go 开发者可通过 `go get github.com/justlovemaki/git-saohua-go` 直接使用全部 API 能力
 
 ---
 
@@ -47,7 +48,8 @@
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
 | **Python SDK** | ✅ 完成 | 类型化客户端，覆盖全部 API 端点，21 个测试全通过 |
-| **自动化测试** | ✅ 完善 | lib/ 116 用例 + api/ 36 用例 + Python SDK 21 用例，全部通过 |
+| **Go SDK** | ✅ 完成 | 类型化客户端（resty），覆盖全部 API 端点，18 个测试用例，支持上下文 |
+| **自动化测试** | ✅ 完善 | lib/ 116 用例 + api/ 36 用例 + Python SDK 21 用例 + Go SDK 18 用例，全部通过 |
 | **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
 | **Go SDK** | ❌ 未开始 | 计划中 |
@@ -74,11 +76,17 @@
 │   ├── swagger.js              — OpenAPI 3.0 文档（含插件端点）
 │   └── test.js                 — API 测试（36 用例）
 ├── sdk/                        — 多语言 SDK
-│   └── python/                 — Python SDK (pip install git-saohua)
-│       ├── git_saohua/         — 包代码（client + models + exceptions）
-│       ├── tests/              — 单元测试（21 用例）
+│   ├── python/                 — Python SDK (pip install git-saohua)
+│   │   ├── git_saohua/         — 包代码（client + models + exceptions）
+│   │   ├── tests/              — 单元测试（21 用例）
+│   │   ├── examples/           — 使用示例
+│   │   ├── pyproject.toml      — 包配置
+│   │   └── README.md           — SDK 文档
+│   └── go/                     — Go SDK (go get github.com/justlovemaki/git-saohua-go)
+│       ├── git_saohua/         — 包代码（client.go + models.go）
+│       ├── tests/              — 单元测试（18 用例）
 │       ├── examples/           — 使用示例
-│       ├── pyproject.toml      — 包配置
+│       ├── go.mod / go.sum     — 模块配置
 │       └── README.md           — SDK 文档
 ├── index.html                  — Web 体验页（独立单文件）
 ├── cli/                        — CLI 命令行工具（引用 lib/）
@@ -105,7 +113,7 @@
 
 ### 近期（1-3 轮）
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
-- Go SDK 封装 — 第二个跨语言 SDK，扩展 Go 开发者生态
+- ✅ **Go SDK 封装** — 第二个跨语言 SDK，扩展 Go 开发者生态
 - Python SDK CI 集成 — 自动化测试 + PyPI 发布流水线
 
 ### 中期（4-10 轮）
@@ -125,7 +133,7 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-09 | 🔐 安全增强 | API 认证机制 — 新增 auth-middleware.js 支持 API Key + Bearer Token 双认证，保护 4 个插件管理写入端点（install/delete/create/reload），读取端点保持开放；新增 24 个认证测试全通过；更新 Swagger 文档 + API README + .env.example | Stage 5 内安全加固（生产就绪） |
+| 最新 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |
 | -1 | 2026-04-08 | 🚀 大演进 | Python SDK — 新增 sdk/python/ 目录，完整客户端 + 13 个 API 方法 + dataclass 模型 + 异常体系 + 21 个测试 + 使用示例 + README，从「JS 单一生态」到「跨语言平台」 | Stage 5 内维度跃迁（跨语言生态） |
 | -1 | 2026-04-08 | 🔧 中迭代 | REST API 集成插件系统 — 新增 5 个插件 CRUD 端点 + Swagger 文档 + 11 个测试用例，API 测试达 36 个全通过 | Stage 5 内能力补全（API 全开放） |
 | -2 | 2026-04-07 | 🚀 大演进 | 插件系统 — 新增 plugin-manager.js，支持自定义骚话包创建/安装/删除/列表，generator 自动加载插件数据，CLI 新增 plugin 子命令，116 测试全通过 | Stage 5 内维度跃迁（可扩展生态） |
