@@ -74,6 +74,55 @@ git-sao-hua hook status      # 查看 hook 安装状态
 git-sao-hua init             # 交互式创建 .saohuarc.json 配置文件
 ```
 
+## 🔌 插件系统（v1.27.0 新增 🎉）
+
+支持通过插件扩展骚话内容，可以从本地文件或远程 URL 安装插件。
+
+### 插件命令
+
+```bash
+git-sao-hua plugin list                 # 列出已安装的插件
+git-sao-hua plugin create [name]        # 创建插件模板
+git-sao-hua plugin install <path>        # 从本地路径安装插件
+git-sao-hua plugin install --url <url>     # 从 URL 安装插件 (v1.28.0)
+git-sao-hua plugin remove <name>             # 删除插件
+```
+
+### 插件格式
+
+```json
+{
+  "name": "my-plugin",
+  "version": "1.0.0",
+  "description": "我的自定义插件",
+  "author": "developer",
+  "data": {
+    "zh-CN": {
+      "feat": {
+        "love": ["自定义骚话"]
+      }
+    }
+  }
+}
+```
+
+### 从 URL 安装插件（v1.28.0 新增）
+
+支持从 HTTP/HTTPS URL 直接安装插件：
+
+```bash
+git-sao-hua plugin install --url https://example.com/my-plugin.json
+```
+
+API 安装方式：
+
+```bash
+curl -X POST http://localhost:3000/api/plugins/install \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"sourceUrl": "https://example.com/plugin.json"}'
+```
+
 ### 配置文件 `.saohuarc.json`
 
 在仓库根目录创建 `.saohuarc.json` 可以自定义骚话行为：

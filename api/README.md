@@ -298,11 +298,11 @@ export SAOHUA_API_KEYS="key1,key2,key3"
 ### 使用示例
 
 ```bash
-# 使用 API Key
+# 使用 API Key 安装本地插件
 curl -X POST http://localhost:3000/api/plugins/install \
   -H "Content-Type: application/json" \
   -H "X-API-Key: my-secret-api-key" \
-  -d '{"name": "my-plugin", ...}'
+  -d '{"name": "my-plugin", "version": "1.0.0", "data": {...}}'
 
 # 使用 Bearer Token
 curl -X POST http://localhost:3000/api/plugins/install \
@@ -310,6 +310,23 @@ curl -X POST http://localhost:3000/api/plugins/install \
   -H "Authorization: Bearer my-secret-api-key" \
   -d '{"name": "my-plugin", ...}'
 ```
+
+### 从 URL 安装插件（v1.28.0 新增）
+
+支持通过 `sourceUrl` 字段从远程 URL 安装插件：
+
+```bash
+# 从 URL 安装插件
+curl -X POST http://localhost:3000/api/plugins/install \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: my-secret-api-key" \
+  -d '{"sourceUrl": "https://example.com/my-plugin.json"}'
+```
+
+字段说明:
+- `sourceUrl` - **可选** 插件 JSON 的 HTTP/HTTPS URL
+- 当提供 `sourceUrl` 时，将从 URL 下载插件并自动验证
+- 当不提供 `sourceUrl` 时，使用请求体中的插件 JSON 数据
 
 ### 受保护的端点
 

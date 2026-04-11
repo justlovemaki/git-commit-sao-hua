@@ -278,11 +278,15 @@ const options = {
                 },
                 PluginInstallRequest: {
                     type: 'object',
-                    required: ['name', 'messages'],
                     properties: {
+                        sourceUrl: {
+                            type: 'string',
+                            description: '插件 JSON 的 URL (支持 http/https)',
+                            example: 'https://example.com/plugin.json'
+                        },
                         name: {
                             type: 'string',
-                            description: '插件名称',
+                            description: '插件名称 (当不提供 sourceUrl 时必填)',
                             example: 'my-custom-plugin'
                         },
                         version: {
@@ -300,13 +304,15 @@ const options = {
                             description: '作者',
                             example: 'developer'
                         },
-                        messages: {
+                        data: {
                             type: 'object',
-                            description: '骚话消息内容',
+                            description: '骚话消息内容 (当不提供 sourceUrl 时必填)',
                             example: {
-                                fix: {
-                                    love: ['修复 bug 也是爱你的表现'],
-                                    sao: ['修 bug 和撩你，我都在行']
+                                'zh-CN': {
+                                    fix: {
+                                        love: ['修复 bug 也是爱你的表现'],
+                                        sao: ['修 bug 和撩你，我都在行']
+                                    }
                                 }
                             }
                         }

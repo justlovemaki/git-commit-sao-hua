@@ -345,6 +345,79 @@ const tests = {
         const res = await del('/api/plugins/test-template-plugin');
         assert(res.status === 200, 'Delete template should return 200');
         assert(res.data.success === true, 'Should have success: true');
+    },
+
+    async testPluginInstallFromUrlInvalid() {
+        const res = await post('/api/plugins/install', { sourceUrl: 'invalid-url' });
+        assert(res.status === 400, 'Invalid URL should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testPluginInstallFromUrlSuccess() {
+        const plugin = {
+            name: 'test-remote-api-plugin',
+            version: '1.0.0',
+            description: '远程 API 测试插件',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['远程安装成功']
+                    }
+                }
+            }
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(plugin));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/plugin.json`;
+            const res = await post('/api/plugins/install', { sourceUrl: testUrl });
+            assert(res.status === 200, 'Remote install should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.name === 'test-remote-api-plugin', 'Should return plugin name');
+            assert(res.data.data.sourceUrl === testUrl, 'Should return sourceUrl');
+        } finally {
+            remoteServer.close();
+            await del('/api/plugins/test-remote-api-plugin');
+        }
+    },
+
+    async testPluginInstallFromUrlDuplicate() {
+        const plugin = {
+            name: 'test-remote-api-plugin-duplicate',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    fix: {
+                        sao: ['重复安装检测']
+                    }
+                }
+            }
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(plugin));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/plugin.json`;
+            const first = await post('/api/plugins/install', { sourceUrl: testUrl });
+            const second = await post('/api/plugins/install', { sourceUrl: testUrl });
+            assert(first.status === 200, 'First remote install should return 200');
+            assert(second.status === 400, 'Duplicate remote install should return 400');
+            assert(second.data.success === false, 'Duplicate remote install should fail');
+        } finally {
+            remoteServer.close();
+            await del('/api/plugins/test-remote-api-plugin-duplicate');
+        }
     }
 };
 

@@ -2,11 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 import swaggerUi from 'swagger-ui-express';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
 
 import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
@@ -240,33 +237,41 @@ app.get('/api/plugins', (req, res) => {
     }
 });
 
-app.post('/api/plugins/install', requireAuth, (req, res) => {
+app.post('/api/plugins/install', requireAuth, async (req, res) => {
     try {
-        const body = req.body;
+        const body = req.body || {};
+        const sourceUrl = body.sourceUrl;
         
-        if (!body || !body.name) {
+        if (sourceUrl) {
+            const result = await saoHuaCore.installPluginFromUrl(sourceUrl);
+            if (!result.success) {
+                return res.status(400).json(errorResponse(result.error));
+            }
+            
+            saoHuaCore.reloadPluginData();
+            
+            res.json(successResponse({
+                name: result.plugin.name,
+                path: result.path,
+                sourceUrl: result.plugin.sourceUrl || sourceUrl
+            }, '插件从 URL 安装成功~'));
+            return;
+        }
+        
+        if (!body.name) {
             return res.status(400).json(errorResponse('请提供插件内容~'));
         }
-        
-        const validation = saoHuaCore.validatePlugin(body);
-        if (!validation.valid) {
-            return res.status(400).json(errorResponse('插件验证失败: ' + validation.error));
+
+        const result = saoHuaCore.installPluginObject(body);
+        if (!result.success) {
+            return res.status(400).json(errorResponse('插件验证失败: ' + result.error));
         }
-        
-        const pluginsDir = saoHuaCore.PluginManager.ensurePluginsDir();
-        const pluginPath = join(pluginsDir, `${body.name}.json`);
-        
-        if (fs.existsSync(pluginPath)) {
-            return res.status(400).json(errorResponse(`插件 ${body.name} 已存在`));
-        }
-        
-        fs.writeFileSync(pluginPath, JSON.stringify(body, null, 2), 'utf8');
         
         saoHuaCore.reloadPluginData();
         
         res.json(successResponse({
-            name: body.name,
-            path: pluginPath
+            name: result.plugin.name,
+            path: result.path
         }, '插件安装成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('插件安装失败: ' + error.message));
