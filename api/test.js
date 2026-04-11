@@ -69,7 +69,7 @@ const tests = {
         assert(res.status === 200, 'Health should return 200');
         assert(res.data.success === true, 'Health should have success: true');
         assert(res.data.data.status === 'ok', 'Health status should be ok');
-        assert(res.data.data.version === '1.0.0', 'Version should be 1.0.0');
+        assert(res.data.data.version === '1.29.0', 'Version should be 1.29.0');
     },
 
     async testRandomSaoHua() {
@@ -418,6 +418,203 @@ const tests = {
             remoteServer.close();
             await del('/api/plugins/test-remote-api-plugin-duplicate');
         }
+    },
+
+    // === 插件市场/索引测试 ===
+
+    async testPluginRegistrySearchEmpty() {
+        const indexData = {
+            plugins: [
+                { name: 'plugin1', version: '1.0.0', sourceUrl: 'http://example.com/p1.json' },
+                { name: 'plugin2', version: '2.0.0', sourceUrl: 'http://example.com/p2.json' }
+            ]
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/index.json`;
+            const res = await get(`/api/plugin-registry?indexUrl=${encodeURIComponent(testUrl)}`);
+            assert(res.status === 200, 'Registry search should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.plugins.length === 2, 'Should have 2 plugins');
+            assert(res.data.data.total === 2, 'Total should be 2');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginRegistrySearchWithQuery() {
+        const indexData = {
+            plugins: [
+                { name: 'love-pack', version: '1.0.0', description: '情话插件', sourceUrl: 'http://example.com/p1.json' },
+                { name: 'sao-pack', version: '1.0.0', description: '骚话插件', sourceUrl: 'http://example.com/p2.json' },
+                { name: 'fix-pack', version: '1.0.0', description: '修复插件', sourceUrl: 'http://example.com/p3.json' }
+            ]
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/index.json`;
+            const res = await get(`/api/plugin-registry?q=love&indexUrl=${encodeURIComponent(testUrl)}`);
+            assert(res.status === 200, 'Registry search should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.plugins.length === 1, 'Should have 1 matching plugin');
+            assert(res.data.data.plugins[0].name === 'love-pack', 'Should be love-pack');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginRegistrySearchByDescription() {
+        const indexData = {
+            plugins: [
+                { name: 'plugin1', version: '1.0.0', description: 'Chinese love messages', sourceUrl: 'http://example.com/p1.json' },
+                { name: 'plugin2', version: '1.0.0', description: 'English jokes', sourceUrl: 'http://example.com/p2.json' }
+            ]
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/index.json`;
+            const res = await get(`/api/plugin-registry?q=love&indexUrl=${encodeURIComponent(testUrl)}`);
+            assert(res.status === 200, 'Registry search should return 200');
+            assert(res.data.data.plugins.length === 1, 'Should have 1 matching plugin');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginRegistrySearchByTags() {
+        const indexData = {
+            plugins: [
+                { name: 'plugin1', version: '1.0.0', tags: ['love', 'chinese'], sourceUrl: 'http://example.com/p1.json' },
+                { name: 'plugin2', version: '1.0.0', tags: ['sao', 'english'], sourceUrl: 'http://example.com/p2.json' }
+            ]
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/index.json`;
+            const res = await get(`/api/plugin-registry?q=chinese&indexUrl=${encodeURIComponent(testUrl)}`);
+            assert(res.status === 200, 'Registry search should return 200');
+            assert(res.data.data.plugins.length === 1, 'Should have 1 matching plugin');
+            assert(res.data.data.plugins[0].name === 'plugin1', 'Should be plugin1');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginInstallFromIndexSuccess() {
+        const indexData = {
+            plugins: []
+        };
+
+        const pluginData = {
+            name: 'test-index-install-plugin',
+            version: '1.0.0',
+            description: 'Index install test',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['索引安装成功']
+                    }
+                }
+            }
+        };
+
+        const indexServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        const pluginServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(pluginData));
+        });
+
+        await new Promise((resolve) => indexServer.listen(0, resolve));
+        const indexPort = indexServer.address().port;
+
+        await new Promise((resolve) => pluginServer.listen(0, resolve));
+        const pluginPort = pluginServer.address().port;
+
+        indexData.plugins.push({
+            name: 'test-index-install-plugin',
+            version: '1.0.0',
+            sourceUrl: `http://127.0.0.1:${pluginPort}/plugin.json`
+        });
+
+        try {
+            const testUrl = `http://127.0.0.1:${indexPort}/index.json`;
+            const res = await post('/api/plugins/install-from-index', {
+                name: 'test-index-install-plugin',
+                indexUrl: testUrl
+            });
+            assert(res.status === 200, 'Install from index should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.name === 'test-index-install-plugin', 'Should return plugin name');
+        } finally {
+            indexServer.close();
+            pluginServer.close();
+            await del('/api/plugins/test-index-install-plugin');
+        }
+    },
+
+    async testPluginInstallFromIndexNotFound() {
+        const indexData = {
+            plugins: [
+                { name: 'plugin1', version: '1.0.0', sourceUrl: 'http://example.com/p1.json' }
+            ]
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/index.json`;
+            const res = await post('/api/plugins/install-from-index', {
+                name: 'non-existent-plugin',
+                indexUrl: testUrl
+            });
+            assert(res.status === 400, 'Install non-existent should return 400');
+            assert(res.data.success === false, 'Should have success: false');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginInstallFromIndexNoName() {
+        const res = await post('/api/plugins/install-from-index', {});
+        assert(res.status === 400, 'No name should return 400');
+        assert(res.data.success === false, 'Should have success: false');
     }
 };
 

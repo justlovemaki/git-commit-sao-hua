@@ -85,6 +85,8 @@ git-sao-hua plugin list                 # 列出已安装的插件
 git-sao-hua plugin create [name]        # 创建插件模板
 git-sao-hua plugin install <path>        # 从本地路径安装插件
 git-sao-hua plugin install --url <url>     # 从 URL 安装插件 (v1.28.0)
+git-sao-hua plugin search [query]         # 搜索插件市场 (v1.29.0)
+git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
 git-sao-hua plugin remove <name>             # 删除插件
 ```
 
@@ -113,6 +115,62 @@ git-sao-hua plugin remove <name>             # 删除插件
 ```bash
 git-sao-hua plugin install --url https://example.com/my-plugin.json
 ```
+
+### 插件市场（v1.29.0 新增）
+
+支持从远程插件索引搜索和安装插件：
+
+```bash
+# 搜索插件市场（支持搜索 name/description/tags）
+git-sao-hua plugin search love
+
+# 指定自定义索引 URL
+git-sao-hua plugin search love --index https://example.com/index.json
+
+# 从索引安装插件
+git-sao-hua plugin install --from-index my-plugin
+
+# 从自定义索引安装插件
+git-sao-hua plugin install --from-index my-plugin --index https://example.com/index.json
+```
+
+API 使用方式：
+
+```bash
+# 搜索插件市场
+curl "http://localhost:3000/api/plugin-registry?q=love"
+
+# 从索引安装插件（需要认证）
+curl -X POST http://localhost:3000/api/plugins/install-from-index \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"name": "my-plugin", "indexUrl": "https://example.com/index.json"}'
+```
+
+默认使用环境变量 `PLUGIN_INDEX_URL` 或内置默认索引 URL。可以通过 `--index` 参数覆盖。
+
+#### 索引格式
+
+插件索引 JSON 文件格式：
+
+```json
+{
+  "plugins": [
+    {
+      "name": "love-pack",
+      "version": "1.0.0",
+      "description": "甜甜的情话插件包",
+      "author": "developer",
+      "tags": ["love", "chinese"],
+      "homepage": "https://github.com/example/love-pack",
+      "sourceUrl": "https://example.com/plugins/love-pack.json"
+    }
+  ]
+}
+```
+
+必需字段：`name`, `version`, `sourceUrl`
+可选字段：`description`, `author`, `tags`, `homepage`
 
 API 安装方式：
 
@@ -736,14 +794,18 @@ npm test
 
 ## 🎯 版本历史
 
-### v1.26.0
-- 🔗 **Git Hook 集成** - 安装 prepare-commit-msg hook，每次 commit 自动追加骚话
-- ⚙️ **项目配置系统** - `.saohuarc.json` 配置文件支持自定义骚话风格、语言、位置等
-- 🔧 **CLI 新命令** - `hook install/uninstall/status` 管理 hook，`init` 交互式创建配置
-- 🔄 **Hook 安全机制** - 自动备份已有 hook 并链式调用，卸载时恢复原有 hook
-- 🚫 **跳过机制** - 设置 `GIT_SAO_HUA_SKIP=true` 可临时跳过骚话生成
+### v1.29.0
+- 🔌 **插件市场** - 支持从远程索引搜索和安装插件
+- 🔍 **搜索插件** - 支持按 name/description/tags 搜索
+- 📦 **索引安装** - `plugin install --from-index <name>` 从索引安装
+- 🌐 **自定义索引** - 支持通过 `--index` 或环境变量覆盖默认索引
+- 🔗 **API 新端点** - `GET /api/plugin-registry` 搜索，`POST /api/plugins/install-from-index` 安装
 
-### v1.17.0
+### v1.28.0
+- 🔗 **URL 安装插件** - 支持从 HTTP/HTTPS URL 直接安装插件
+- 📦 **CLI 新命令** - `plugin install --url <url>` 从 URL 安装
+
+### v1.26.0
 - 🗂️ **代码模式识别** - 新增 5 种智能模式检测
 - 🗄️ **数据库操作模式** - SQL/ORM/MongoDB/Redis 操作检测
 - 🌐 **API/HTTP 请求模式** - fetch/axios/GraphQL/REST API 检测

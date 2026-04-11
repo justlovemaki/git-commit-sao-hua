@@ -1,6 +1,6 @@
 {
   "name": "git-sao-hua-api",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "description": "Git Commit 骚话生成器 REST API 服务",
   "main": "server.js",
   "scripts": {

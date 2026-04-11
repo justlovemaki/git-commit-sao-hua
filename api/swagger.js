@@ -5,7 +5,7 @@ const options = {
         openapi: '3.0.3',
         info: {
             title: 'Git Saohua API',
-            version: '1.28.0',
+            version: '1.29.0',
             description: 'Git Commit 骚话生成器 REST API 服务 - 提供骚话生成、类型管理、风格选择等功能',
             contact: {
                 name: 'API Support',
@@ -343,6 +343,60 @@ const options = {
                             description: '作者',
                             example: 'developer'
                         }
+                    }
+                },
+                PluginIndexSearchRequest: {
+                    type: 'object',
+                    properties: {
+                        q: {
+                            type: 'string',
+                            description: '搜索关键词',
+                            example: 'love'
+                        },
+                        indexUrl: {
+                            type: 'string',
+                            description: '自定义索引 URL',
+                            example: 'https://example.com/index.json'
+                        }
+                    }
+                },
+                PluginIndexInstallRequest: {
+                    type: 'object',
+                    required: ['name'],
+                    properties: {
+                        name: {
+                            type: 'string',
+                            description: '要安装的插件名称',
+                            example: 'my-plugin'
+                        },
+                        indexUrl: {
+                            type: 'string',
+                            description: '自定义索引 URL (可选)',
+                            example: 'https://example.com/index.json'
+                        }
+                    }
+                },
+                PluginIndexData: {
+                    type: 'object',
+                    properties: {
+                        plugins: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    name: { type: 'string', example: 'love-pack' },
+                                    version: { type: 'string', example: '1.0.0' },
+                                    description: { type: 'string', example: '情话插件包' },
+                                    author: { type: 'string', example: 'developer' },
+                                    tags: { type: 'array', items: { type: 'string' }, example: ['love', 'chinese'] },
+                                    homepage: { type: 'string', example: 'https://github.com/example/plugin' },
+                                    sourceUrl: { type: 'string', example: 'https://example.com/plugins/love-pack.json' }
+                                }
+                            }
+                        },
+                        total: { type: 'integer', example: 10 },
+                        query: { type: 'string', example: 'love' },
+                        indexUrl: { type: 'string', example: 'https://example.com/index.json' }
                     }
                 }
             }
@@ -1135,6 +1189,161 @@ const options = {
                                         meta: {
                                             timestamp: '2024-01-01T00:00:00.000Z',
                                             message: '插件数据重新加载成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugin-registry': {
+                get: {
+                    tags: ['Plugins'],
+                    summary: '搜索插件市场',
+                    description: '从远程插件索引搜索插件',
+                    operationId: 'searchPluginRegistry',
+                    parameters: [
+                        {
+                            name: 'q',
+                            in: 'query',
+                            description: '搜索关键词 (支持搜索 name/description/tags)',
+                            schema: {
+                                type: 'string'
+                            },
+                            example: 'love'
+                        },
+                        {
+                            name: 'indexUrl',
+                            in: 'query',
+                            description: '自定义索引 URL (可选，不提供则使用默认索引)',
+                            schema: {
+                                type: 'string'
+                            },
+                            example: 'https://example.com/index.json'
+                        }
+                    ],
+                    responses: {
+                        '200': {
+                            description: '搜索成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            {
+                                                properties: {
+                                                    data: { $ref: '#/components/schemas/PluginIndexData' }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            plugins: [
+                                                {
+                                                    name: 'love-pack',
+                                                    version: '1.0.0',
+                                                    description: '甜甜的情话插件包',
+                                                    author: 'developer',
+                                                    tags: ['love', 'chinese'],
+                                                    sourceUrl: 'https://example.com/plugins/love-pack.json'
+                                                }
+                                            ],
+                                            total: 10,
+                                            query: 'love',
+                                            indexUrl: 'https://example.com/index.json'
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件搜索成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '搜索失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugins/install-from-index': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '从索引安装插件',
+                    description: '从远程插件索引安装插件\n\n**需要认证**: 必须提供有效的 API Key 或 Bearer Token',
+                    operationId: 'installPluginFromIndex',
+                    security: [
+                        { ApiKeyAuth: [] },
+                        { BearerAuth: [] }
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginIndexInstallRequest' },
+                                example: {
+                                    name: 'my-plugin',
+                                    indexUrl: 'https://example.com/index.json'
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件安装成功',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/SuccessResponse' },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            name: 'my-plugin',
+                                            version: '1.0.0',
+                                            path: '/home/user/.saohua/plugins/my-plugin.json',
+                                            fromIndex: 'https://example.com/index.json'
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '插件从索引安装成功~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '安装失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' },
+                                    example: {
+                                        success: false,
+                                        error: '索引中未找到插件: my-plugin',
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z'
                                         }
                                     }
                                 }

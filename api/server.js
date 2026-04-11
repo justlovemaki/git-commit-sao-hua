@@ -23,7 +23,7 @@ app.get('/api/openapi.json', (req, res) => {
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
 }));
 
 app.use(express.json());
@@ -74,7 +74,7 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        version: '1.0.0'
+        version: '1.29.0'
     }, '服务器运行中~'));
 });
 
@@ -336,6 +336,55 @@ app.post('/api/plugins/reload', requireAuth, (req, res) => {
         }, '插件数据重新加载成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('插件数据重新加载失败: ' + error.message));
+    }
+});
+
+app.get('/api/plugin-registry', (req, res) => {
+    try {
+        const { q, indexUrl } = req.query;
+        
+        saoHuaCore.searchPluginIndex(q || '', indexUrl || null).then(result => {
+            if (!result.success) {
+                return res.status(400).json(errorResponse(result.error));
+            }
+            
+            res.json(successResponse({
+                plugins: result.plugins,
+                total: result.total,
+                query: result.query || '',
+                indexUrl: result.indexUrl
+            }, '插件搜索成功~'));
+        }).catch(error => {
+            res.status(500).json(errorResponse('插件搜索失败: ' + error.message));
+        });
+    } catch (error) {
+        res.status(500).json(errorResponse('插件搜索失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugins/install-from-index', requireAuth, async (req, res) => {
+    try {
+        const { name, indexUrl } = req.body;
+        
+        if (!name) {
+            return res.status(400).json(errorResponse('请提供插件名称~'));
+        }
+        
+        const result = await saoHuaCore.installPluginFromIndex(name, indexUrl || null);
+        if (!result.success) {
+            return res.status(400).json(errorResponse(result.error));
+        }
+        
+        saoHuaCore.reloadPluginData();
+        
+        res.json(successResponse({
+            name: result.plugin.name,
+            version: result.plugin.version,
+            path: result.path,
+            fromIndex: result.plugin.fromIndex || null
+        }, '插件从索引安装成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件从索引安装失败: ' + error.message));
     }
 });
 
