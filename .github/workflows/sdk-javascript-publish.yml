@@ -1,0 +1,39 @@
+name: JavaScript SDK Publish
+
+on:
+  push:
+    tags:
+      - 'sdk/javascript/v*'
+  workflow_dispatch:
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+          cache-dependency-path: sdk/javascript/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd sdk/javascript
+          npm install --include=dev
+
+      - name: Build SDK
+        run: |
+          cd sdk/javascript
+          npm run build
+
+      - name: Publish package
+        run: |
+          cd sdk/javascript
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

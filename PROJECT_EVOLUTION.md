@@ -28,6 +28,7 @@
 - 插件系统 + REST API 插件管理端点已完成
 - ✅ **Python SDK** 已发布，从「JS 单一生态」到「跨语言平台」，Python 开发者可通过 `pip install git-saohua` 直接使用全部 API 能力
 - ✅ **Go SDK** 已发布，从「Python 单跨语言」到「Go+Python 双跨语言生态」，Go 开发者可通过 `go get github.com/justlovemaki/git-saohua-go` 直接使用全部 API 能力
+- ✅ **JavaScript / TypeScript SDK** 已补齐，从「API 已开放」到「Node.js / TS 生态可直接接入」，支持 API Key / Bearer Token / timeout / 自定义 headers，并覆盖插件索引与插件管理能力
 - ✅ **插件远程安装** 已完成，CLI 与 REST API 均可通过 URL 分发和安装插件，平台开始具备轻量生态分发能力
 - ✅ **插件官方索引入口** 已完成，CLI 与 REST API 均支持从远程插件索引搜索、发现并安装插件，平台开始具备可发现生态能力
 
@@ -53,7 +54,8 @@
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
 | **Python SDK** | ✅ 完成 | 类型化客户端，覆盖全部 API 端点，21 个测试全通过 |
 | **Go SDK** | ✅ 完成 | 类型化客户端（resty），覆盖全部 API 端点，18 个测试用例，支持上下文 |
-| **SDK 发布流水线** | ✅ 完成 | Python SDK 多版本 CI + PyPI/TestPyPI 发布骨架，Go SDK 多版本 CI + tag 驱动 Draft Release |
+| **JavaScript / TypeScript SDK** | ✅ 完成 | 原生 TS 客户端，覆盖主要 REST API 端点，支持 API Key / Bearer Token / timeout / 自定义 headers，内置 8 个单元测试 |
+| **SDK 发布流水线** | ✅ 完成 | Python SDK 多版本 CI + PyPI/TestPyPI 发布骨架，Go SDK 多版本 CI + tag 驱动 Draft Release，JS SDK Node 多版本 CI + npm 发布骨架 |
 | **自动化测试** | ✅ 完善 | lib/ 140 用例 + api/ 46 用例 + Python SDK 21 用例 + Go SDK 18 用例，工作流已覆盖跨语言 SDK |
 | **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 + SDK 发布流程 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
@@ -86,11 +88,17 @@
 │   │   ├── examples/           — 使用示例
 │   │   ├── pyproject.toml      — 包配置
 │   │   └── README.md           — SDK 文档
-│   └── go/                     — Go SDK (go get github.com/justlovemaki/git-saohua-go)
-│       ├── git_saohua/         — 包代码（client.go + models.go）
-│       ├── tests/              — 单元测试（18 用例）
-│       ├── examples/           — 使用示例
-│       ├── go.mod / go.sum     — 模块配置
+│   ├── go/                     — Go SDK (go get github.com/justlovemaki/git-saohua-go)
+│   │   ├── git_saohua/         — 包代码（client.go + models.go）
+│   │   ├── tests/              — 单元测试（18 用例）
+│   │   ├── examples/           — 使用示例
+│   │   ├── go.mod / go.sum     — 模块配置
+│   │   └── README.md           — SDK 文档
+│   └── javascript/             — JavaScript / TypeScript SDK (npm install git-saohua)
+│       ├── src/index.ts        — 类型化客户端入口
+│       ├── test.js             — 单元测试（8 用例）
+│       ├── examples/           — Node.js 示例
+│       ├── package.json        — npm 包配置
 │       └── README.md           — SDK 文档
 ├── index.html                  — Web 体验页（独立单文件）
 ├── cli/                        — CLI 命令行工具（引用 lib/）
@@ -106,7 +114,7 @@
 ## 5. 已知问题与技术债
 
 1. **Web 页面骚话数据独立** — index.html 内嵌骚话数据，未引用 lib/（单文件设计限制）
-2. **NPM_TOKEN / VSCE_PAT / PyPI Secrets 配置** — 需在 GitHub Secrets 中补齐发布凭据，自动发布链路才能真正启用
+2. **NPM_TOKEN / VSCE_PAT / PyPI Secrets 配置** — 需在 GitHub Secrets 中补齐发布凭据，自动发布链路才能真正启用（现已覆盖 CLI / core / JS SDK，Python/Go 也已有发布骨架）
 3. **API 服务需实际部署** — 需部署到 Railway / Vercel / 云服务器验证生产环境表现
 4. **Python SDK 尚未正式发布到 PyPI** — 已具备自动发布工作流，仍需配置凭据并跑通首个正式版本
 5. **Go SDK 缺少版本标签发布实践** — 已补齐 tag 驱动 release 工作流，仍需跑通首个 `sdk/go/v*` 标签发布验证
@@ -129,7 +137,7 @@
 - 插件远程安装增强 — 支持 npm / GitHub Release / Git 仓库快捷安装与来源校验
 - WebSocket 实时推送骚话
 - CLI 交互式模式（TUI）
-- SDK 示例站点 / 多语言文档门户 — 降低第三方接入门槛
+- SDK 示例站点 / 多语言文档门户 — 统一 Python / Go / JS 文档、示例与认证接入说明，降低第三方接入门槛
 
 ### 远期愿景
 - 成为 Git 提交信息领域最有趣的开源工具
@@ -142,9 +150,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-12 | 🚀 大演进 | 插件供应链完整性增强 — 在 `lib/plugin-manager` 中增加 SHA-256 摘要计算与校验，CLI 新增 `plugin install --url ... --checksum ...`，REST API `POST /api/plugins/install` 支持 `checksum` 参数，插件索引条目支持 `checksum` 并在按名称安装时自动校验，同时补齐 README / Swagger / lib+api 测试，从“插件可发现、可安装”继续进化到“插件可校验、可追溯安装” | Stage 5 内维度跃迁（插件供应链完整性） |
-| 最新 | 2026-04-11 | 🚀 大演进 | 插件索引 / 市场入口能力 — 在 `lib/plugin-manager` 增加远程索引拉取、搜索、按名称安装能力，CLI 新增 `plugin search` 和 `plugin install --from-index`，REST API 新增 `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index`，并补齐 Swagger、README、版本号与测试，从「可远程分发插件」继续进化到「可发现、可检索、可安装的插件生态入口」 | Stage 5 内维度跃迁（插件可发现生态） |
-| -1 | 2026-04-11 | 🚀 大演进 | 插件远程安装能力 — 在 `lib/plugin-manager` 增加 HTTP/HTTPS URL 下载与安装能力，CLI 支持 `plugin install --url`，REST API 支持 `sourceUrl`，并补齐 Swagger、README 与测试，从「本地插件导入」前进到「可远程分发的轻量生态」 | Stage 5 内维度跃迁（插件分发能力） |
-| -2 | 2026-04-10 | 🔧 中迭代 | SDK 发布流水线 — 新增 Python SDK CI、PyPI/TestPyPI 发布工作流，以及 Go SDK CI、tag 驱动 Draft Release；补齐 RELEASE_CHECKLIST 与 SDK 文档，从「已有 SDK 代码」推进到「具备自动验证与发布骨架」 | Stage 5 内能力补全（生态交付能力） |
-| -3 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |
-| -4 | 2026-04-08 | 🚀 大演进 | Python SDK — 新增 sdk/python/ 目录，完整客户端 + 13 个 API 方法 + dataclass 模型 + 异常体系 + 21 个测试 + 使用示例 + README，从「JS 单一生态」到「跨语言平台」 | Stage 5 内维度跃迁（跨语言生态） |
+| 最新 | 2026-04-12 | 🚀 大演进 | JavaScript / TypeScript SDK — 新增 `sdk/javascript/`，补齐原生 TS 客户端、8 个单元测试、使用示例、README，以及 Node 多版本 CI 与 npm 发布骨架，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引，并支持 API Key / Bearer Token / timeout / 自定义 headers；平台从“已有 API + Python/Go SDK”继续前进到“主流后端脚本生态可直接接入” | Stage 5 内维度跃迁（Node / TS 生态接入） |
+| -1 | 2026-04-12 | 🚀 大演进 | 插件供应链完整性增强 — 在 `lib/plugin-manager` 中增加 SHA-256 摘要计算与校验，CLI 新增 `plugin install --url ... --checksum ...`，REST API `POST /api/plugins/install` 支持 `checksum` 参数，插件索引条目支持 `checksum` 并在按名称安装时自动校验，同时补齐 README / Swagger / lib+api 测试，从“插件可发现、可安装”继续进化到“插件可校验、可追溯安装” | Stage 5 内维度跃迁（插件供应链完整性） |
+| -2 | 2026-04-11 | 🚀 大演进 | 插件索引 / 市场入口能力 — 在 `lib/plugin-manager` 增加远程索引拉取、搜索、按名称安装能力，CLI 新增 `plugin search` 和 `plugin install --from-index`，REST API 新增 `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index`，并补齐 Swagger、README、版本号与测试，从「可远程分发插件」继续进化到「可发现、可检索、可安装的插件生态入口」 | Stage 5 内维度跃迁（插件可发现生态） |
+| -3 | 2026-04-11 | 🚀 大演进 | 插件远程安装能力 — 在 `lib/plugin-manager` 增加 HTTP/HTTPS URL 下载与安装能力，CLI 支持 `plugin install --url`，REST API 支持 `sourceUrl`，并补齐 Swagger、README 与测试，从「本地插件导入」前进到「可远程分发的轻量生态」 | Stage 5 内维度跃迁（插件分发能力） |
+| -4 | 2026-04-10 | 🔧 中迭代 | SDK 发布流水线 — 新增 Python SDK CI、PyPI/TestPyPI 发布工作流，以及 Go SDK CI、tag 驱动 Draft Release；补齐 RELEASE_CHECKLIST 与 SDK 文档，从「已有 SDK 代码」推进到「具备自动验证与发布骨架」 | Stage 5 内能力补全（生态交付能力） |
+| -5 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |

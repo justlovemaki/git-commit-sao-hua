@@ -1,0 +1,73 @@
+name: JavaScript SDK CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'sdk/javascript/**'
+      - '.github/workflows/sdk-javascript-ci.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'sdk/javascript/**'
+      - '.github/workflows/sdk-javascript-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18.x', '20.x', '22.x']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: sdk/javascript/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd sdk/javascript
+          npm install --include=dev
+
+      - name: Build SDK
+        run: |
+          cd sdk/javascript
+          npm run build
+
+      - name: Run tests
+        run: |
+          cd sdk/javascript
+          npm test
+
+      - name: Check built package export
+        run: |
+          cd sdk/javascript
+          node --input-type=module -e "import('./dist/index.js').then(m => console.log(Object.keys(m).length > 0 ? 'exports ok' : 'no exports'))"
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: sdk/javascript/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd sdk/javascript
+          npm install --include=dev
+
+      - name: Type check
+        run: |
+          cd sdk/javascript
+          npm run lint

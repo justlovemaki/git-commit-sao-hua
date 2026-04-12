@@ -302,6 +302,49 @@ php -S localhost:8000
 
 然后访问 `http://localhost:8000`
 
+## 🧩 多语言 SDK
+
+项目现在已经补齐 Python、Go、JavaScript / TypeScript 三套 SDK，方便在不同运行时里直接接入骚话 API。
+
+### JavaScript / TypeScript SDK（v1.31.0 新增 🎉）
+
+```bash
+cd sdk/javascript
+npm install
+npm test
+```
+
+```ts
+import { SaohuaClient } from 'git-saohua';
+
+const client = new SaohuaClient({
+  baseUrl: 'http://localhost:3000',
+  apiKey: process.env.SAOHUA_API_KEY,
+  timeout: 8000,
+  headers: {
+    'X-Request-From': 'my-script',
+  },
+});
+
+const result = await client.randomSaohua('zh-CN', 'love');
+console.log(result.fullMessage);
+```
+
+支持能力：
+
+- 健康检查、随机骚话、按类型 / 风格生成
+- AI 骚话生成
+- 类型 / 风格 / 统计查询
+- 插件列表、安装、删除、模板创建、重载
+- 插件索引搜索、按索引安装
+- API Key / Bearer Token / timeout / 自定义 headers
+
+更多说明见：
+
+- `sdk/javascript/README.md`
+- `sdk/python/README.md`
+- `sdk/go/README.md`
+
 ## 🌐 部署
 
 ### GitHub Pages
@@ -806,6 +849,12 @@ npm test
 **让代码不再枯燥，让提交充满乐趣！** 🎉
 
 ## 🎯 版本历史
+
+### v1.31.0
+- 🟨 **JavaScript / TypeScript SDK** - 新增 `sdk/javascript/`，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引
+- 🔑 **认证与请求控制** - 支持 API Key / Bearer Token / timeout / 自定义 headers / 自定义 fetch
+- 🧪 **Node 多版本验证** - 补齐 8 个单元测试、Node 18/20/22 CI 与 npm 发布骨架
+- 📚 **多语言文档同步** - 根 README、SDK README、PROJECT_EVOLUTION 同步纳入 JS / TS 生态说明
 
 ### v1.29.0
 - 🔌 **插件市场** - 支持从远程索引搜索和安装插件
