@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import http from 'http';
+import saoHuaCore from '../lib/index.js';
 
 let BASE_URL = process.env.TEST_URL || 'http://localhost:3000';
 
@@ -69,7 +70,7 @@ const tests = {
         assert(res.status === 200, 'Health should return 200');
         assert(res.data.success === true, 'Health should have success: true');
         assert(res.data.data.status === 'ok', 'Health status should be ok');
-        assert(res.data.data.version === '1.29.0', 'Version should be 1.29.0');
+        assert(res.data.data.version === '1.30.0', 'Version should be 1.30.0');
     },
 
     async testRandomSaoHua() {
@@ -381,9 +382,80 @@ const tests = {
             assert(res.data.success === true, 'Should have success: true');
             assert(res.data.data.name === 'test-remote-api-plugin', 'Should return plugin name');
             assert(res.data.data.sourceUrl === testUrl, 'Should return sourceUrl');
+            assert(typeof res.data.data.checksum === 'string', 'Should return computed checksum');
         } finally {
             remoteServer.close();
             await del('/api/plugins/test-remote-api-plugin');
+        }
+    },
+
+    async testPluginInstallFromUrlWithChecksumSuccess() {
+        const plugin = {
+            name: 'test-remote-api-plugin-checksum',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['远程校验安装成功']
+                    }
+                }
+            }
+        };
+
+        const rawPlugin = JSON.stringify(plugin);
+        const checksum = saoHuaCore.calculateSha256(rawPlugin);
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(rawPlugin);
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/plugin.json`;
+            const res = await post('/api/plugins/install', { sourceUrl: testUrl, checksum });
+            assert(res.status === 200, 'Checksum remote install should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.checksum === checksum, 'Should return provided checksum');
+        } finally {
+            remoteServer.close();
+            await del('/api/plugins/test-remote-api-plugin-checksum');
+        }
+    },
+
+    async testPluginInstallFromUrlWithChecksumFailure() {
+        const plugin = {
+            name: 'test-remote-api-plugin-checksum-fail',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['远程校验安装失败']
+                    }
+                }
+            }
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(plugin));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/plugin.json`;
+            const res = await post('/api/plugins/install', {
+                sourceUrl: testUrl,
+                checksum: '0000000000000000000000000000000000000000000000000000000000000000'
+            });
+            assert(res.status === 400, 'Checksum mismatch should return 400');
+            assert(res.data.success === false, 'Should have success: false');
+            assert(res.data.error.includes('SHA-256 校验失败'), 'Should mention checksum mismatch');
+        } finally {
+            remoteServer.close();
+            await del('/api/plugins/test-remote-api-plugin-checksum-fail');
         }
     },
 
@@ -577,10 +649,125 @@ const tests = {
             assert(res.status === 200, 'Install from index should return 200');
             assert(res.data.success === true, 'Should have success: true');
             assert(res.data.data.name === 'test-index-install-plugin', 'Should return plugin name');
+            assert(res.data.data.checksum === null, 'Should return null checksum when index does not provide one');
         } finally {
             indexServer.close();
             pluginServer.close();
             await del('/api/plugins/test-index-install-plugin');
+        }
+    },
+
+    async testPluginInstallFromIndexWithChecksumSuccess() {
+        const pluginData = {
+            name: 'test-index-install-plugin-checksum',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['索引校验安装成功']
+                    }
+                }
+            }
+        };
+        const rawPlugin = JSON.stringify(pluginData);
+        const checksum = saoHuaCore.calculateSha256(rawPlugin);
+        const indexData = {
+            plugins: [
+                {
+                    name: 'test-index-install-plugin-checksum',
+                    version: '1.0.0',
+                    sourceUrl: 'http://127.0.0.1:9999/plugin.json',
+                    checksum
+                }
+            ]
+        };
+
+        const indexServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        const pluginServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(rawPlugin);
+        });
+
+        await new Promise((resolve) => indexServer.listen(0, resolve));
+        const indexPort = indexServer.address().port;
+
+        await new Promise((resolve) => pluginServer.listen(0, resolve));
+        const pluginPort = pluginServer.address().port;
+        indexData.plugins[0].sourceUrl = `http://127.0.0.1:${pluginPort}/plugin.json`;
+
+        try {
+            const testUrl = `http://127.0.0.1:${indexPort}/index.json`;
+            const res = await post('/api/plugins/install-from-index', {
+                name: 'test-index-install-plugin-checksum',
+                indexUrl: testUrl
+            });
+            assert(res.status === 200, 'Install from index with checksum should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.checksum === checksum, 'Should return checksum from index');
+        } finally {
+            indexServer.close();
+            pluginServer.close();
+            await del('/api/plugins/test-index-install-plugin-checksum');
+        }
+    },
+
+    async testPluginInstallFromIndexWithChecksumFailure() {
+        const pluginData = {
+            name: 'test-index-install-plugin-checksum-fail',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['索引校验安装失败']
+                    }
+                }
+            }
+        };
+        const indexData = {
+            plugins: [
+                {
+                    name: 'test-index-install-plugin-checksum-fail',
+                    version: '1.0.0',
+                    sourceUrl: 'http://127.0.0.1:9999/plugin.json',
+                    checksum: '0000000000000000000000000000000000000000000000000000000000000000'
+                }
+            ]
+        };
+
+        const indexServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(indexData));
+        });
+
+        const pluginServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(pluginData));
+        });
+
+        await new Promise((resolve) => indexServer.listen(0, resolve));
+        const indexPort = indexServer.address().port;
+
+        await new Promise((resolve) => pluginServer.listen(0, resolve));
+        const pluginPort = pluginServer.address().port;
+        indexData.plugins[0].sourceUrl = `http://127.0.0.1:${pluginPort}/plugin.json`;
+
+        try {
+            const testUrl = `http://127.0.0.1:${indexPort}/index.json`;
+            const res = await post('/api/plugins/install-from-index', {
+                name: 'test-index-install-plugin-checksum-fail',
+                indexUrl: testUrl
+            });
+            assert(res.status === 400, 'Checksum mismatch from index should return 400');
+            assert(res.data.success === false, 'Should have success: false');
+            assert(res.data.error.includes('SHA-256 校验失败'), 'Should mention checksum mismatch');
+        } finally {
+            indexServer.close();
+            pluginServer.close();
+            await del('/api/plugins/test-index-install-plugin-checksum-fail');
         }
     },
 

@@ -85,6 +85,7 @@ git-sao-hua plugin list                 # 列出已安装的插件
 git-sao-hua plugin create [name]        # 创建插件模板
 git-sao-hua plugin install <path>        # 从本地路径安装插件
 git-sao-hua plugin install --url <url>     # 从 URL 安装插件 (v1.28.0)
+git-sao-hua plugin install --url <url> --checksum <sha256> # 从 URL 安装并校验摘要 (v1.30.0)
 git-sao-hua plugin search [query]         # 搜索插件市场 (v1.29.0)
 git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
 git-sao-hua plugin remove <name>             # 删除插件
@@ -114,6 +115,12 @@ git-sao-hua plugin remove <name>             # 删除插件
 
 ```bash
 git-sao-hua plugin install --url https://example.com/my-plugin.json
+```
+
+如果你拿到了插件发布方提供的 SHA-256 摘要，可以在安装时一并校验完整性：
+
+```bash
+git-sao-hua plugin install --url https://example.com/my-plugin.json --checksum <sha256>
 ```
 
 ### 插件市场（v1.29.0 新增）
@@ -163,14 +170,15 @@ curl -X POST http://localhost:3000/api/plugins/install-from-index \
       "author": "developer",
       "tags": ["love", "chinese"],
       "homepage": "https://github.com/example/love-pack",
-      "sourceUrl": "https://example.com/plugins/love-pack.json"
+      "sourceUrl": "https://example.com/plugins/love-pack.json",
+      "checksum": "3d7d3a6b6d6b8c3e2d0d3d6f0a9c5f96a4a6a1b3d2c4e5f60718293a4b5c6d7e"
     }
   ]
 }
 ```
 
 必需字段：`name`, `version`, `sourceUrl`
-可选字段：`description`, `author`, `tags`, `homepage`
+可选字段：`description`, `author`, `tags`, `homepage`, `checksum`
 
 API 安装方式：
 
@@ -179,6 +187,11 @@ curl -X POST http://localhost:3000/api/plugins/install \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
   -d '{"sourceUrl": "https://example.com/plugin.json"}'
+
+curl -X POST http://localhost:3000/api/plugins/install \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"sourceUrl": "https://example.com/plugin.json", "checksum": "<sha256>"}'
 ```
 
 ### 配置文件 `.saohuarc.json`
@@ -800,6 +813,11 @@ npm test
 - 📦 **索引安装** - `plugin install --from-index <name>` 从索引安装
 - 🌐 **自定义索引** - 支持通过 `--index` 或环境变量覆盖默认索引
 - 🔗 **API 新端点** - `GET /api/plugin-registry` 搜索，`POST /api/plugins/install-from-index` 安装
+
+### v1.30.0
+- 🔐 **插件摘要校验** - 远程 URL 安装支持 `--checksum` / API `checksum` 参数，安装前校验 SHA-256
+- 🛡️ **索引完整性保护** - 插件索引条目支持 `checksum` 字段，按名称安装时自动校验插件内容
+- 🧪 **测试补强** - lib 与 API 层补充摘要校验成功/失败用例
 
 ### v1.28.0
 - 🔗 **URL 安装插件** - 支持从 HTTP/HTTPS URL 直接安装插件

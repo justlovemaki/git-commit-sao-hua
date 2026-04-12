@@ -91,6 +91,34 @@ git-sao-hua -g
 git-sao-hua -i
 ```
 
+## 插件管理
+
+```bash
+# 列出已安装的插件
+git-sao-hua plugin list
+
+# 创建插件模板
+git-sao-hua plugin create my-pack
+
+# 安装本地插件
+git-sao-hua plugin install ./my-plugin.json
+
+# 从 URL 安装插件
+git-sao-hua plugin install --url https://example.com/plugin.json
+
+# 从 URL 安装插件并校验 SHA-256
+git-sao-hua plugin install --url https://example.com/plugin.json --checksum abc123...
+
+# 搜索插件市场
+git-sao-hua plugin search love
+
+# 从索引安装插件
+git-sao-hua plugin install --from-index my-plugin
+
+# 删除插件
+git-sao-hua plugin remove my-pack
+```
+
 ## 本地开发
 
 ```bash

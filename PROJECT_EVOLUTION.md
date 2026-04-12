@@ -111,6 +111,7 @@
 4. **Python SDK 尚未正式发布到 PyPI** — 已具备自动发布工作流，仍需配置凭据并跑通首个正式版本
 5. **Go SDK 缺少版本标签发布实践** — 已补齐 tag 驱动 release 工作流，仍需跑通首个 `sdk/go/v*` 标签发布验证
 6. **插件索引可信度仍不足** — 已补齐官方索引入口，但仍缺少插件签名校验、来源白名单、完整性摘要等供应链防护
+7. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验，但仍缺少签名、公钥信任链、来源白名单与发布者身份验证
 
 ---
 
@@ -120,6 +121,7 @@
 - ✅ **插件索引 / 市场入口** — CLI `plugin search` 与 `plugin install --from-index`、API `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index` 打通，插件开始具备可发现能力
 - ✅ **插件远程安装** — CLI `plugin install --url` 与 API `sourceUrl` 打通，支持远程分发骚话包
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
+- ✅ **插件 SHA-256 摘要校验** — 远程 URL 安装与索引安装支持完整性校验，开始从“可分发”进化到“可校验分发”
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -140,6 +142,7 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
+| 最新 | 2026-04-12 | 🚀 大演进 | 插件供应链完整性增强 — 在 `lib/plugin-manager` 中增加 SHA-256 摘要计算与校验，CLI 新增 `plugin install --url ... --checksum ...`，REST API `POST /api/plugins/install` 支持 `checksum` 参数，插件索引条目支持 `checksum` 并在按名称安装时自动校验，同时补齐 README / Swagger / lib+api 测试，从“插件可发现、可安装”继续进化到“插件可校验、可追溯安装” | Stage 5 内维度跃迁（插件供应链完整性） |
 | 最新 | 2026-04-11 | 🚀 大演进 | 插件索引 / 市场入口能力 — 在 `lib/plugin-manager` 增加远程索引拉取、搜索、按名称安装能力，CLI 新增 `plugin search` 和 `plugin install --from-index`，REST API 新增 `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index`，并补齐 Swagger、README、版本号与测试，从「可远程分发插件」继续进化到「可发现、可检索、可安装的插件生态入口」 | Stage 5 内维度跃迁（插件可发现生态） |
 | -1 | 2026-04-11 | 🚀 大演进 | 插件远程安装能力 — 在 `lib/plugin-manager` 增加 HTTP/HTTPS URL 下载与安装能力，CLI 支持 `plugin install --url`，REST API 支持 `sourceUrl`，并补齐 Swagger、README 与测试，从「本地插件导入」前进到「可远程分发的轻量生态」 | Stage 5 内维度跃迁（插件分发能力） |
 | -2 | 2026-04-10 | 🔧 中迭代 | SDK 发布流水线 — 新增 Python SDK CI、PyPI/TestPyPI 发布工作流，以及 Go SDK CI、tag 驱动 Draft Release；补齐 RELEASE_CHECKLIST 与 SDK 文档，从「已有 SDK 代码」推进到「具备自动验证与发布骨架」 | Stage 5 内能力补全（生态交付能力） |

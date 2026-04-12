@@ -5,7 +5,7 @@ const options = {
         openapi: '3.0.3',
         info: {
             title: 'Git Saohua API',
-            version: '1.29.0',
+            version: '1.30.0',
             description: 'Git Commit 骚话生成器 REST API 服务 - 提供骚话生成、类型管理、风格选择等功能',
             contact: {
                 name: 'API Support',
@@ -284,6 +284,11 @@ const options = {
                             description: '插件 JSON 的 URL (支持 http/https)',
                             example: 'https://example.com/plugin.json'
                         },
+                        checksum: {
+                            type: 'string',
+                            description: '插件 JSON 的 SHA-256 校验和 (可选，用于验证插件完整性)',
+                            example: 'a1b2c3d4e5f6...'
+                        },
                         name: {
                             type: 'string',
                             description: '插件名称 (当不提供 sourceUrl 时必填)',
@@ -390,7 +395,8 @@ const options = {
                                     author: { type: 'string', example: 'developer' },
                                     tags: { type: 'array', items: { type: 'string' }, example: ['love', 'chinese'] },
                                     homepage: { type: 'string', example: 'https://github.com/example/plugin' },
-                                    sourceUrl: { type: 'string', example: 'https://example.com/plugins/love-pack.json' }
+                                    sourceUrl: { type: 'string', example: 'https://example.com/plugins/love-pack.json' },
+                                    checksum: { type: 'string', description: '插件的 SHA-256 校验和 (可选)', example: 'a1b2c3d4e5f6...' }
                                 }
                             }
                         },
@@ -983,6 +989,8 @@ const options = {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/PluginInstallRequest' },
                                 example: {
+                                    sourceUrl: 'https://example.com/plugin.json',
+                                    checksum: 'a1b2c3d4e5f6...',
                                     name: 'my-custom-plugin',
                                     version: '1.0.0',
                                     description: '自定义插件',
@@ -1324,7 +1332,8 @@ const options = {
                                             name: 'my-plugin',
                                             version: '1.0.0',
                                             path: '/home/user/.saohua/plugins/my-plugin.json',
-                                            fromIndex: 'https://example.com/index.json'
+                                            fromIndex: 'https://example.com/index.json',
+                                            checksum: 'a1b2c3d4e5f6...'
                                         },
                                         meta: {
                                             timestamp: '2024-01-01T00:00:00.000Z',

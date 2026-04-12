@@ -74,7 +74,7 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        version: '1.29.0'
+        version: '1.30.0'
     }, '服务器运行中~'));
 });
 
@@ -241,9 +241,10 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
     try {
         const body = req.body || {};
         const sourceUrl = body.sourceUrl;
+        const checksum = body.checksum;
         
         if (sourceUrl) {
-            const result = await saoHuaCore.installPluginFromUrl(sourceUrl);
+            const result = await saoHuaCore.installPluginFromUrl(sourceUrl, null, { expectedChecksum: checksum || null });
             if (!result.success) {
                 return res.status(400).json(errorResponse(result.error));
             }
@@ -253,7 +254,8 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
             res.json(successResponse({
                 name: result.plugin.name,
                 path: result.path,
-                sourceUrl: result.plugin.sourceUrl || sourceUrl
+                sourceUrl: result.plugin.sourceUrl || sourceUrl,
+                checksum: result.plugin.checksum || null
             }, '插件从 URL 安装成功~'));
             return;
         }
@@ -262,7 +264,7 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
             return res.status(400).json(errorResponse('请提供插件内容~'));
         }
 
-        const result = saoHuaCore.installPluginObject(body);
+        const result = saoHuaCore.installPluginObject(body, null, { checksum: checksum || null });
         if (!result.success) {
             return res.status(400).json(errorResponse('插件验证失败: ' + result.error));
         }
@@ -271,7 +273,8 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
         
         res.json(successResponse({
             name: result.plugin.name,
-            path: result.path
+            path: result.path,
+            checksum: result.plugin.checksum || null
         }, '插件安装成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('插件安装失败: ' + error.message));
@@ -381,7 +384,8 @@ app.post('/api/plugins/install-from-index', requireAuth, async (req, res) => {
             name: result.plugin.name,
             version: result.plugin.version,
             path: result.path,
-            fromIndex: result.plugin.fromIndex || null
+            fromIndex: result.plugin.fromIndex || null,
+            checksum: result.plugin.checksum || null
         }, '插件从索引安装成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('插件从索引安装失败: ' + error.message));
