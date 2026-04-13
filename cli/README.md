@@ -42,7 +42,7 @@ git-sao-hua -t feat -s love
 | `-l, --list` | 列出所有可用类型和风格 |
 | `-c, --copy` | 生成后复制到剪贴板 |
 | `-g, --git` | 直接执行 git commit |
-| `-i, --interactive` | 交互模式 |
+| `-i, --interactive` | 交互式提交向导 |
 | `-h, --help` | 显示帮助信息 |
 | `-v, --version` | 显示版本号 |
 
@@ -87,9 +87,19 @@ git-sao-hua -c
 # 生成并直接提交（需要先 git add）
 git-sao-hua -g
 
-# 交互式选择类型和风格
+# 交互式提交向导（语言 / 生成模式 / 预览 / 一键提交）
 git-sao-hua -i
+
+# 指定英文输出
+git-sao-hua --lang en
 ```
+
+交互式提交向导现在支持：
+
+- 先选择输出语言（中文 / English）
+- 在模板生成、AI 生成、智能检测三种模式间切换
+- 生成后直接预览结果
+- 预览后继续重新生成、切换风格、复制到剪贴板、直接 git commit 或退出
 
 ## 插件管理
 

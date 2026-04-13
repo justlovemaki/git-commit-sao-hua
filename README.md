@@ -247,15 +247,15 @@ git-sao-hua
 # 指定类型和风格
 git-sao-hua -t feat -s love
 
-# 交互模式
+# 交互式提交向导（语言 / 生成模式 / 预览 / 一键提交）
 git-sao-hua -i
 
 # 生成并直接 git commit
 git-sao-hua -g
 
-# 指定输出语言 (支持: en, zh, ja, ko, es, fr, de, ru)
+# 指定输出语言
 git-sao-hua --lang en
-git-sao-hua -t feat -s love --lang zh
+git-sao-hua -t feat -s love --lang zh-CN
 ```
 
 详细文档见 [cli/README.md](cli/README.md)

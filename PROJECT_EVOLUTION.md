@@ -40,7 +40,7 @@
 |---------|------|------|
 | **Web 体验页** | ✅ 完成 | 单 HTML 文件，可直接打开使用 |
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
-| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理 |
+| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理、交互式提交向导 |
 | **GitHub Action** | ✅ 完成 | CI/CD 中自动生成骚话 commit message |
 | **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 并评论骚话 |
 | **REST API** | ✅ 完成 | Express.js HTTP 服务，支持全部生成能力 + AI + 统计 + 插件 CRUD |
@@ -120,12 +120,14 @@
 5. **Go SDK 缺少版本标签发布实践** — 已补齐 tag 驱动 release 工作流，仍需跑通首个 `sdk/go/v*` 标签发布验证
 6. **插件索引可信度仍不足** — 已补齐官方索引入口，但仍缺少插件签名校验、来源白名单、完整性摘要等供应链防护
 7. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验，但仍缺少签名、公钥信任链、来源白名单与发布者身份验证
+8. **交互向导仍是 readline 文本流** — 已补齐语言/模式/预览/一键提交，但还不是真正 curses/TUI 界面，后续可继续升级为全屏终端体验
 
 ---
 
 ## 6. 演进路线图
 
 ### 近期（1-3 轮）
+- ✅ **CLI 交互式提交向导** — 交互模式已支持语言选择、模板/AI/智能检测三种生成模式、结果预览，以及重新生成 / 切换风格 / 复制 / 一键提交，CLI 从“只会一次性出结果”进化到“可对话式完成 commit 生成与提交”
 - ✅ **插件索引 / 市场入口** — CLI `plugin search` 与 `plugin install --from-index`、API `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index` 打通，插件开始具备可发现能力
 - ✅ **插件远程安装** — CLI `plugin install --url` 与 API `sourceUrl` 打通，支持远程分发骚话包
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
@@ -136,7 +138,7 @@
 - 插件签名 / 校验链路 — 增加签名校验、来源白名单、摘要校验等供应链能力
 - 插件远程安装增强 — 支持 npm / GitHub Release / Git 仓库快捷安装与来源校验
 - WebSocket 实时推送骚话
-- CLI 交互式模式（TUI）
+- CLI 全屏 TUI 模式 — 从 readline 向导继续升级为全屏终端交互体验
 - SDK 示例站点 / 多语言文档门户 — 统一 Python / Go / JS 文档、示例与认证接入说明，降低第三方接入门槛
 
 ### 远期愿景
@@ -150,9 +152,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
+| 最新 | 2026-04-13 | 🚀 大演进 | CLI 交互式提交向导 — 升级 `git-sao-hua -i`，支持语言选择、模板/AI/智能检测三种生成模式、生成预览，以及重新生成 / 切换风格 / 复制 / 直接 git commit，并同步修正文档中的交互模式与语言示例；项目从“单次命令触发”继续前进到“终端内可迭代完成提交决策与执行”的交互体验 | Stage 5 内维度跃迁（CLI 交互体验） |
 | 最新 | 2026-04-12 | 🚀 大演进 | JavaScript / TypeScript SDK — 新增 `sdk/javascript/`，补齐原生 TS 客户端、8 个单元测试、使用示例、README，以及 Node 多版本 CI 与 npm 发布骨架，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引，并支持 API Key / Bearer Token / timeout / 自定义 headers；平台从“已有 API + Python/Go SDK”继续前进到“主流后端脚本生态可直接接入” | Stage 5 内维度跃迁（Node / TS 生态接入） |
 | -1 | 2026-04-12 | 🚀 大演进 | 插件供应链完整性增强 — 在 `lib/plugin-manager` 中增加 SHA-256 摘要计算与校验，CLI 新增 `plugin install --url ... --checksum ...`，REST API `POST /api/plugins/install` 支持 `checksum` 参数，插件索引条目支持 `checksum` 并在按名称安装时自动校验，同时补齐 README / Swagger / lib+api 测试，从“插件可发现、可安装”继续进化到“插件可校验、可追溯安装” | Stage 5 内维度跃迁（插件供应链完整性） |
 | -2 | 2026-04-11 | 🚀 大演进 | 插件索引 / 市场入口能力 — 在 `lib/plugin-manager` 增加远程索引拉取、搜索、按名称安装能力，CLI 新增 `plugin search` 和 `plugin install --from-index`，REST API 新增 `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index`，并补齐 Swagger、README、版本号与测试，从「可远程分发插件」继续进化到「可发现、可检索、可安装的插件生态入口」 | Stage 5 内维度跃迁（插件可发现生态） |
 | -3 | 2026-04-11 | 🚀 大演进 | 插件远程安装能力 — 在 `lib/plugin-manager` 增加 HTTP/HTTPS URL 下载与安装能力，CLI 支持 `plugin install --url`，REST API 支持 `sourceUrl`，并补齐 Swagger、README 与测试，从「本地插件导入」前进到「可远程分发的轻量生态」 | Stage 5 内维度跃迁（插件分发能力） |
-| -4 | 2026-04-10 | 🔧 中迭代 | SDK 发布流水线 — 新增 Python SDK CI、PyPI/TestPyPI 发布工作流，以及 Go SDK CI、tag 驱动 Draft Release；补齐 RELEASE_CHECKLIST 与 SDK 文档，从「已有 SDK 代码」推进到「具备自动验证与发布骨架」 | Stage 5 内能力补全（生态交付能力） |
-| -5 | 2026-04-10 | 🚀 大演进 | Go SDK — 新增 sdk/go/ 目录，完整 Go 客户端（client.go + models.go）+ 18 个测试用例 + 使用示例 + README，支持全部 API 端点（骚话生成/AI/插件管理），从「Python 单跨语言」到「Go+Python 双跨语言生态」 | Stage 5 内维度跃迁（双跨语言生态） |

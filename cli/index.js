@@ -265,7 +265,7 @@ function showHelp() {
     console.log('  ' + green('-l, --list') + '             列出所有可用类型和风格');
     console.log('  ' + green('-c, --copy') + '             生成后复制到剪贴板');
     console.log('  ' + green('-g, --git') + '              直接执行 git commit');
-    console.log('  ' + green('-i, --interactive') + '      交互模式');
+    console.log('  ' + green('-i, --interactive') + '      交互式提交向导');
     console.log('  ' + green('--lang <lang>') + '          设置语言 (zh-CN/en, 默认: zh-CN)');
     console.log('  ' + green('-h, --help') + '             显示帮助信息');
     console.log('  ' + green('-v, --version') + '         显示版本号');
@@ -303,7 +303,9 @@ function showHelp() {
     console.log('  git-sao-hua -c');
     console.log(dim('\n  # 生成并直接提交'));
     console.log('  git-sao-hua -g');
-    console.log(dim('\n  # 交互模式'));
+    console.log(dim('\n  # 交互式提交向导'));
+    console.log('  git-sao-hua -i');
+    console.log(dim('\n  # 在交互模式里切换到 AI / 智能检测 / 一键提交'));
     console.log('  git-sao-hua -i');
     console.log(dim('\n  # 安装 Git Hook（自动在每次 commit 时追加骚话）'));
     console.log('  git-sao-hua hook install');
@@ -332,13 +334,16 @@ function showHelp() {
 }
 
 function showList() {
+    const typeOptions = getCommitTypeOptions();
+    const styleOptions = getStyleOptions();
+
     console.log('\n' + bold('可用类型:'));
-    data.commitTypes.forEach(t => {
+    typeOptions.forEach(t => {
         console.log(`  ${green(t.value.padEnd(10))} - ${t.desc}`);
     });
 
     console.log('\n' + bold('可用风格:'));
-    data.styles.forEach(s => {
+    styleOptions.forEach(s => {
         const emoji = s.emoji || '';
         console.log(`  ${green(s.value.padEnd(10))} - ${emoji} ${s.label}`);
     });
@@ -353,6 +358,113 @@ function askQuestion(rl, question) {
     });
 }
 
+function resolveChoice(answer, items, fallbackValue, formatter) {
+    const raw = (answer || '').trim();
+    if (!raw) {
+        return fallbackValue;
+    }
+
+    const index = parseInt(raw, 10);
+    if (!isNaN(index) && index >= 1 && index <= items.length) {
+        return formatter(items[index - 1]);
+    }
+
+    const normalized = raw.toLowerCase();
+    const matched = items.find(item => formatter(item).toLowerCase() === normalized);
+    return matched ? formatter(matched) : fallbackValue;
+}
+
+function getCommitTypeOptions(language = DEFAULT_LANGUAGE) {
+    return data.commitTypes[language] || data.commitTypes[DEFAULT_LANGUAGE] || [];
+}
+
+function getStyleOptions(language = DEFAULT_LANGUAGE) {
+    return data.styles[language] || data.styles[DEFAULT_LANGUAGE] || [];
+}
+
+async function promptLanguage(rl) {
+    console.log(bold('请选择语言:'));
+    console.log('  ' + green('1') + '. zh-CN (中文)');
+    console.log('  ' + green('2') + '. en (English)');
+    const answer = await askQuestion(rl, '\n请输入编号 (默认 1-zh-CN): ');
+    return answer.trim() === '2' || answer.trim().toLowerCase() === 'en' ? 'en' : 'zh-CN';
+}
+
+async function promptGenerationMode(rl) {
+    console.log('\n' + bold('请选择生成模式:'));
+    console.log('  ' + green('1') + '. 模板生成 - 直接按类型/风格生成');
+    console.log('  ' + green('2') + '. AI 生成 - 根据 diff 生成个性化骚话');
+    console.log('  ' + green('3') + '. 智能检测 - 先检测类型，再按模板生成');
+
+    const answer = await askQuestion(rl, '\n请输入编号 (默认 1-模板生成): ');
+    const modeMap = { '1': 'template', '2': 'ai', '3': 'auto' };
+    return modeMap[answer.trim()] || 'template';
+}
+
+async function promptType(rl, detectedType = null) {
+    const typeOptions = getCommitTypeOptions();
+    console.log('\n' + bold('请选择类型:'));
+    typeOptions.forEach((t, i) => {
+        console.log(`  ${green((i + 1).toString())}. ${t.value} - ${t.desc}`);
+    });
+
+    const defaultType = detectedType || 'feat';
+    const answer = await askQuestion(rl, `\n请输入类型编号或名称 (默认 ${defaultType}): `);
+    return resolveChoice(answer, typeOptions, defaultType, item => item.value);
+}
+
+async function promptStyle(rl, type) {
+    const styleOptions = getStyleOptions();
+    console.log('\n' + bold('请选择风格:'));
+    styleOptions.forEach((s, i) => {
+        console.log(`  ${green((i + 1).toString())}. ${s.value} - ${s.emoji} ${s.label}`);
+    });
+
+    const langData = data.saoHuaData[DEFAULT_LANGUAGE] || {};
+    const typeStyles = langData[type] ? Object.keys(langData[type]) : VALID_STYLES;
+    const fallbackStyle = typeStyles.includes('sao') ? 'sao' : typeStyles[0];
+    const answer = await askQuestion(rl, `\n请输入风格编号或名称 (默认 ${fallbackStyle}): `);
+    return resolveChoice(answer, styleOptions, fallbackStyle, item => item.value);
+}
+
+async function promptPostAction(rl) {
+    console.log(bold('接下来做什么？'));
+    console.log('  ' + green('1') + '. 重新生成一条');
+    console.log('  ' + green('2') + '. 切换风格后重试');
+    console.log('  ' + green('3') + '. 复制到剪贴板');
+    console.log('  ' + green('4') + '. 直接 git commit');
+    console.log('  ' + green('5') + '. 退出');
+
+    const answer = await askQuestion(rl, '\n请输入编号 (默认 5-退出): ');
+    const actionMap = {
+        '1': 'regenerate',
+        '2': 'restyle',
+        '3': 'copy',
+        '4': 'git',
+        '5': 'exit'
+    };
+    return actionMap[answer.trim()] || 'exit';
+}
+
+async function buildInteractiveMessage({ type, style, language, mode }) {
+    if (mode === 'ai') {
+        return generateAIMessage(type, style, language);
+    }
+
+    if (mode === 'auto') {
+        console.log(cyan('\n🔍 正在智能分析 Git 变更...'));
+        const detection = smartDetectType();
+        if (detection) {
+            console.log(cyan(`✓ 检测推荐类型：${green(detection.type)} (置信度：${detection.confidence})`));
+            console.log(dim(`  ${detection.reason}`));
+            return generateMessage(detection.type, style, language);
+        }
+        console.log(yellow('⚠ 智能检测失败，将使用当前类型继续生成'));
+    }
+
+    return generateMessage(type, style, language);
+}
+
 async function interactiveMode() {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -361,44 +473,51 @@ async function interactiveMode() {
 
     console.log('\n' + bold('====== 交互模式 ======\n'));
 
-    console.log(bold('请选择类型:'));
-    data.commitTypes.forEach((t, i) => {
-        console.log(`  ${green((i + 1).toString())}. ${t.value} - ${t.desc}`);
-    });
+    const language = await promptLanguage(rl);
+    const mode = await promptGenerationMode(rl);
+    let detectedType = null;
 
-    let typeAnswer = await askQuestion(rl, '\n请输入类型编号或名称：');
-    let type = typeAnswer.trim();
-
-    if (!isNaN(type) && type >= 1 && type <= data.commitTypes.length) {
-        type = data.commitTypes[parseInt(type) - 1].value;
+    if (mode === 'auto') {
+        const detection = smartDetectType();
+        if (detection && detection.type) {
+            detectedType = detection.type;
+        }
     }
 
-    if (!VALID_TYPES.includes(type)) {
-        type = VALID_TYPES[getRandomInt(VALID_TYPES.length)];
-        console.log(dim(`  输入无效，已随机选择：${type}`));
+    const type = await promptType(rl, detectedType);
+    let style = await promptStyle(rl, type);
+
+    while (true) {
+        const msgObj = await buildInteractiveMessage({ type, style, language, mode });
+        printMessage(msgObj);
+
+        const action = await promptPostAction(rl);
+
+        if (action === 'regenerate') {
+            console.log(dim('  好，再来一条新的。'));
+            continue;
+        }
+
+        if (action === 'restyle') {
+            style = await promptStyle(rl, type);
+            continue;
+        }
+
+        if (action === 'copy') {
+            const success = copyToClipboard(msgObj.fullMessage);
+            console.log(success ? green('✓ 已复制到剪贴板') : red('✗ 复制到剪贴板失败'));
+            continue;
+        }
+
+        if (action === 'git') {
+            rl.close();
+            gitCommit(msgObj.fullMessage);
+            return { handled: true, type, style, language, mode };
+        }
+
+        rl.close();
+        return { handled: true, type, style, language, mode, message: msgObj };
     }
-
-    console.log('\n' + bold('请选择风格:'));
-    data.styles.forEach((s, i) => {
-        console.log(`  ${green((i + 1).toString())}. ${s.value} - ${s.emoji} ${s.label}`);
-    });
-
-    let styleAnswer = await askQuestion(rl, '\n请输入风格编号或名称：');
-    let style = styleAnswer.trim();
-
-    if (!isNaN(style) && style >= 1 && style <= data.styles.length) {
-        style = data.styles[parseInt(style) - 1].value;
-    }
-
-    if (!VALID_STYLES.includes(style)) {
-        const styleKeys = Object.keys(data.saoHuaData[type]);
-        style = styleKeys[getRandomInt(styleKeys.length)];
-        console.log(dim(`  输入无效，已随机选择：${style}`));
-    }
-
-    rl.close();
-
-    return { type, style };
 }
 
 function parseArgs() {
@@ -859,8 +978,9 @@ async function main() {
 
     if (options.interactive) {
         const result = await interactiveMode();
-        type = result.type;
-        style = result.style;
+        if (result.handled) {
+            return;
+        }
     }
 
     const language = options.language;
