@@ -69,6 +69,16 @@ function errorResponse(message, statusCode = 400) {
     };
 }
 
+function parseAllowedHosts(value) {
+    if (!value) {
+        return undefined;
+    }
+
+    const items = Array.isArray(value) ? value : String(value).split(',');
+    const hosts = items.map(item => String(item || '').trim()).filter(Boolean);
+    return hosts.length > 0 ? hosts : undefined;
+}
+
 app.get('/api/health', (req, res) => {
     res.json(successResponse({
         status: 'ok',
@@ -242,9 +252,13 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
         const body = req.body || {};
         const sourceUrl = body.sourceUrl;
         const checksum = body.checksum;
+        const allowedHosts = parseAllowedHosts(body.allowedHosts);
         
         if (sourceUrl) {
-            const result = await saoHuaCore.installPluginFromUrl(sourceUrl, null, { expectedChecksum: checksum || null });
+            const result = await saoHuaCore.installPluginFromUrl(sourceUrl, null, { 
+                expectedChecksum: checksum || null,
+                allowedHosts
+            });
             if (!result.success) {
                 return res.status(400).json(errorResponse(result.error));
             }
@@ -345,8 +359,9 @@ app.post('/api/plugins/reload', requireAuth, (req, res) => {
 app.get('/api/plugin-registry', (req, res) => {
     try {
         const { q, indexUrl } = req.query;
+        const allowedHosts = parseAllowedHosts(req.query.allowedHosts);
         
-        saoHuaCore.searchPluginIndex(q || '', indexUrl || null).then(result => {
+        saoHuaCore.searchPluginIndex(q || '', indexUrl || null, { allowedHosts }).then(result => {
             if (!result.success) {
                 return res.status(400).json(errorResponse(result.error));
             }
@@ -368,12 +383,13 @@ app.get('/api/plugin-registry', (req, res) => {
 app.post('/api/plugins/install-from-index', requireAuth, async (req, res) => {
     try {
         const { name, indexUrl } = req.body;
+        const allowedHosts = parseAllowedHosts(req.body.allowedHosts);
         
         if (!name) {
             return res.status(400).json(errorResponse('请提供插件名称~'));
         }
         
-        const result = await saoHuaCore.installPluginFromIndex(name, indexUrl || null);
+        const result = await saoHuaCore.installPluginFromIndex(name, indexUrl || null, null, { allowedHosts });
         if (!result.success) {
             return res.status(400).json(errorResponse(result.error));
         }

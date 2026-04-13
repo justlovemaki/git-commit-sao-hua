@@ -798,6 +798,61 @@ const tests = {
         }
     },
 
+    async testPluginRegistryRejectsDisallowedHost() {
+        const res = await get('/api/plugin-registry?indexUrl=' + encodeURIComponent('https://plugins.example.com/index.json') + '&allowedHosts=' + encodeURIComponent('trusted.example.com'));
+        assert(res.status === 400, 'Disallowed host should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+        assert(res.data.error.includes('不在允许列表中'), 'Should mention allowlist rejection');
+    },
+
+    async testPluginInstallSupportsAllowedHostsArray() {
+        const pluginData = {
+            name: 'api-allow-host-plugin',
+            version: '1.0.0',
+            data: {
+                'zh-CN': {
+                    feat: {
+                        love: ['API allow host success']
+                    }
+                }
+            }
+        };
+
+        const remoteServer = http.createServer((req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(pluginData));
+        });
+
+        await new Promise((resolve) => remoteServer.listen(0, resolve));
+
+        try {
+            const testUrl = `http://127.0.0.1:${remoteServer.address().port}/plugin.json`;
+            const res = await post('/api/plugins/install', {
+                sourceUrl: testUrl,
+                allowedHosts: ['127.0.0.1']
+            });
+
+            assert(res.status === 200, 'Allowed host install should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+
+            await del('/api/plugins/api-allow-host-plugin');
+        } finally {
+            remoteServer.close();
+        }
+    },
+
+    async testPluginInstallFromIndexRejectsDisallowedHost() {
+        const res = await post('/api/plugins/install-from-index', {
+            name: 'plugin1',
+            indexUrl: 'https://plugins.example.com/index.json',
+            allowedHosts: ['trusted.example.com']
+        });
+
+        assert(res.status === 400, 'Disallowed index host should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+        assert(res.data.error.includes('不在允许列表中'), 'Should mention allowlist rejection');
+    },
+
     async testPluginInstallFromIndexNoName() {
         const res = await post('/api/plugins/install-from-index', {});
         assert(res.status === 400, 'No name should return 400');

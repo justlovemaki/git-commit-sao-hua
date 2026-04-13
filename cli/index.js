@@ -280,8 +280,11 @@ function showHelp() {
     console.log('  ' + green('plugin install <path>') + '     安装插件 (v1.27.0 新增)');
     console.log('  ' + green('plugin install --url <url>') + ' 从 URL 安装插件 (v1.28.0 新增)');
     console.log('  ' + green('plugin install --url <url> --checksum <sha256>') + ' 从 URL 安装插件并校验 (v1.30.0 新增)');
+    console.log('  ' + green('plugin install --url <url> --allow-host <host>') + ' 允许指定 host (v1.31.0 新增)');
     console.log('  ' + green('plugin search [query]') + '     搜索插件市场 (v1.29.0 新增)');
+    console.log('  ' + green('plugin search [query] --allow-host <host>') + ' 允许指定 host (v1.31.0 新增)');
     console.log('  ' + green('plugin install --from-index <name>') + ' 从索引安装插件 (v1.29.0 新增)');
+    console.log('  ' + green('plugin install --from-index <name> --allow-host <host>') + ' 允许 host (v1.31.0 新增)');
     console.log('  ' + green('plugin remove <name>') + '    删除插件 (v1.27.0 新增)');
     console.log('');
     console.log(bold('示例:'));
@@ -321,14 +324,20 @@ function showHelp() {
     console.log('  git-sao-hua plugin install --url https://example.com/plugin.json');
     console.log(dim('\n  # 从 URL 安装插件并校验 SHA-256'));
     console.log('  git-sao-hua plugin install --url https://example.com/plugin.json --checksum abc123...');
+    console.log(dim('\n  # 从 URL 安装并允许指定自定义 host'));
+    console.log('  git-sao-hua plugin install --url https://example.com/plugin.json --allow-host example.com');
     console.log(dim('\n  # 搜索插件市场'));
     console.log('  git-sao-hua plugin search love');
     console.log(dim('\n  # 指定自定义索引 URL'));
     console.log('  git-sao-hua plugin search love --index https://example.com/index.json');
+    console.log(dim('\n  # 搜索并允许自定义 host'));
+    console.log('  git-sao-hua plugin search love --index https://example.com/index.json --allow-host example.com');
     console.log(dim('\n  # 从索引安装插件'));
     console.log('  git-sao-hua plugin install --from-index my-plugin');
     console.log(dim('\n  # 从自定义索引安装插件'));
     console.log('  git-sao-hua plugin install --from-index my-plugin --index https://example.com/index.json');
+    console.log(dim('\n  # 从索引安装并允许自定义 host'));
+    console.log('  git-sao-hua plugin install --from-index my-plugin --allow-host example.com');
     console.log(dim('\n  # 删除插件'));
     console.log('  git-sao-hua plugin remove my-pack');
 }
@@ -772,11 +781,29 @@ async function handlePluginCommand(action, args = []) {
             const indexArg = args.find(arg => arg.startsWith('--index=') || arg === '--index');
             const indexUrl = indexArg ? (indexArg === '--index' ? args[args.indexOf(indexArg) + 1] : indexArg.split('=')[1]) : null;
 
+            const allowedHosts = args
+                .flatMap((arg, index) => {
+                    if (arg === '--allow-host') {
+                        return args[index + 1] ? [args[index + 1]] : [];
+                    }
+                    if (arg.startsWith('--allow-host=')) {
+                        return [arg.split('=')[1]];
+                    }
+                    return [];
+                })
+                .filter(Boolean);
+
             console.log(cyan('正在搜索插件市场...'));
             if (indexUrl) {
                 console.log(dim('  索引地址: ' + indexUrl));
             }
-            const result = await pluginManager.searchPluginIndex(query, indexUrl);
+            if (allowedHosts.length > 0) {
+                console.log(dim('  允许 Hosts: ' + allowedHosts.join(', ')));
+            }
+            const result = await pluginManager.searchPluginIndex(query, indexUrl, { 
+                allowedHosts: allowedHosts.length > 0 ? allowedHosts : undefined,
+                cwd: process.cwd()
+            });
             if (!result.success) {
                 console.log(red('✗ 搜索失败: ' + result.error));
                 process.exit(1);
@@ -793,7 +820,10 @@ async function handlePluginCommand(action, args = []) {
                     if (p.author) console.log(`     作者: ${p.author}`);
                     if (p.tags && p.tags.length > 0) console.log(`     标签: ${dim(p.tags.join(', '))}`);
                     if (p.homepage) console.log(`     主页: ${dim(p.homepage)}`);
-                    console.log(`     安装: ${dim('git-sao-hua plugin install --from-index ' + p.name + (indexUrl ? ' --index ' + indexUrl : ''))}`);
+                    const installCommand = 'git-sao-hua plugin install --from-index ' + p.name
+                        + (indexUrl ? ' --index ' + indexUrl : '')
+                        + (allowedHosts.length > 0 ? ' ' + allowedHosts.map(host => '--allow-host ' + host).join(' ') : '');
+                    console.log(`     安装: ${dim(installCommand)}`);
                 });
             }
             console.log('');
@@ -812,12 +842,25 @@ async function handlePluginCommand(action, args = []) {
             
             const indexArg = args.find(arg => arg.startsWith('--index=') || arg === '--index');
             const indexUrl = indexArg ? (indexArg === '--index' ? args[args.indexOf(indexArg) + 1] : indexArg.split('=')[1]) : null;
+
+            const allowedHosts = args
+                .flatMap((arg, index) => {
+                    if (arg === '--allow-host') {
+                        return args[index + 1] ? [args[index + 1]] : [];
+                    }
+                    if (arg.startsWith('--allow-host=')) {
+                        return [arg.split('=')[1]];
+                    }
+                    return [];
+                })
+                .filter(Boolean);
             
             if (!sourcePath && !urlValue && !fromIndexValue) {
                 console.log(red('错误：请指定插件路径、URL 或从索引安装'));
                 console.log(dim('用法: git-sao-hua plugin install <path>'));
                 console.log(dim('       git-sao-hua plugin install --url <url> [--checksum <sha256>]'));
-                console.log(dim('       git-sao-hua plugin install --from-index <name> [--index <url>]'));
+                console.log(dim('       git-sao-hua plugin install --url <url> --allow-host <host>'));
+                console.log(dim('       git-sao-hua plugin install --from-index <name> [--index <url>] [--allow-host <host>]'));
                 process.exit(1);
             }
             
@@ -826,7 +869,13 @@ async function handlePluginCommand(action, args = []) {
                 if (indexUrl) {
                     console.log(dim('  索引地址: ' + indexUrl));
                 }
-                const result = await pluginManager.installPluginFromIndex(fromIndexValue, indexUrl);
+                if (allowedHosts.length > 0) {
+                    console.log(dim('  允许 Hosts: ' + allowedHosts.join(', ')));
+                }
+                const result = await pluginManager.installPluginFromIndex(fromIndexValue, indexUrl, null, {
+                    allowedHosts: allowedHosts.length > 0 ? allowedHosts : undefined,
+                    cwd: process.cwd()
+                });
                 if (result.success) {
                     console.log(green('✓ 插件安装成功: ' + result.plugin.name));
                     console.log(dim('  版本: ' + result.plugin.version));
@@ -843,7 +892,14 @@ async function handlePluginCommand(action, args = []) {
                 if (checksumValue) {
                     console.log(dim('  校验 SHA-256: ' + checksumValue));
                 }
-                const result = await pluginManager.installPluginFromUrl(urlValue, null, { expectedChecksum: checksumValue || null });
+                if (allowedHosts.length > 0) {
+                    console.log(dim('  允许 Hosts: ' + allowedHosts.join(', ')));
+                }
+                const result = await pluginManager.installPluginFromUrl(urlValue, null, {
+                    expectedChecksum: checksumValue || null,
+                    allowedHosts: allowedHosts.length > 0 ? allowedHosts : undefined,
+                    cwd: process.cwd()
+                });
                 if (result.success) {
                     console.log(green('✓ 插件安装成功: ' + result.plugin.name));
                     console.log(dim('  版本: ' + result.plugin.version));

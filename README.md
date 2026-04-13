@@ -86,8 +86,11 @@ git-sao-hua plugin create [name]        # 创建插件模板
 git-sao-hua plugin install <path>        # 从本地路径安装插件
 git-sao-hua plugin install --url <url>     # 从 URL 安装插件 (v1.28.0)
 git-sao-hua plugin install --url <url> --checksum <sha256> # 从 URL 安装并校验摘要 (v1.30.0)
+git-sao-hua plugin install --url <url> --allow-host <host> # 允许额外远程源 host (v1.31.0)
 git-sao-hua plugin search [query]         # 搜索插件市场 (v1.29.0)
+git-sao-hua plugin search [query] --allow-host <host> # 搜索时允许额外索引 host (v1.31.0)
 git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
+git-sao-hua plugin install --from-index <name> --allow-host <host> # 从索引安装时允许额外 host (v1.31.0)
 git-sao-hua plugin remove <name>             # 删除插件
 ```
 
@@ -123,6 +126,22 @@ git-sao-hua plugin install --url https://example.com/my-plugin.json
 git-sao-hua plugin install --url https://example.com/my-plugin.json --checksum <sha256>
 ```
 
+从 v1.31.0 起，远程插件与索引默认只信任官方 GitHub 源（`raw.githubusercontent.com`、`githubusercontent.com`、`github.com`）。如果你要接入自建源，可以显式追加允许的 host：
+
+```bash
+git-sao-hua plugin install --url https://plugins.example.com/my-plugin.json --allow-host plugins.example.com
+```
+
+也可以在项目级 `.saohuarc.json` 中持久化配置，或通过环境变量 `PLUGIN_ALLOWED_HOSTS` 统一设置：
+
+```json
+{
+  "plugins": {
+    "allowedHosts": ["plugins.example.com", "mirror.example.net"]
+  }
+}
+```
+
 ### 插件市场（v1.29.0 新增）
 
 支持从远程插件索引搜索和安装插件：
@@ -134,11 +153,17 @@ git-sao-hua plugin search love
 # 指定自定义索引 URL
 git-sao-hua plugin search love --index https://example.com/index.json
 
+# 为自定义索引显式放行 host
+git-sao-hua plugin search love --index https://plugins.example.com/index.json --allow-host plugins.example.com
+
 # 从索引安装插件
 git-sao-hua plugin install --from-index my-plugin
 
 # 从自定义索引安装插件
 git-sao-hua plugin install --from-index my-plugin --index https://example.com/index.json
+
+# 从自定义索引安装并同时放行索引 / 插件源 host
+git-sao-hua plugin install --from-index my-plugin --index https://plugins.example.com/index.json --allow-host plugins.example.com
 ```
 
 API 使用方式：
@@ -147,14 +172,17 @@ API 使用方式：
 # 搜索插件市场
 curl "http://localhost:3000/api/plugin-registry?q=love"
 
+# 搜索自定义插件索引并放行 host
+curl "http://localhost:3000/api/plugin-registry?q=love&indexUrl=https://plugins.example.com/index.json&allowedHosts=plugins.example.com"
+
 # 从索引安装插件（需要认证）
 curl -X POST http://localhost:3000/api/plugins/install-from-index \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-api-key" \
-  -d '{"name": "my-plugin", "indexUrl": "https://example.com/index.json"}'
+  -d '{"name": "my-plugin", "indexUrl": "https://plugins.example.com/index.json", "allowedHosts": ["plugins.example.com"]}'
 ```
 
-默认使用环境变量 `PLUGIN_INDEX_URL` 或内置默认索引 URL。可以通过 `--index` 参数覆盖。
+默认使用环境变量 `PLUGIN_INDEX_URL` 或内置默认索引 URL。可以通过 `--index` 参数覆盖。远程访问 host 会按以下优先级决定是否放行：CLI/API 显式传参 > `.saohuarc.json` 的 `plugins.allowedHosts` > `PLUGIN_ALLOWED_HOSTS` 环境变量 > 内置官方源白名单。
 
 #### 索引格式
 
