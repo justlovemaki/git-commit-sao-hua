@@ -7,6 +7,7 @@ const path = require('path');
 const data = require('../lib');
 const aiGenerator = require('../lib/ai-generator.js');
 const versionModule = require('../lib/version.js');
+const tui = require('./tui');
 
 const COLORS = {
     reset: '\x1b[0m',
@@ -30,15 +31,15 @@ const VALID_LANGUAGES = ['zh-CN', 'en'];
 const DEFAULT_LANGUAGE = 'zh-CN';
 
 function green(text) {
-    return COLORS.green + text + COLORS.reset;
+    return tui.green(text);
 }
 
 function yellow(text) {
-    return COLORS.yellow + text + COLORS.reset;
+    return tui.yellow(text);
 }
 
 function cyan(text) {
-    return COLORS.cyan + text + COLORS.reset;
+    return tui.cyan(text);
 }
 
 function magenta(text) {
@@ -46,11 +47,11 @@ function magenta(text) {
 }
 
 function bold(text) {
-    return COLORS.bold + text + COLORS.reset;
+    return tui.bold(text);
 }
 
 function dim(text) {
-    return COLORS.dim + text + COLORS.reset;
+    return tui.dim(text);
 }
 
 function red(text) {
@@ -267,6 +268,7 @@ function showHelp() {
     console.log('  ' + green('-c, --copy') + '             生成后复制到剪贴板');
     console.log('  ' + green('-g, --git') + '              直接执行 git commit');
     console.log('  ' + green('-i, --interactive') + '      交互式提交向导');
+    console.log('  ' + green('--tui') + '                  全屏 TUI 提交向导');
     console.log('  ' + green('--lang <lang>') + '          设置语言 (zh-CN/en, 默认: zh-CN)');
     console.log('  ' + green('-h, --help') + '             显示帮助信息');
     console.log('  ' + green('-v, --version') + '         显示版本号');
@@ -311,6 +313,8 @@ function showHelp() {
     console.log('  git-sao-hua -i');
     console.log(dim('\n  # 在交互模式里切换到 AI / 智能检测 / 一键提交'));
     console.log('  git-sao-hua -i');
+    console.log(dim('\n  # 使用全屏 TUI 模式完成提交'));
+    console.log('  git-sao-hua --tui');
     console.log(dim('\n  # 安装 Git Hook（自动在每次 commit 时追加骚话）'));
     console.log('  git-sao-hua hook install');
     console.log(dim('\n  # 创建项目配置文件'));
@@ -369,19 +373,7 @@ function askQuestion(rl, question) {
 }
 
 function resolveChoice(answer, items, fallbackValue, formatter) {
-    const raw = (answer || '').trim();
-    if (!raw) {
-        return fallbackValue;
-    }
-
-    const index = parseInt(raw, 10);
-    if (!isNaN(index) && index >= 1 && index <= items.length) {
-        return formatter(items[index - 1]);
-    }
-
-    const normalized = raw.toLowerCase();
-    const matched = items.find(item => formatter(item).toLowerCase() === normalized);
-    return matched ? formatter(matched) : fallbackValue;
+    return tui.resolveChoice(answer, items, fallbackValue, formatter);
 }
 
 function getCommitTypeOptions(language = DEFAULT_LANGUAGE) {
@@ -530,6 +522,158 @@ async function interactiveMode() {
     }
 }
 
+function renderTUIScreen(title, description, options, footer) {
+    tui.clearScreen();
+    process.stdout.write(tui.formatMenu(title, description, options, footer));
+}
+
+async function promptTUISelection(rl, { title, description, options, footer, prompt, fallbackValue }) {
+    renderTUIScreen(title, description, options, footer);
+    const answer = await askQuestion(rl, prompt || '\n请输入编号: ');
+    return resolveChoice(answer, options, fallbackValue, item => item.value);
+}
+
+async function tuiMode() {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    const languageOptions = [
+        { value: 'zh-CN', label: 'zh-CN', description: '中文骚话，默认推荐' },
+        { value: 'en', label: 'en', description: 'English commit banter' }
+    ];
+    const modeOptions = [
+        { value: 'template', label: '模板生成', description: '按类型和风格直接生成' },
+        { value: 'ai', label: 'AI 生成', description: '根据 diff 输出个性化骚话' },
+        { value: 'auto', label: '智能检测', description: '先检测 commit 类型，再生成骚话' }
+    ];
+
+    const language = await promptTUISelection(rl, {
+        title: 'Git Commit 骚话 TUI',
+        description: '全屏模式会在每一步刷新终端，让提交选择保持专注。',
+        options: languageOptions,
+        footer: '快捷输入数字即可，直接回车使用默认值。',
+        prompt: '\n选择语言 (默认 1-zh-CN): ',
+        fallbackValue: 'zh-CN'
+    });
+
+    const mode = await promptTUISelection(rl, {
+        title: 'Git Commit 骚话 TUI',
+        description: `当前语言：${language}`,
+        options: modeOptions,
+        footer: '模板生成更快，AI 更个性，智能检测更省心。',
+        prompt: '\n选择生成模式 (默认 1-template): ',
+        fallbackValue: 'template'
+    });
+
+    let detectedType = null;
+    if (mode === 'auto') {
+        const detection = smartDetectType();
+        if (detection && detection.type) {
+            detectedType = detection.type;
+        }
+    }
+
+    const typeOptions = getCommitTypeOptions(language).map(item => ({
+        value: item.value,
+        label: item.value,
+        description: item.desc
+    }));
+    const type = await promptTUISelection(rl, {
+        title: 'Git Commit 骚话 TUI',
+        description: mode === 'auto' && detectedType
+            ? `智能检测推荐类型：${detectedType}`
+            : `当前模式：${mode}`,
+        options: typeOptions,
+        footer: detectedType ? '你可以接受推荐，也可以手动覆盖。' : '直接输入类型名也可以。',
+        prompt: `\n选择类型 (默认 ${detectedType || 'feat'}): `,
+        fallbackValue: detectedType || 'feat'
+    });
+
+    const langData = data.saoHuaData[language] || data.saoHuaData[DEFAULT_LANGUAGE] || {};
+    const availableStyles = langData[type] ? Object.keys(langData[type]) : VALID_STYLES;
+    const styleOptions = getStyleOptions(language)
+        .filter(item => availableStyles.includes(item.value))
+        .map(item => ({
+            value: item.value,
+            label: `${item.value} ${item.emoji || ''}`.trim(),
+            description: item.label
+        }));
+    let style = await promptTUISelection(rl, {
+        title: 'Git Commit 骚话 TUI',
+        description: `已选择类型：${type}`,
+        options: styleOptions,
+        footer: '如果该类型不支持某个风格，列表会自动裁剪。',
+        prompt: `\n选择风格 (默认 ${availableStyles.includes('sao') ? 'sao' : availableStyles[0]}): `,
+        fallbackValue: availableStyles.includes('sao') ? 'sao' : availableStyles[0]
+    });
+
+    while (true) {
+        const msgObj = await buildInteractiveMessage({ type, style, language, mode });
+        tui.clearScreen();
+        process.stdout.write(tui.formatPreview(msgObj, {
+            type,
+            style,
+            language,
+            mode,
+            hint: '你可以继续重生一条，或者直接复制 / 提交。'
+        }));
+
+        const postActionOptions = [
+            { value: 'regenerate', label: '重新生成', description: '保留当前类型和风格，再来一条' },
+            { value: 'restyle', label: '切换风格', description: '保留类型，只调整风格' },
+            { value: 'copy', label: '复制到剪贴板', description: '把 commit message 放进系统剪贴板' },
+            { value: 'git', label: '直接 git commit', description: '立即执行 git commit -m' },
+            { value: 'exit', label: '退出', description: '结束 TUI 模式' }
+        ];
+        process.stdout.write(tui.formatMenu('下一步操作', null, postActionOptions, '回车默认退出，避免误提交。'));
+        const action = await askQuestion(rl, '\n请选择操作 (默认 5-exit): ');
+        const resolvedAction = resolveChoice(action, postActionOptions, 'exit', item => item.value);
+
+        if (resolvedAction === 'regenerate') {
+            continue;
+        }
+
+        if (resolvedAction === 'restyle') {
+            style = await promptTUISelection(rl, {
+                title: 'Git Commit 骚话 TUI',
+                description: `重新选择 ${type} 的风格`,
+                options: styleOptions,
+                footer: '只换风格，不改类型与语言。',
+                prompt: `\n选择风格 (默认 ${style}): `,
+                fallbackValue: style
+            });
+            continue;
+        }
+
+        if (resolvedAction === 'copy') {
+            const success = copyToClipboard(msgObj.fullMessage);
+            tui.clearScreen();
+            process.stdout.write(tui.formatPreview(msgObj, {
+                type,
+                style,
+                language,
+                mode,
+                hint: success ? '✓ 已复制到剪贴板' : '✗ 复制失败，请检查系统剪贴板命令'
+            }));
+            await askQuestion(rl, '\n按回车继续...');
+            continue;
+        }
+
+        if (resolvedAction === 'git') {
+            rl.close();
+            gitCommit(msgObj.fullMessage);
+            return { handled: true, type, style, language, mode, message: msgObj };
+        }
+
+        rl.close();
+        tui.clearScreen();
+        printMessage(msgObj);
+        return { handled: true, type, style, language, mode, message: msgObj };
+    }
+}
+
 function parseArgs() {
     const args = process.argv.slice(2);
     const options = {
@@ -539,6 +683,7 @@ function parseArgs() {
         copy: false,
         git: false,
         interactive: false,
+        tui: false,
         auto: false,
         ai: false,
         help: false,
@@ -561,6 +706,8 @@ function parseArgs() {
             options.git = true;
         } else if (arg === '-i' || arg === '--interactive') {
             options.interactive = true;
+        } else if (arg === '--tui') {
+            options.tui = true;
         } else if (arg === '-a' || arg === '--auto') {
             options.auto = true;
         } else if (arg === '--ai') {
@@ -986,6 +1133,10 @@ async function main() {
         await handlePluginCommand(args[1], args.slice(2));
         return;
     }
+    if (args[0] === 'tui') {
+        await tuiMode();
+        return;
+    }
 
     const options = parseArgs();
 
@@ -1035,6 +1186,13 @@ async function main() {
 
     if (options.interactive) {
         const result = await interactiveMode();
+        if (result.handled) {
+            return;
+        }
+    }
+
+    if (options.tui) {
+        const result = await tuiMode();
         if (result.handled) {
             return;
         }

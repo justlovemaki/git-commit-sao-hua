@@ -41,7 +41,7 @@
 |---------|------|------|
 | **Web 体验页** | ✅ 完成 | 单 HTML 文件，可直接打开使用 |
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
-| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理、交互式提交向导 |
+| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理、交互式提交向导、全屏 TUI 提交流程 |
 | **GitHub Action** | ✅ 完成 | CI/CD 中自动生成骚话 commit message |
 | **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 并评论骚话 |
 | **REST API** | ✅ 完成 | Express.js HTTP 服务，支持全部生成能力 + AI + 统计 + 插件 CRUD |
@@ -121,8 +121,7 @@
 5. **Go SDK 缺少版本标签发布实践** — 已补齐 tag 驱动 release 工作流，仍需跑通首个 `sdk/go/v*` 标签发布验证
 6. **插件索引可信度仍不足** — 已补齐官方索引入口、摘要校验与来源白名单，但仍缺少插件签名、公钥信任链与发布者身份验证
 7. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验与来源白名单，但仍缺少签名、公钥信任链与发布者身份验证
-8. **交互向导仍是 readline 文本流** — 已补齐语言/模式/预览/一键提交，但还不是真正 curses/TUI 界面，后续可继续升级为全屏终端体验
-9. **多语言 SDK 版本治理尚未完全统一** — 当前主项目版本已纳入 `RELEASE.json`，但 Python / JavaScript SDK 仍保留各自包版本节奏，后续需要补齐更细粒度的发布矩阵与自动化校验
+8. **多语言 SDK 版本治理尚未完全统一** — 当前主项目版本已纳入 `RELEASE.json`，但 Python / JavaScript SDK 仍保留各自包版本节奏，后续需要补齐更细粒度的发布矩阵与自动化校验
 
 ---
 
@@ -135,6 +134,7 @@
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
 - ✅ **版本治理 / Release Doctor** — 新增 `RELEASE.json` 作为主版本单一来源，CLI/API/core/OpenAPI 改为动态读取版本，`bin/release-doctor.js` 可检查 README、关键运行时入口与 package.json 一致性；平台开始从“功能多端齐全”前进到“多包发布可治理、版本漂移可发现”
 - ✅ **插件 SHA-256 摘要校验** — 远程 URL 安装与索引安装支持完整性校验，开始从“可分发”进化到“可校验分发”
+- ✅ **CLI 全屏 TUI 模式** — 新增 `git-sao-hua --tui` / `git-sao-hua tui`，通过 ANSI 全屏刷新提供语言、模式、类型、风格、预览、复制与一键提交流程，CLI 从“交互向导可用”继续前进到“终端内具备更沉浸、更专注的提交编排体验”
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -155,8 +155,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-14 | 🚀 大演进 | 版本治理 / Release Doctor — 新增根级 `RELEASE.json` 作为主版本单一来源，CLI / API health / OpenAPI / core 改为动态读取版本，补齐 `bin/release-doctor.js` 一致性检查与版本相关测试，并同步 README；项目从“多端功能齐全”继续前进到“多包版本可治理、发布漂移可发现”的平台化发布工程能力 | Stage 5 内维度跃迁（发布治理） |
-| -1 | 2026-04-13 | 🚀 大演进 | 插件来源白名单 — 在 `lib/plugin-manager` 增加远程插件 URL / 索引 URL host allowlist 校验，默认仅信任 GitHub 官方源，并支持 CLI/API 显式传参、`.saohuarc.json` 的 `plugins.allowedHosts`、环境变量 `PLUGIN_ALLOWED_HOSTS` 多层配置；同时补齐 lib + API 测试与 README，从“插件可校验”继续进化到“插件来源可控、默认更安全”的供应链防护 | Stage 5 内维度跃迁（插件供应链来源控制） |
-| -2 | 2026-04-13 | 🚀 大演进 | CLI 交互式提交向导 — 升级 `git-sao-hua -i`，支持语言选择、模板/AI/智能检测三种生成模式、生成预览，以及重新生成 / 切换风格 / 复制 / 直接 git commit，并同步修正文档中的交互模式与语言示例；项目从“单次命令触发”继续前进到“终端内可迭代完成提交决策与执行”的交互体验 | Stage 5 内维度跃迁（CLI 交互体验） |
-| -3 | 2026-04-12 | 🚀 大演进 | JavaScript / TypeScript SDK — 新增 `sdk/javascript/`，补齐原生 TS 客户端、8 个单元测试、使用示例、README，以及 Node 多版本 CI 与 npm 发布骨架，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引，并支持 API Key / Bearer Token / timeout / 自定义 headers；平台从“已有 API + Python/Go SDK”继续前进到“主流后端脚本生态可直接接入” | Stage 5 内维度跃迁（Node / TS 生态接入） |
-| -4 | 2026-04-12 | 🚀 大演进 | 插件供应链完整性增强 — 在 `lib/plugin-manager` 中增加 SHA-256 摘要计算与校验，CLI 新增 `plugin install --url ... --checksum ...`，REST API `POST /api/plugins/install` 支持 `checksum` 参数，插件索引条目支持 `checksum` 并在按名称安装时自动校验，同时补齐 README / Swagger / lib+api 测试，从“插件可发现、可安装”继续进化到“插件可校验、可追溯安装” | Stage 5 内维度跃迁（插件供应链完整性） |
+| 最新 | 2026-04-14 | 🚀 大演进 | CLI 全屏 TUI 模式 — 新增 `git-sao-hua --tui` / `git-sao-hua tui`，通过 ANSI 全屏刷新串起语言、生成模式、类型、风格、结果预览、复制与一键提交流程，并抽出 `cli/tui.js` + CLI 测试；项目从“已有行式交互向导”继续前进到“终端内具备更沉浸、更专注的提交编排体验” | Stage 5 内维度跃迁（CLI 终端体验） |
+| -1 | 2026-04-14 | 🚀 大演进 | 版本治理 / Release Doctor — 新增根级 `RELEASE.json` 作为主版本单一来源，CLI / API health / OpenAPI / core 改为动态读取版本，补齐 `bin/release-doctor.js` 一致性检查与版本相关测试，并同步 README；项目从“多端功能齐全”继续前进到“多包版本可治理、发布漂移可发现”的平台化发布工程能力 | Stage 5 内维度跃迁（发布治理） |
+| -2 | 2026-04-13 | 🚀 大演进 | 插件来源白名单 — 在 `lib/plugin-manager` 增加远程插件 URL / 索引 URL host allowlist 校验，默认仅信任 GitHub 官方源，并支持 CLI/API 显式传参、`.saohuarc.json` 的 `plugins.allowedHosts`、环境变量 `PLUGIN_ALLOWED_HOSTS` 多层配置；同时补齐 lib + API 测试与 README，从“插件可校验”继续进化到“插件来源可控、默认更安全”的供应链防护 | Stage 5 内维度跃迁（插件供应链来源控制） |
+| -3 | 2026-04-13 | 🚀 大演进 | CLI 交互式提交向导 — 升级 `git-sao-hua -i`，支持语言选择、模板/AI/智能检测三种生成模式、生成预览，以及重新生成 / 切换风格 / 复制 / 直接 git commit，并同步修正文档中的交互模式与语言示例；项目从“单次命令触发”继续前进到“终端内可迭代完成提交决策与执行”的交互体验 | Stage 5 内维度跃迁（CLI 交互体验） |
+| -4 | 2026-04-12 | 🚀 大演进 | JavaScript / TypeScript SDK — 新增 `sdk/javascript/`，补齐原生 TS 客户端、8 个单元测试、使用示例、README，以及 Node 多版本 CI 与 npm 发布骨架，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引，并支持 API Key / Bearer Token / timeout / 自定义 headers；平台从“已有 API + Python/Go SDK”继续前进到“主流后端脚本生态可直接接入” | Stage 5 内维度跃迁（Node / TS 生态接入） |

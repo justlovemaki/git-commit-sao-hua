@@ -278,6 +278,9 @@ git-sao-hua -t feat -s love
 # 交互式提交向导（语言 / 生成模式 / 预览 / 一键提交）
 git-sao-hua -i
 
+# 全屏 TUI 提交向导（更专注的终端流程）
+git-sao-hua --tui
+
 # 生成并直接 git commit
 git-sao-hua -g
 

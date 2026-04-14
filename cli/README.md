@@ -43,6 +43,7 @@ git-sao-hua -t feat -s love
 | `-c, --copy` | 生成后复制到剪贴板 |
 | `-g, --git` | 直接执行 git commit |
 | `-i, --interactive` | 交互式提交向导 |
+| `--tui` | 全屏 TUI 提交向导 |
 | `-h, --help` | 显示帮助信息 |
 | `-v, --version` | 显示版本号 |
 
@@ -90,6 +91,11 @@ git-sao-hua -g
 # 交互式提交向导（语言 / 生成模式 / 预览 / 一键提交）
 git-sao-hua -i
 
+# 全屏 TUI 提交向导（更专注的终端体验）
+git-sao-hua --tui
+# 或
+git-sao-hua tui
+
 # 指定英文输出
 git-sao-hua --lang en
 ```
@@ -100,6 +106,12 @@ git-sao-hua --lang en
 - 在模板生成、AI 生成、智能检测三种模式间切换
 - 生成后直接预览结果
 - 预览后继续重新生成、切换风格、复制到剪贴板、直接 git commit 或退出
+
+全屏 TUI 模式额外提供：
+
+- 每一步自动清屏刷新，只保留当前决策上下文
+- 预览页集中展示 type / style / language / mode 元数据
+- 支持 `git-sao-hua tui` 子命令，适合在终端里快速走完整个提交流程
 
 ## 插件管理
 
