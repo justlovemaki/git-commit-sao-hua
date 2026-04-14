@@ -1,11 +1,16 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const versionModule = require('../lib/version.js');
+const apiVersion = versionModule.getVersion() || '1.31.0';
 
 const options = {
     definition: {
         openapi: '3.0.3',
         info: {
             title: 'Git Saohua API',
-            version: '1.30.0',
+            version: apiVersion,
             description: 'Git Commit 骚话生成器 REST API 服务 - 提供骚话生成、类型管理、风格选择等功能',
             contact: {
                 name: 'API Support',

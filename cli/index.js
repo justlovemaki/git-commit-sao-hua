@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const data = require('../lib');
 const aiGenerator = require('../lib/ai-generator.js');
+const versionModule = require('../lib/version.js');
 
 const COLORS = {
     reset: '\x1b[0m',
@@ -18,7 +19,7 @@ const COLORS = {
     dim: '\x1b[2m'
 };
 
-const VERSION = '1.30.0';
+const VERSION = versionModule.getVersion() || '1.31.0';
 const hookManager = require('../lib/hook-manager.js');
 const configModule = require('../lib/config.js');
 const pluginManager = require('../lib/plugin-manager.js');

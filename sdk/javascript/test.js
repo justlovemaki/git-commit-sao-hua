@@ -1,5 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const versionModule = require('../../lib/version.js');
+const EXPECTED_VERSION = versionModule.getVersion() || '1.31.0';
 
 import {
   SaohuaClient,
@@ -31,7 +36,7 @@ test('health() returns parsed server status', async () => {
         data: {
           status: 'ok',
           uptime: 12.5,
-          version: '1.30.0',
+          version: EXPECTED_VERSION,
           memory: { rss: 1024 },
         },
       }),
@@ -40,7 +45,7 @@ test('health() returns parsed server status', async () => {
 
   const result = await client.health();
   assert.equal(result.status, 'ok');
-  assert.equal(result.version, '1.30.0');
+  assert.equal(result.version, EXPECTED_VERSION);
 });
 
 test('randomSaohua() forwards lang and style query params', async () => {

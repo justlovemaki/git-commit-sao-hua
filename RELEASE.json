@@ -1,0 +1,42 @@
+{
+  "version": "1.31.0",
+  "releaseDate": "2026-04-14",
+  "channels": {
+    "latest": "1.31.0",
+    "next": "1.32.0-beta.1"
+  },
+  "packages": {
+    "cli": {
+      "name": "git-sao-hua",
+      "version": "1.31.0"
+    },
+    "core": {
+      "name": "git-sao-hua-core",
+      "version": "1.31.0"
+    },
+    "api": {
+      "name": "git-sao-hua-api",
+      "version": "1.31.0"
+    },
+    "javascriptSdk": {
+      "name": "git-saohua",
+      "version": "0.1.0"
+    },
+    "pythonSdk": {
+      "name": "git-saohua",
+      "version": "0.1.0"
+    }
+  },
+  "checks": {
+    "files": [
+      { "path": "README.md", "pattern": "### v[0-9]+\\.[0-9]+\\.[0-9]+", "expected": "1.31.0" },
+      { "path": "api/server.js", "pattern": "versionModule", "expected": "1.31.0" },
+      { "path": "api/swagger.js", "pattern": "apiVersion", "expected": "1.31.0" },
+      { "path": "cli/index.js", "pattern": "versionModule", "expected": "1.31.0" },
+      { "path": "lib/index.js", "pattern": "versionModule", "expected": "1.31.0" },
+      { "path": "cli/package.json", "pattern": "\"version\":", "expected": "1.31.0" },
+      { "path": "api/package.json", "pattern": "\"version\":", "expected": "1.31.0" },
+      { "path": "lib/package.json", "pattern": "\"version\":", "expected": "1.31.0" }
+    ]
+  }
+}

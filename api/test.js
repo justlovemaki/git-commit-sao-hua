@@ -1,8 +1,10 @@
 import fetch from 'node-fetch';
 import http from 'http';
 import saoHuaCore from '../lib/index.js';
+import versionModule from '../lib/version.js';
 
 let BASE_URL = process.env.TEST_URL || 'http://localhost:3000';
+const EXPECTED_VERSION = versionModule.getVersion() || '1.31.0';
 
 const results = {
     passed: 0,
@@ -70,7 +72,7 @@ const tests = {
         assert(res.status === 200, 'Health should return 200');
         assert(res.data.success === true, 'Health should have success: true');
         assert(res.data.data.status === 'ok', 'Health status should be ok');
-        assert(res.data.data.version === '1.30.0', 'Version should be 1.30.0');
+        assert(res.data.data.version === EXPECTED_VERSION, `Version should be ${EXPECTED_VERSION}`);
     },
 
     async testRandomSaoHua() {

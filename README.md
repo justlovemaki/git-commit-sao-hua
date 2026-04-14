@@ -876,6 +876,39 @@ npm test
 
 **让代码不再枯燥，让提交充满乐趣！** 🎉
 
+## 📋 版本治理
+
+项目使用集中式版本管理方案，确保各包版本一致性。
+
+### 发布元数据
+
+`RELEASE.json` 是唯一的版本来源，包含：
+- `version`: 主版本号
+- `packages`: 各子包版本信息
+- `checks`: 版本一致性检查规则
+
+### 版本检查
+
+运行 Release Doctor 检查版本一致性：
+
+```bash
+node bin/release-doctor.js
+```
+
+### 手动更新版本
+
+1. 更新 `RELEASE.json` 中的 `version` 和 `packages[x].version`
+2. 更新各 `package.json` 的 `version`
+3. 运行 `node bin/release-doctor.js` 验证
+
+### 动态版本
+
+以下文件从 `RELEASE.json` 动态读取版本：
+- `cli/index.js` - CLI 版本
+- `api/server.js` - API health endpoint
+- `api/swagger.js` - OpenAPI spec
+- `lib/index.js` - 核心库版本
+
 ## 🎯 版本历史
 
 ### v1.31.0

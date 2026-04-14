@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 
 import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
+import versionModule from '../lib/version.js';
 import { requireAuth } from './auth-middleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -84,7 +85,7 @@ app.get('/api/health', (req, res) => {
         status: 'ok',
         uptime: process.uptime(),
         memory: process.memoryUsage(),
-        version: '1.30.0'
+        version: versionModule.getVersion() || '1.31.0'
     }, '服务器运行中~'));
 });
 
