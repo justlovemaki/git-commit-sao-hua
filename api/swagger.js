@@ -286,8 +286,13 @@ const options = {
                     properties: {
                         sourceUrl: {
                             type: 'string',
-                            description: '插件 JSON 的 URL (支持 http/https)',
+                            description: '插件 JSON 的 URL (支持 http/https)，与 githubSpec 二选一',
                             example: 'https://example.com/plugin.json'
+                        },
+                        githubSpec: {
+                            type: 'string',
+                            description: 'GitHub 简写 (如 owner/repo:path@ref)，与 sourceUrl 二选一',
+                            example: 'owner/repo:saohua-plugin.json@main'
                         },
                         checksum: {
                             type: 'string',
@@ -400,7 +405,8 @@ const options = {
                                     author: { type: 'string', example: 'developer' },
                                     tags: { type: 'array', items: { type: 'string' }, example: ['love', 'chinese'] },
                                     homepage: { type: 'string', example: 'https://github.com/example/plugin' },
-                                    sourceUrl: { type: 'string', example: 'https://example.com/plugins/love-pack.json' },
+                                    sourceUrl: { type: 'string', description: '直接 URL (与 github 二选一)', example: 'https://example.com/plugins/love-pack.json' },
+                                    github: { type: 'string', description: 'GitHub 简写 (与 sourceUrl 二选一)', example: 'owner/repo:saohua-plugin.json@main' },
                                     checksum: { type: 'string', description: '插件的 SHA-256 校验和 (可选)', example: 'a1b2c3d4e5f6...' }
                                 }
                             }
@@ -995,6 +1001,7 @@ const options = {
                                 schema: { $ref: '#/components/schemas/PluginInstallRequest' },
                                 example: {
                                     sourceUrl: 'https://example.com/plugin.json',
+                                    githubSpec: 'owner/repo:saohua-plugin.json@main',
                                     checksum: 'a1b2c3d4e5f6...',
                                     name: 'my-custom-plugin',
                                     version: '1.0.0',

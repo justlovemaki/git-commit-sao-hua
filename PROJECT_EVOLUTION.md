@@ -49,7 +49,7 @@
 | **Git Hook 集成** | ✅ 完成 | prepare-commit-msg hook，每次 commit 自动追加骚话 |
 | **项目配置系统** | ✅ 完成 | `.saohuarc.json` 支持风格/语言/格式/AI/emoji/插件等配置 |
 | **插件系统** | ✅ 完成 | 自定义骚话包，支持创建/安装/删除/列表，自动合并数据 |
-| **插件远程安装** | ✅ 完成 | 支持从 HTTP/HTTPS URL 安装插件，CLI/API/文档/测试已打通 |
+| **插件远程安装 / GitHub 简写分发** | ✅ 完成 | 支持从 HTTP/HTTPS URL、GitHub 仓库简写 `owner/repo[:path][@ref]` 安装插件，CLI/API/文档/测试已打通 |
 | **插件索引 / 市场入口** | ✅ 完成 | 支持从远程索引搜索插件并按名称安装，CLI/API/Swagger/README/测试已打通 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
@@ -131,6 +131,7 @@
 - ✅ **CLI 交互式提交向导** — 交互模式已支持语言选择、模板/AI/智能检测三种生成模式、结果预览，以及重新生成 / 切换风格 / 复制 / 一键提交，CLI 从“只会一次性出结果”进化到“可对话式完成 commit 生成与提交”
 - ✅ **插件索引 / 市场入口** — CLI `plugin search` 与 `plugin install --from-index`、API `GET /api/plugin-registry` 与 `POST /api/plugins/install-from-index` 打通，插件开始具备可发现能力
 - ✅ **插件远程安装** — CLI `plugin install --url` 与 API `sourceUrl` 打通，支持远程分发骚话包
+- ✅ **GitHub 简写插件安装** — CLI `plugin install --github` 与 API `githubSpec` 打通，支持通过 `owner/repo[:path][@ref]` 直接从 GitHub 仓库分发插件，并在默认路径缺失时自动回退查找 `plugin.json`
 - ✅ **API 认证机制** — 支持 API Key / Bearer Token 双认证，保护插件管理写入端点
 - ✅ **版本治理 / Release Doctor** — 新增 `RELEASE.json` 作为主版本单一来源，CLI/API/core/OpenAPI 改为动态读取版本，`bin/release-doctor.js` 可检查 README、关键运行时入口与 package.json 一致性；平台开始从“功能多端齐全”前进到“多包发布可治理、版本漂移可发现”
 - ✅ **插件 SHA-256 摘要校验** — 远程 URL 安装与索引安装支持完整性校验，开始从“可分发”进化到“可校验分发”
@@ -155,8 +156,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-14 | 🚀 大演进 | CLI 全屏 TUI 模式 — 新增 `git-sao-hua --tui` / `git-sao-hua tui`，通过 ANSI 全屏刷新串起语言、生成模式、类型、风格、结果预览、复制与一键提交流程，并抽出 `cli/tui.js` + CLI 测试；项目从“已有行式交互向导”继续前进到“终端内具备更沉浸、更专注的提交编排体验” | Stage 5 内维度跃迁（CLI 终端体验） |
-| -1 | 2026-04-14 | 🚀 大演进 | 版本治理 / Release Doctor — 新增根级 `RELEASE.json` 作为主版本单一来源，CLI / API health / OpenAPI / core 改为动态读取版本，补齐 `bin/release-doctor.js` 一致性检查与版本相关测试，并同步 README；项目从“多端功能齐全”继续前进到“多包版本可治理、发布漂移可发现”的平台化发布工程能力 | Stage 5 内维度跃迁（发布治理） |
-| -2 | 2026-04-13 | 🚀 大演进 | 插件来源白名单 — 在 `lib/plugin-manager` 增加远程插件 URL / 索引 URL host allowlist 校验，默认仅信任 GitHub 官方源，并支持 CLI/API 显式传参、`.saohuarc.json` 的 `plugins.allowedHosts`、环境变量 `PLUGIN_ALLOWED_HOSTS` 多层配置；同时补齐 lib + API 测试与 README，从“插件可校验”继续进化到“插件来源可控、默认更安全”的供应链防护 | Stage 5 内维度跃迁（插件供应链来源控制） |
-| -3 | 2026-04-13 | 🚀 大演进 | CLI 交互式提交向导 — 升级 `git-sao-hua -i`，支持语言选择、模板/AI/智能检测三种生成模式、生成预览，以及重新生成 / 切换风格 / 复制 / 直接 git commit，并同步修正文档中的交互模式与语言示例；项目从“单次命令触发”继续前进到“终端内可迭代完成提交决策与执行”的交互体验 | Stage 5 内维度跃迁（CLI 交互体验） |
-| -4 | 2026-04-12 | 🚀 大演进 | JavaScript / TypeScript SDK — 新增 `sdk/javascript/`，补齐原生 TS 客户端、8 个单元测试、使用示例、README，以及 Node 多版本 CI 与 npm 发布骨架，覆盖健康检查、骚话生成、AI、统计、插件管理、插件索引，并支持 API Key / Bearer Token / timeout / 自定义 headers；平台从“已有 API + Python/Go SDK”继续前进到“主流后端脚本生态可直接接入” | Stage 5 内维度跃迁（Node / TS 生态接入） |
+| 最新 | 2026-04-15 | 🔧 中迭代 | GitHub 简写插件安装 — 在 `lib/plugin-manager` 新增 GitHub shorthand 解析与默认路径回退，CLI 增加 `plugin install --github`，REST API `/api/plugins/install` 支持 `githubSpec`，插件索引项支持 `github` 字段，并补齐 Swagger、CLI 文档、lib/API 测试；平台从“插件可远程分发”继续前进到“插件可直接由 GitHub 仓库名分发”的更低摩擦生态入口 | Stage 5 不变（插件生态分发体验增强） |
+| -1 | 2026-04-14 | 🚀 大演进 | CLI 全屏 TUI 模式 — 新增 `git-sao-hua --tui` / `git-sao-hua tui`，通过 ANSI 全屏刷新串起语言、生成模式、类型、风格、结果预览、复制与一键提交流程，并抽出 `cli/tui.js` + CLI 测试；项目从“已有行式交互向导”继续前进到“终端内具备更沉浸、更专注的提交编排体验” | Stage 5 内维度跃迁（CLI 终端体验） |
+| -2 | 2026-04-14 | 🚀 大演进 | 版本治理 / Release Doctor — 新增根级 `RELEASE.json` 作为主版本单一来源，CLI / API health / OpenAPI / core 改为动态读取版本，补齐 `bin/release-doctor.js` 一致性检查与版本相关测试，并同步 README；项目从“多端功能齐全”继续前进到“多包版本可治理、发布漂移可发现”的平台化发布工程能力 | Stage 5 内维度跃迁（发布治理） |
+| -3 | 2026-04-13 | 🚀 大演进 | 插件来源白名单 — 在 `lib/plugin-manager` 增加远程插件 URL / 索引 URL host allowlist 校验，默认仅信任 GitHub 官方源，并支持 CLI/API 显式传参、`.saohuarc.json` 的 `plugins.allowedHosts`、环境变量 `PLUGIN_ALLOWED_HOSTS` 多层配置；同时补齐 lib + API 测试与 README，从“插件可校验”继续进化到“插件来源可控、默认更安全”的供应链防护 | Stage 5 内维度跃迁（插件供应链来源控制） |
+| -4 | 2026-04-13 | 🚀 大演进 | CLI 交互式提交向导 — 升级 `git-sao-hua -i`，支持语言选择、模板/AI/智能检测三种生成模式、生成预览，以及重新生成 / 切换风格 / 复制 / 直接 git commit，并同步修正文档中的交互模式与语言示例；项目从“单次命令触发”继续前进到“终端内可迭代完成提交决策与执行”的交互体验 | Stage 5 内维度跃迁（CLI 交互体验） |

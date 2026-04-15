@@ -284,6 +284,8 @@ function showHelp() {
     console.log('  ' + green('plugin install --url <url>') + ' 从 URL 安装插件 (v1.28.0 新增)');
     console.log('  ' + green('plugin install --url <url> --checksum <sha256>') + ' 从 URL 安装插件并校验 (v1.30.0 新增)');
     console.log('  ' + green('plugin install --url <url> --allow-host <host>') + ' 允许指定 host (v1.31.0 新增)');
+    console.log('  ' + green('plugin install --github <spec>') + ' 从 GitHub 简写安装插件 (v1.32.0 新增)');
+    console.log('  ' + green('plugin install --github owner/repo[:path][@ref]') + ' GitHub 简写格式 (v1.32.0 新增)');
     console.log('  ' + green('plugin search [query]') + '     搜索插件市场 (v1.29.0 新增)');
     console.log('  ' + green('plugin search [query] --allow-host <host>') + ' 允许指定 host (v1.31.0 新增)');
     console.log('  ' + green('plugin install --from-index <name>') + ' 从索引安装插件 (v1.29.0 新增)');
@@ -331,6 +333,16 @@ function showHelp() {
     console.log('  git-sao-hua plugin install --url https://example.com/plugin.json --checksum abc123...');
     console.log(dim('\n  # 从 URL 安装并允许指定自定义 host'));
     console.log('  git-sao-hua plugin install --url https://example.com/plugin.json --allow-host example.com');
+    console.log(dim('\n  # 从 GitHub 简写安装 (默认 main 分支，默认路径 saohua-plugin.json 或 plugin.json)'));
+    console.log('  git-sao-hua plugin install --github owner/repo');
+    console.log(dim('\n  # 指定插件文件路径'));
+    console.log('  git-sao-hua plugin install --github owner/repo:path/to/plugin.json');
+    console.log(dim('\n  # 指定分支或标签'));
+    console.log('  git-sao-hua plugin install --github owner/repo@v1.0.0');
+    console.log(dim('\n  # 同时指定路径和分支'));
+    console.log('  git-sao-hua plugin install --github owner/repo:plugins/my-plugin.json@v1.0.0');
+    console.log(dim('\n  # 使用 github: 前缀'));
+    console.log('  git-sao-hua plugin install --github github:owner/repo:plugin.json@main');
     console.log(dim('\n  # 搜索插件市场'));
     console.log('  git-sao-hua plugin search love');
     console.log(dim('\n  # 指定自定义索引 URL'));
@@ -982,6 +994,9 @@ async function handlePluginCommand(action, args = []) {
             const urlArg = args.find(arg => arg.startsWith('--url=') || arg === '--url');
             const urlValue = urlArg ? (urlArg === '--url' ? args[args.indexOf(urlArg) + 1] : urlArg.split('=')[1]) : null;
             
+            const githubArg = args.find(arg => arg.startsWith('--github=') || arg === '--github');
+            const githubValue = githubArg ? (githubArg === '--github' ? args[args.indexOf(githubArg) + 1] : githubArg.split('=')[1]) : null;
+            
             const checksumArg = args.find(arg => arg.startsWith('--checksum=') || arg === '--checksum');
             const checksumValue = checksumArg ? (checksumArg === '--checksum' ? args[args.indexOf(checksumArg) + 1] : checksumArg.split('=')[1]) : null;
             
@@ -1003,11 +1018,17 @@ async function handlePluginCommand(action, args = []) {
                 })
                 .filter(Boolean);
             
-            if (!sourcePath && !urlValue && !fromIndexValue) {
-                console.log(red('错误：请指定插件路径、URL 或从索引安装'));
+            if (!sourcePath && !urlValue && !fromIndexValue && !githubValue) {
+                console.log(red('错误：请指定插件路径、URL、GitHub 简写或从索引安装'));
                 console.log(dim('用法: git-sao-hua plugin install <path>'));
                 console.log(dim('       git-sao-hua plugin install --url <url> [--checksum <sha256>]'));
                 console.log(dim('       git-sao-hua plugin install --url <url> --allow-host <host>'));
+                console.log(dim('       git-sao-hua plugin install --github <spec>'));
+                console.log(dim('       git-sao-hua plugin install --github owner/repo'));
+                console.log(dim('       git-sao-hua plugin install --github owner/repo:path/to/plugin.json'));
+                console.log(dim('       git-sao-hua plugin install --github owner/repo@branch'));
+                console.log(dim('       git-sao-hua plugin install --github owner/repo:path/to/plugin.json@branch'));
+                console.log(dim('       git-sao-hua plugin install --github github:owner/repo:path@ref'));
                 console.log(dim('       git-sao-hua plugin install --from-index <name> [--index <url>] [--allow-host <host>]'));
                 process.exit(1);
             }
@@ -1052,6 +1073,28 @@ async function handlePluginCommand(action, args = []) {
                     console.log(green('✓ 插件安装成功: ' + result.plugin.name));
                     console.log(dim('  版本: ' + result.plugin.version));
                     console.log(dim('  路径: ' + result.path));
+                    if (result.plugin.checksum) {
+                        console.log(dim('  SHA-256: ' + result.plugin.checksum));
+                    }
+                } else {
+                    console.log(red('✗ 安装失败: ' + result.error));
+                    process.exit(1);
+                }
+            } else if (githubValue) {
+                console.log(cyan('正在从 GitHub 安装插件...'));
+                console.log(dim('  GitHub 简写: ' + githubValue));
+                const result = await pluginManager.installPluginFromGitHub(githubValue, null, {
+                    expectedChecksum: checksumValue || null,
+                    allowedHosts: allowedHosts.length > 0 ? allowedHosts : undefined,
+                    cwd: process.cwd()
+                });
+                if (result.success) {
+                    console.log(green('✓ 插件安装成功: ' + result.plugin.name));
+                    console.log(dim('  版本: ' + result.plugin.version));
+                    console.log(dim('  路径: ' + result.path));
+                    if (result.plugin.sourceUrl) {
+                        console.log(dim('  源码地址: ' + result.plugin.sourceUrl));
+                    }
                     if (result.plugin.checksum) {
                         console.log(dim('  SHA-256: ' + result.plugin.checksum));
                     }

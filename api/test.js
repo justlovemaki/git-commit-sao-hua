@@ -494,6 +494,36 @@ const tests = {
         }
     },
 
+    async testPluginInstallFromGitHubSpecSuccess() {
+        const originalInstallPluginFromGitHub = saoHuaCore.installPluginFromGitHub;
+
+        saoHuaCore.installPluginFromGitHub = async (githubSpec, pluginsDir, options = {}) => ({
+            success: true,
+            path: '/tmp/github-spec-plugin.json',
+            plugin: {
+                name: 'test-github-spec-plugin',
+                version: '1.0.0',
+                sourceUrl: 'https://raw.githubusercontent.com/owner/repo/main/plugin.json',
+                checksum: options.expectedChecksum || 'mock-checksum'
+            }
+        });
+
+        try {
+            const res = await post('/api/plugins/install', {
+                githubSpec: 'owner/repo:plugin.json@main',
+                checksum: 'expected-checksum'
+            });
+            assert(res.status === 200, 'GitHub spec install should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.name === 'test-github-spec-plugin', 'Should return plugin name');
+            assert(res.data.data.sourceUrl === 'https://raw.githubusercontent.com/owner/repo/main/plugin.json', 'Should return resolved raw URL');
+            assert(res.data.data.checksum === 'expected-checksum', 'Should preserve provided checksum');
+        } finally {
+            saoHuaCore.installPluginFromGitHub = originalInstallPluginFromGitHub;
+            await del('/api/plugins/test-github-spec-plugin');
+        }
+    },
+
     // === 插件市场/索引测试 ===
 
     async testPluginRegistrySearchEmpty() {
@@ -656,6 +686,34 @@ const tests = {
             indexServer.close();
             pluginServer.close();
             await del('/api/plugins/test-index-install-plugin');
+        }
+    },
+
+    async testPluginInstallFromIndexWithGitHubField() {
+        const originalInstallPluginFromIndex = saoHuaCore.installPluginFromIndex;
+
+        saoHuaCore.installPluginFromIndex = async (name, indexUrl) => ({
+            success: true,
+            path: '/tmp/index-github-plugin.json',
+            plugin: {
+                name,
+                version: '1.0.0',
+                sourceUrl: 'https://raw.githubusercontent.com/example/repo/main/plugin.json',
+                checksum: null
+            }
+        });
+
+        try {
+            const res = await post('/api/plugins/install-from-index', {
+                name: 'test-index-github-plugin',
+                indexUrl: 'https://example.com/index.json'
+            });
+            assert(res.status === 200, 'Install from index with github field should return 200');
+            assert(res.data.success === true, 'Should have success: true');
+            assert(res.data.data.name === 'test-index-github-plugin', 'Should return plugin name');
+        } finally {
+            saoHuaCore.installPluginFromIndex = originalInstallPluginFromIndex;
+            await del('/api/plugins/test-index-github-plugin');
         }
     },
 

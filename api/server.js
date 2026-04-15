@@ -252,6 +252,7 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
     try {
         const body = req.body || {};
         const sourceUrl = body.sourceUrl;
+        const githubSpec = body.githubSpec;
         const checksum = body.checksum;
         const allowedHosts = parseAllowedHosts(body.allowedHosts);
         
@@ -272,6 +273,26 @@ app.post('/api/plugins/install', requireAuth, async (req, res) => {
                 sourceUrl: result.plugin.sourceUrl || sourceUrl,
                 checksum: result.plugin.checksum || null
             }, '插件从 URL 安装成功~'));
+            return;
+        }
+
+        if (githubSpec) {
+            const result = await saoHuaCore.installPluginFromGitHub(githubSpec, null, {
+                expectedChecksum: checksum || null,
+                allowedHosts
+            });
+            if (!result.success) {
+                return res.status(400).json(errorResponse(result.error));
+            }
+
+            saoHuaCore.reloadPluginData();
+
+            res.json(successResponse({
+                name: result.plugin.name,
+                path: result.path,
+                sourceUrl: result.plugin.sourceUrl || null,
+                checksum: result.plugin.checksum || null
+            }, '插件从 GitHub 简写安装成功~'));
             return;
         }
         

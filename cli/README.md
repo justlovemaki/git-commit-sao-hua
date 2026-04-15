@@ -131,6 +131,21 @@ git-sao-hua plugin install --url https://example.com/plugin.json
 # 从 URL 安装插件并校验 SHA-256
 git-sao-hua plugin install --url https://example.com/plugin.json --checksum abc123...
 
+# 从 GitHub 简写安装 (默认 main 分支，默认路径 saohua-plugin.json 或 plugin.json)
+git-sao-hua plugin install --github owner/repo
+
+# 指定插件文件路径
+git-sao-hua plugin install --github owner/repo:path/to/plugin.json
+
+# 指定分支或标签
+git-sao-hua plugin install --github owner/repo@v1.0.0
+
+# 同时指定路径和分支
+git-sao-hua plugin install --github owner/repo:plugins/my-plugin.json@v1.0.0
+
+# 使用 github: 前缀
+git-sao-hua plugin install --github github:owner/repo:plugin.json@main
+
 # 搜索插件市场
 git-sao-hua plugin search love
 
