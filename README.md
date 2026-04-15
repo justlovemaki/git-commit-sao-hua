@@ -82,6 +82,7 @@ git-sao-hua init             # 交互式创建 .saohuarc.json 配置文件
 
 ```bash
 git-sao-hua plugin list                 # 列出已安装的插件
+git-sao-hua plugin inspect <name>       # 查看插件来源、校验和、锁定信息 (v1.33.0)
 git-sao-hua plugin create [name]        # 创建插件模板
 git-sao-hua plugin install <path>        # 从本地路径安装插件
 git-sao-hua plugin install --url <url>     # 从 URL 安装插件 (v1.28.0)
@@ -93,6 +94,13 @@ git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
 git-sao-hua plugin install --from-index <name> --allow-host <host> # 从索引安装时允许额外 host (v1.31.0)
 git-sao-hua plugin remove <name>             # 删除插件
 ```
+
+### 插件安装治理与锁文件（v1.33.0）
+
+- 每次安装插件后，都会在插件目录生成或更新 `plugins.lock.json`
+- 锁文件会记录 `sourceType`、`sourceUrl`、`checksum`、`fromIndex`、`githubSpec`、`installedAt` 等元数据
+- 可通过 `git-sao-hua plugin inspect <name>` 或 `GET /api/plugins/:name` 查看单个插件的来源审计信息
+- 这样在平台期可以更清楚地回答“这个插件从哪来、何时装的、是否带摘要校验”
 
 ### 插件格式
 

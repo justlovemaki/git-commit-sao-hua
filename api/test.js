@@ -263,6 +263,12 @@ const tests = {
         assert(typeof res.data.data.count === 'number', 'Should have count');
     },
 
+    async testPluginDetailsNotFound() {
+        const res = await get('/api/plugins/not-found-plugin');
+        assert(res.status === 404, 'Missing plugin details should return 404');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
     async testPluginInstallSuccess() {
         const plugin = {
             name: 'test-api-plugin',
@@ -280,6 +286,15 @@ const tests = {
         assert(res.status === 200, 'Install should return 200');
         assert(res.data.success === true, 'Should have success: true');
         assert(res.data.data.name === 'test-api-plugin', 'Should return plugin name');
+    },
+
+    async testPluginDetailsSuccess() {
+        const res = await get('/api/plugins/test-api-plugin');
+        assert(res.status === 200, 'Plugin details should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.name === 'test-api-plugin', 'Should return plugin name');
+        assert(res.data.data.sourceType, 'Should include sourceType');
+        assert(res.data.data.installedAt, 'Should include installedAt');
     },
 
     async testPluginInstallDuplicate() {

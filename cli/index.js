@@ -257,7 +257,7 @@ function showHelp() {
     console.log('  git-sao-hua [选项]');
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
-    console.log('  git-sao-hua plugin <list|create|install|remove>');
+    console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -279,6 +279,7 @@ function showHelp() {
     console.log('  ' + green('hook status') + '            查看 hook 安装状态');
     console.log('  ' + green('init') + '                   在当前目录创建 .saohuarc.json 配置文件（交互式）');
     console.log('  ' + green('plugin list') + '            列出已安装的插件 (v1.27.0 新增)');
+    console.log('  ' + green('plugin inspect <name>') + '  查看插件来源与锁定信息 (v1.33.0 新增)');
     console.log('  ' + green('plugin create [name]') + '    创建插件模板 (v1.27.0 新增)');
     console.log('  ' + green('plugin install <path>') + '     安装插件 (v1.27.0 新增)');
     console.log('  ' + green('plugin install --url <url>') + ' 从 URL 安装插件 (v1.28.0 新增)');
@@ -325,6 +326,8 @@ function showHelp() {
     console.log('  git-sao-hua plugin list');
     console.log(dim('\n  # 创建插件模板'));
     console.log('  git-sao-hua plugin create my-pack');
+    console.log(dim('\n  # 查看插件详情与来源'));
+    console.log('  git-sao-hua plugin inspect my-pack');
     console.log(dim('\n  # 安装插件'));
     console.log('  git-sao-hua plugin install ./my-plugin.json');
     console.log(dim('\n  # 从 URL 安装插件'));
@@ -898,7 +901,7 @@ async function handleInitCommand() {
 
 /**
  * 处理 plugin 子命令
- * @param {string} action - list/create/install/remove/search
+ * @param {string} action - list/inspect/create/install/remove/search
  * @param {string[]} args - 额外参数
  */
 async function handlePluginCommand(action, args = []) {
@@ -920,6 +923,38 @@ async function handlePluginCommand(action, args = []) {
                     console.log(`     路径: ${dim(p.path)}`);
                 });
             }
+            console.log('');
+            break;
+        }
+        case 'inspect': {
+            const pluginName = args[0];
+            if (!pluginName) {
+                console.log(red('错误：请指定插件名称'));
+                console.log(dim('用法: git-sao-hua plugin inspect <name>'));
+                process.exit(1);
+            }
+
+            const result = pluginManager.getPluginDetails(pluginName);
+            if (!result.success) {
+                console.log(red('✗ 查询失败: ' + result.error));
+                process.exit(1);
+            }
+
+            const plugin = result.plugin;
+            console.log('');
+            console.log(bold(`====== 插件详情: ${plugin.name} ======`));
+            console.log(`  名称: ${green(plugin.name)}`);
+            console.log(`  版本: ${plugin.version}`);
+            if (plugin.description) console.log(`  描述: ${plugin.description}`);
+            if (plugin.author) console.log(`  作者: ${plugin.author}`);
+            console.log(`  路径: ${dim(plugin.path)}`);
+            console.log(`  来源类型: ${plugin.sourceType || 'unknown'}`);
+            if (plugin.sourceUrl) console.log(`  来源地址: ${dim(plugin.sourceUrl)}`);
+            if (plugin.fromIndex) console.log(`  索引来源: ${dim(plugin.fromIndex)}`);
+            if (plugin.githubSpec) console.log(`  GitHub 简写: ${plugin.githubSpec}`);
+            if (plugin.checksum) console.log(`  SHA-256: ${plugin.checksum}`);
+            if (plugin.installedAt) console.log(`  Installed At: ${plugin.installedAt}`);
+            if (plugin.lockedAt) console.log(`  Locked At: ${plugin.lockedAt}`);
             console.log('');
             break;
         }
@@ -1139,6 +1174,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('');
             console.log(bold('用法:'));
             console.log('  ' + green('git-sao-hua plugin list') + '           列出已安装的插件');
+            console.log('  ' + green('git-sao-hua plugin inspect <name>') + ' 查看插件详情与锁定信息');
             console.log('  ' + green('git-sao-hua plugin create [name]') + '     创建插件模板');
             console.log('  ' + green('git-sao-hua plugin install <path>') + '     安装本地插件');
             console.log('  ' + green('git-sao-hua plugin install --url <url>') + ' 从 URL 安装插件');
@@ -1149,6 +1185,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('');
             console.log(dim('示例:'));
             console.log('  git-sao-hua plugin list');
+            console.log('  git-sao-hua plugin inspect my-pack');
             console.log('  git-sao-hua plugin create my-pack');
             console.log('  git-sao-hua plugin install ./my-plugin.json');
             console.log('  git-sao-hua plugin install --url https://example.com/plugin.json');

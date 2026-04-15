@@ -248,6 +248,21 @@ app.get('/api/plugins', (req, res) => {
     }
 });
 
+app.get('/api/plugins/:name', (req, res) => {
+    try {
+        const { name } = req.params;
+        const result = saoHuaCore.getPluginDetails(name);
+
+        if (!result.success) {
+            return res.status(404).json(errorResponse(result.error, 404));
+        }
+
+        res.json(successResponse(result.plugin, '获取插件详情成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('获取插件详情失败: ' + error.message));
+    }
+});
+
 app.post('/api/plugins/install', requireAuth, async (req, res) => {
     try {
         const body = req.body || {};

@@ -281,6 +281,23 @@ const options = {
                         }
                     }
                 },
+                PluginDetails: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string', example: 'my-plugin' },
+                        version: { type: 'string', example: '1.0.0' },
+                        description: { type: 'string', example: '自定义插件' },
+                        author: { type: 'string', example: 'developer' },
+                        path: { type: 'string', example: '/home/user/.saohua/plugins/my-plugin.json' },
+                        sourceType: { type: 'string', example: 'github' },
+                        sourceUrl: { type: 'string', example: 'https://raw.githubusercontent.com/owner/repo/main/plugin.json', nullable: true },
+                        fromIndex: { type: 'string', example: 'https://example.com/index.json', nullable: true },
+                        githubSpec: { type: 'string', example: 'owner/repo:plugin.json@main', nullable: true },
+                        checksum: { type: 'string', example: 'a1b2c3...', nullable: true },
+                        installedAt: { type: 'string', example: '2026-04-15T10:20:00.000Z', nullable: true },
+                        lockedAt: { type: 'string', example: '2026-04-15T10:20:01.000Z', nullable: true }
+                    }
+                },
                 PluginInstallRequest: {
                     type: 'object',
                     properties: {
@@ -1063,6 +1080,59 @@ const options = {
                 }
             },
             '/api/plugins/{name}': {
+                get: {
+                    tags: ['Plugins'],
+                    summary: '获取单个插件详情',
+                    description: '获取指定插件的来源、校验和、锁定时间等治理信息',
+                    operationId: 'getPluginDetails',
+                    parameters: [
+                        {
+                            name: 'name',
+                            in: 'path',
+                            description: '插件名称',
+                            required: true,
+                            schema: {
+                                type: 'string'
+                            },
+                            example: 'my-custom-plugin'
+                        }
+                    ],
+                    responses: {
+                        '200': {
+                            description: '成功获取插件详情',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            {
+                                                properties: {
+                                                    data: { $ref: '#/components/schemas/PluginDetails' }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '404': {
+                            description: '插件不存在',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                },
                 delete: {
                     tags: ['Plugins'],
                     summary: '删除插件',
