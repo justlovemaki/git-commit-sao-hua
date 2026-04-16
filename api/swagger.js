@@ -33,6 +33,7 @@ const options = {
             { name: 'Types', description: '类型管理端点' },
             { name: 'Styles', description: '风格管理端点' },
             { name: 'Stats', description: '统计数据端点' },
+            { name: 'Metrics', description: '可观测性指标端点' },
             { name: 'Plugins', description: '插件管理端点' }
         ],
         components: {
@@ -102,26 +103,39 @@ const options = {
                 HealthData: {
                     type: 'object',
                     properties: {
-                        status: {
-                            type: 'string',
-                            example: 'ok'
-                        },
-                        uptime: {
-                            type: 'number',
-                            example: 3600.5
-                        },
+                        status: { type: 'string', example: 'ok' },
+                        requestId: { type: 'string', example: 'a1b2c3d4e5f6' },
+                        uptime: { type: 'number', example: 3600.5 },
                         memory: {
                             type: 'object',
-                            example: {
-                                rss: 123456,
-                                heapTotal: 67890,
-                                heapUsed: 54321,
-                                external: 1234
+                            properties: {
+                                rss: { type: 'number', example: 123456 },
+                                heapTotal: { type: 'number', example: 67890 },
+                                heapUsed: { type: 'number', example: 54321 },
+                                external: { type: 'number', example: 1234 }
                             }
                         },
-                        version: {
-                            type: 'string',
-                            example: '1.0.0'
+                        runtime: {
+                            type: 'object',
+                            properties: {
+                                nodeVersion: { type: 'string', example: 'v20.0.0' },
+                                platform: { type: 'string', example: 'linux' },
+                                arch: { type: 'string', example: 'x64' },
+                                cpuUsage: {
+                                    type: 'object',
+                                    properties: {
+                                        user: { type: 'number', example: 1000 },
+                                        system: { type: 'number', example: 500 }
+                                    }
+                                }
+                            }
+                        },
+                        service: {
+                            type: 'object',
+                            properties: {
+                                name: { type: 'string', example: 'git-sao-hua-api' },
+                                version: { type: 'string', example: '1.31.0' }
+                            }
                         }
                     }
                 },
@@ -432,6 +446,69 @@ const options = {
                         query: { type: 'string', example: 'love' },
                         indexUrl: { type: 'string', example: 'https://example.com/index.json' }
                     }
+                },
+                MetricsData: {
+                    type: 'object',
+                    properties: {
+                        requestId: {
+                            type: 'object',
+                            properties: {
+                                enabled: { type: 'boolean', example: true },
+                                header: { type: 'string', example: 'X-Request-Id' }
+                            }
+                        },
+                        totalRequests: { type: 'integer', example: 1000 },
+                        uptime: { type: 'integer', example: 3600 },
+                        statusCodes: {
+                            type: 'object',
+                            properties: {
+                                '2xx': { type: 'integer', example: 900 },
+                                '3xx': { type: 'integer', example: 50 },
+                                '4xx': { type: 'integer', example: 40 },
+                                '5xx': { type: 'integer', example: 10 }
+                            }
+                        },
+                        routes: {
+                            type: 'object',
+                            example: {
+                                '/api/saohua': { count: 500, avgTime: 15 }
+                            }
+                        },
+                        recentErrors: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    requestId: { type: 'string', example: 'a1b2c3d4e5f6' },
+                                    path: { type: 'string', example: '/api/saohua' },
+                                    method: { type: 'string', example: 'GET' },
+                                    statusCode: { type: 'integer', example: 500 },
+                                    timestamp: { type: 'string', example: '2024-01-01T00:00:00.000Z' }
+                                }
+                            }
+                        },
+                        runtime: {
+                            type: 'object',
+                            properties: {
+                                memory: {
+                                    type: 'object',
+                                    properties: {
+                                        rss: { type: 'number', example: 123456 },
+                                        heapTotal: { type: 'number', example: 67890 },
+                                        heapUsed: { type: 'number', example: 54321 },
+                                        external: { type: 'number', example: 1234 }
+                                    }
+                                },
+                                cpu: {
+                                    type: 'object',
+                                    properties: {
+                                        user: { type: 'number', example: 1000 },
+                                        system: { type: 'number', example: 500 }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -457,13 +534,138 @@ const options = {
                                         success: true,
                                         data: {
                                             status: 'ok',
+                                            requestId: 'a1b2c3d4e5f6',
                                             uptime: 3600.5,
                                             memory: { rss: 123456, heapTotal: 67890 },
-                                            version: '1.0.0'
+                                            runtime: {
+                                                nodeVersion: 'v20.0.0',
+                                                platform: 'linux',
+                                                arch: 'x64'
+                                            },
+                                            service: {
+                                                name: 'git-sao-hua-api',
+                                                version: '1.31.0'
+                                            }
                                         },
                                         meta: {
                                             timestamp: '2024-01-01T00:00:00.000Z',
                                             message: '服务器运行中~'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/health/live': {
+                get: {
+                    tags: ['Health'],
+                    summary: '存活探针',
+                    description: 'Kubernetes liveness probe，检查进程是否存活',
+                    operationId: 'getLiveness',
+                    responses: {
+                        '200': {
+                            description: '进程存活',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            status: { type: 'string', example: 'ok' }
+                                        }
+                                    },
+                                    example: {
+                                        status: 'ok'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/health/ready': {
+                get: {
+                    tags: ['Health'],
+                    summary: '就绪探针',
+                    description: 'Kubernetes readiness probe，检查服务是否准备好接受请求',
+                    operationId: 'getReadiness',
+                    responses: {
+                        '200': {
+                            description: '服务已就绪',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            status: { type: 'string', example: 'ok' },
+                                            reason: { type: 'string', example: 'service ready' }
+                                        }
+                                    },
+                                    example: {
+                                        status: 'ok',
+                                        reason: 'service ready'
+                                    }
+                                }
+                            }
+                        },
+                        '503': {
+                            description: '服务未就绪',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        type: 'object',
+                                        properties: {
+                                            status: { type: 'string', example: 'not_ready' },
+                                            reason: { type: 'string', example: 'core data not loaded' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/metrics': {
+                get: {
+                    tags: ['Metrics'],
+                    summary: '获取指标快照',
+                    description: '返回当前_metrics 可观测性指标快照，包括请求数、状态码分布、路由聚合、运行时信息和最近错误',
+                    operationId: 'getMetrics',
+                    responses: {
+                        '200': {
+                            description: '成功获取指标',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            {
+                                                properties: {
+                                                    data: { $ref: '#/components/schemas/MetricsData' }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            requestId: { enabled: true, header: 'X-Request-Id' },
+                                            totalRequests: 1000,
+                                            uptime: 3600,
+                                            statusCodes: { '2xx': 900, '3xx': 50, '4xx': 40, '5xx': 10 },
+                                            routes: {
+                                                '/api/saohua': { count: 500, avgTime: 15 }
+                                            },
+                                            recentErrors: [],
+                                            runtime: {
+                                                memory: { rss: 123456, heapTotal: 67890 },
+                                                cpu: { user: 1000, system: 500 }
+                                            }
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '获取指标快照成功~'
                                         }
                                     }
                                 }

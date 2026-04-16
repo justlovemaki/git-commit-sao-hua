@@ -53,19 +53,95 @@ docker run -p 3000:3000 git-sao-hua-api
 GET /api/health
 ```
 
+响应字段说明:
+- `status` - 服务器状态
+- `requestId` - 请求追踪 ID
+- `uptime` - 运行时长（秒）
+- `memory` - 内存使用情况
+- `runtime` - 运行时信息（nodeVersion, platform, arch, cpuUsage）
+- `service` - 服务信息（name, version）
+
 响应示例:
 ```json
 {
   "success": true,
   "data": {
     "status": "ok",
+    "requestId": "a1b2c3d4e5f6",
     "uptime": 3600.5,
-    "memory": { "rss": 123456, "heapTotal": 67890 },
-    "version": "1.0.0"
+    "memory": { "rss": 123456, "heapTotal": 67890, "heapUsed": 54321, "external": 1234 },
+    "runtime": {
+      "nodeVersion": "v20.0.0",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuUsage": { "user": 1000, "system": 500 }
+    },
+    "service": { "name": "git-sao-hua-api", "version": "1.31.0" }
   },
   "meta": {
     "timestamp": "2024-01-01T00:00:00.000Z",
     "message": "服务器运行中~"
+  }
+}
+```
+
+### 存活探针
+
+```
+GET /api/health/live
+```
+
+用于 Kubernetes liveness probe，检查进程是否存活。
+
+响应示例:
+```json
+{ "status": "ok" }
+```
+
+### 就绪探针
+
+```
+GET /api/health/ready
+```
+
+用于 Kubernetes readiness probe，检查服务是否准备好接受请求。
+
+响应示例:
+```json
+{ "status": "ok", "reason": "service ready" }
+```
+
+### 指标快照
+
+```
+GET /api/metrics
+```
+
+返回可观测性指标快照，包括：
+- `requestId` - 请求追踪配置
+- `totalRequests` - 总请求数
+- `statusCodes` - 各状态码段统计
+- `routes` - 各路由聚合统计
+- `recentErrors` - 最近错误（最多 50 条）
+- `runtime` - 运行时信息
+
+响应示例:
+```json
+{
+  "success": true,
+  "data": {
+    "requestId": { "enabled": true, "header": "X-Request-Id" },
+    "totalRequests": 1000,
+    "uptime": 3600,
+    "statusCodes": { "2xx": 900, "3xx": 50, "4xx": 40, "5xx": 10 },
+    "routes": {
+      "/api/saohua": { "count": 500, "avgTime": 15 }
+    },
+    "recentErrors": [],
+    "runtime": {
+      "memory": { "rss": 123456, "heapTotal": 67890 },
+      "cpu": { "user": 1000, "system": 500 }
+    }
   }
 }
 ```

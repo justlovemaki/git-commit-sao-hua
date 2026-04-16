@@ -45,7 +45,7 @@
 - 💻 **CLI 命令行工具** - 终端直接生成骚话 commit message，支持交互模式和一键提交（v1.18.0）
 - 🤖 **GitHub Action** - 在 CI/CD 中自动生成骚话 commit message（v1.22.0）
 - 🐙 **GitHub App** - 自动监听 PR/Issue 创建，智能分析并自动评论骚话（v2.0.0）
-- 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制和 Docker 部署（v1.25.0）
+- 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制、健康探针、请求追踪与指标快照（v1.25.0 起持续增强）
 
 ## 🔗 Git Hook 自动集成（v1.26.0 新增 🎉）
 

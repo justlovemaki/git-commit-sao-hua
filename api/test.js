@@ -72,7 +72,60 @@ const tests = {
         assert(res.status === 200, 'Health should return 200');
         assert(res.data.success === true, 'Health should have success: true');
         assert(res.data.data.status === 'ok', 'Health status should be ok');
-        assert(res.data.data.version === EXPECTED_VERSION, `Version should be ${EXPECTED_VERSION}`);
+        assert(res.data.data.service?.version === EXPECTED_VERSION, `Version should be ${EXPECTED_VERSION}`);
+    },
+
+    async testHealthEndpointWithRequestId() {
+        const res = await get('/api/health');
+        assert(res.status === 200, 'Health should return 200');
+        assert(res.data.data.requestId !== undefined, 'Health should have requestId');
+    },
+
+    async testHealthEndpointWithRuntime() {
+        const res = await get('/api/health');
+        assert(res.status === 200, 'Health should return 200');
+        assert(res.data.data.runtime !== undefined, 'Health should have runtime');
+        assert(res.data.data.runtime.nodeVersion !== undefined, 'Health should have nodeVersion');
+        assert(res.data.data.runtime.platform !== undefined, 'Health should have platform');
+        assert(res.data.data.runtime.arch !== undefined, 'Health should have arch');
+    },
+
+    async testHealthEndpointWithServiceInfo() {
+        const res = await get('/api/health');
+        assert(res.status === 200, 'Health should return 200');
+        assert(res.data.data.service !== undefined, 'Health should have service');
+        assert(res.data.data.service.name === 'git-sao-hua-api', 'Service name should be git-sao-hua-api');
+        assert(res.data.data.service.version !== undefined, 'Service should have version');
+    },
+
+    async testLivenessEndpoint() {
+        const res = await get('/api/health/live');
+        assert(res.status === 200, 'Liveness should return 200');
+        assert(res.data.status === 'ok', 'Liveness status should be ok');
+    },
+
+    async testReadinessEndpoint() {
+        const res = await get('/api/health/ready');
+        assert(res.status === 200, 'Readiness should return 200');
+        assert(res.data.status === 'ok', 'Readiness status should be ok');
+    },
+
+    async testMetricsEndpoint() {
+        const res = await get('/api/metrics');
+        assert(res.status === 200, 'Metrics should return 200');
+        assert(res.data.success === true, 'Metrics should have success: true');
+        assert(res.data.data.requestId !== undefined, 'Metrics should have requestId');
+        assert(res.data.data.totalRequests !== undefined, 'Metrics should have totalRequests');
+        assert(res.data.data.statusCodes !== undefined, 'Metrics should have statusCodes');
+        assert(res.data.data.runtime !== undefined, 'Metrics should have runtime');
+    },
+
+    async testMetricsStatusCodes() {
+        await get('/api/saohua');
+        const res = await get('/api/metrics');
+        assert(res.status === 200, 'Metrics should return 200');
+        assert(typeof res.data.data.statusCodes['2xx'] === 'number', 'Should have 2xx count');
+        assert(res.data.data.routes['/api/saohua'] !== undefined, 'Should have route stats');
     },
 
     async testRandomSaoHua() {

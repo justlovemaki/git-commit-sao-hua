@@ -9,6 +9,7 @@ import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
 import versionModule from '../lib/version.js';
 import { requireAuth } from './auth-middleware.js';
+import { metricsMiddleware, getMetricsSnapshot } from './metrics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,6 +36,7 @@ const requestLogger = (req, res, next) => {
     next();
 };
 app.use(requestLogger);
+app.use(metricsMiddleware);
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -81,12 +83,54 @@ function parseAllowedHosts(value) {
 }
 
 app.get('/api/health', (req, res) => {
+    const mem = process.memoryUsage();
+    const cpu = process.cpuUsage();
     res.json(successResponse({
         status: 'ok',
+        requestId: req.requestId,
         uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        version: versionModule.getVersion() || '1.31.0'
+        memory: {
+            rss: mem.rss,
+            heapTotal: mem.heapTotal,
+            heapUsed: mem.heapUsed,
+            external: mem.external
+        },
+        runtime: {
+            nodeVersion: process.version,
+            platform: process.platform,
+            arch: process.arch,
+            cpuUsage: {
+                user: cpu.user,
+                system: cpu.system
+            }
+        },
+        service: {
+            name: 'git-sao-hua-api',
+            version: versionModule.getVersion() || '1.31.0'
+        }
     }, '服务器运行中~'));
+});
+
+app.get('/api/health/live', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api/health/ready', async (req, res) => {
+    try {
+        const types = saoHuaCore.getAllTypes('zh-CN');
+        const ready = types && types.length > 0;
+        res.status(ready ? 200 : 503).json({
+            status: ready ? 'ok' : 'not_ready',
+            reason: ready ? 'service ready' : 'core data not loaded'
+        });
+    } catch (error) {
+        res.status(503).json({ status: 'not_ready', reason: error.message });
+    }
+});
+
+app.get('/api/metrics', (req, res) => {
+    const metrics = getMetricsSnapshot();
+    res.json(successResponse(metrics, '获取指标快照成功~'));
 });
 
 app.get('/api/saohua', (req, res) => {
