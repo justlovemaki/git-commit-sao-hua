@@ -42,7 +42,13 @@ async function getRaw(path) {
     const url = process.env.TEST_URL || BASE_URL;
     const response = await fetch(`${url}${path}`);
     const data = await response.text();
-    return { status: response.status, data };
+    return {
+        status: response.status,
+        data,
+        headers: {
+            contentType: response.headers.get('content-type')
+        }
+    };
 }
 
 async function post(path, body) {
@@ -126,6 +132,51 @@ const tests = {
         assert(res.status === 200, 'Metrics should return 200');
         assert(typeof res.data.data.statusCodes['2xx'] === 'number', 'Should have 2xx count');
         assert(res.data.data.routes['/api/saohua'] !== undefined, 'Should have route stats');
+    },
+
+    async testPrometheusMetricsEndpoint() {
+        const res = await getRaw('/api/metrics/prometheus');
+        assert(res.status === 200, 'Prometheus metrics should return 200');
+        assert(res.data.includes('http_requests_total'), 'Should include http_requests_total');
+        assert(res.data.includes('http_requests_by_status'), 'Should include http_requests_by_status');
+        assert(res.data.includes('# HELP http_requests_total'), 'Should include HELP comment');
+        assert(res.data.includes('# TYPE http_requests_total counter'), 'Should include TYPE comment');
+    },
+
+    async testPrometheusMetricsContentType() {
+        const res = await getRaw('/api/metrics/prometheus');
+        assert(res.status === 200, 'Prometheus metrics should return 200');
+        assert(
+            res.headers.contentType === 'text/plain; charset=utf-8; version=0.0.4',
+            'Prometheus metrics should return Prometheus content type'
+        );
+    },
+
+    async testPrometheusMetricsProcessInfo() {
+        const res = await getRaw('/api/metrics/prometheus');
+        assert(res.status === 200, 'Prometheus metrics should return 200');
+        assert(res.data.includes('process_uptime_seconds'), 'Should include process_uptime_seconds');
+        assert(res.data.includes('process_memory_heap_used_bytes'), 'Should include process_memory_heap_used_bytes');
+        assert(res.data.includes('process_memory_rss_bytes'), 'Should include process_memory_rss_bytes');
+    },
+
+    async testPrometheusMetricsRouteStats() {
+        await get('/api/saohua');
+        const res = await getRaw('/api/metrics/prometheus');
+        assert(res.status === 200, 'Prometheus metrics should return 200');
+        assert(res.data.includes('http_request_duration_average_ms'), 'Should include route avg time');
+        assert(res.data.includes('http_request_count_total'), 'Should include route count');
+        assert(
+            res.data.includes('http_request_count_total{method="GET",route="/api/saohua"}'),
+            'Should include GET /api/saohua route label'
+        );
+    },
+
+    async testPrometheusMetricsStatusCodes() {
+        const res = await getRaw('/api/metrics/prometheus');
+        assert(res.status === 200, 'Prometheus metrics should return 200');
+        assert(res.data.includes('http_requests_by_status{status="2xx"}'), 'Should include 2xx status');
+        assert(res.data.includes('http_requests_by_status{status="4xx"}'), 'Should include 4xx status');
     },
 
     async testRandomSaoHua() {

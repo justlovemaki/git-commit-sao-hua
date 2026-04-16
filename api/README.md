@@ -146,6 +146,50 @@ GET /api/metrics
 }
 ```
 
+### Prometheus 指标导出
+
+```
+GET /api/metrics/prometheus
+```
+
+返回 Prometheus 文本格式的指标数据，支持标准 Prometheus 抓取协议。
+
+Content-Type: `text/plain; version=0.0.4; charset=utf-8`
+
+导出指标说明：
+- `http_requests_total` - 总请求数（counter）
+- `http_requests_by_status{status="2xx|3xx|4xx|5xx"}` - 按状态码分组请求数（counter）
+- `http_request_duration_average_ms{method="...",route="..."}` - 按方法 + 路由聚合平均耗时（gauge）
+- `http_request_count_total{method="...",route="..."}` - 按方法 + 路由聚合请求数（counter）
+- `process_uptime_seconds` - 进程运行时长（gauge）
+- `process_memory_rss_bytes` - 进程 RSS 内存（gauge）
+- `process_memory_heap_used_bytes` - 进程堆内存已使用（gauge）
+- `process_memory_heap_total_bytes` - 进程堆内存总量（gauge）
+- `process_memory_external_bytes` - 进程外部内存（gauge）
+
+输出示例:
+```
+# HELP http_requests_total Total number of HTTP requests
+# TYPE http_requests_total counter
+http_requests_total 1000
+# HELP http_requests_by_status HTTP requests grouped by status code
+# TYPE http_requests_by_status counter
+http_requests_by_status{status="2xx"} 900
+http_requests_by_status{status="4xx"} 100
+# HELP http_request_duration_average_ms Average request duration in milliseconds by method and route
+# TYPE http_request_duration_average_ms gauge
+http_request_duration_average_ms{method="GET",route="/api/saohua"} 15
+# HELP http_request_count_total Total requests by method and route
+# TYPE http_request_count_total counter
+http_request_count_total{method="GET",route="/api/saohua"} 42
+# HELP process_uptime_seconds Process uptime in seconds
+# TYPE process_uptime_seconds gauge
+process_uptime_seconds 3600
+# HELP process_memory_heap_used_bytes Process heap used memory in bytes
+# TYPE process_memory_heap_used_bytes gauge
+process_memory_heap_used_bytes 12345678
+```
+
 ### 随机骚话
 
 ```
@@ -459,6 +503,10 @@ npm test
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | /api/health | 健康检查 |
+| GET | /api/health/live | 存活探针 |
+| GET | /api/health/ready | 就绪探针 |
+| GET | /api/metrics | 指标快照（JSON） |
+| GET | /api/metrics/prometheus | Prometheus 指标导出 |
 | GET | /api/saohua | 随机骚话生成 |
 | GET | /api/saohua/:type | 按类型生成 |
 | GET | /api/saohua/:type/:style | 按类型+风格生成 |

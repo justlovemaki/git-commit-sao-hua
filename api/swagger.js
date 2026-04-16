@@ -33,7 +33,7 @@ const options = {
             { name: 'Types', description: '类型管理端点' },
             { name: 'Styles', description: '风格管理端点' },
             { name: 'Stats', description: '统计数据端点' },
-            { name: 'Metrics', description: '可观测性指标端点' },
+            { name: 'Metrics', description: '可观测性指标端点（JSON 快照 + Prometheus 文本格式）' },
             { name: 'Plugins', description: '插件管理端点' }
         ],
         components: {
@@ -668,6 +668,28 @@ const options = {
                                             message: '获取指标快照成功~'
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/metrics/prometheus': {
+                get: {
+                    tags: ['Metrics'],
+                    summary: 'Prometheus 指标导出',
+                    description: '以 Prometheus 文本格式导出指标数据，支持标准 Prometheus 抓取协议。包含总请求数、按状态码分组请求数、按方法与路由聚合的请求数与平均耗时、进程 uptime、内存使用等指标',
+                    operationId: 'getPrometheusMetrics',
+                    responses: {
+                        '200': {
+                            description: 'Prometheus 格式指标数据',
+                            content: {
+                                'text/plain; version=0.0.4; charset=utf-8': {
+                                    schema: {
+                                        type: 'string',
+                                        example: '# HELP http_requests_total Total number of HTTP requests\n# TYPE http_requests_total counter\nhttp_requests_total 1234\n# HELP http_requests_by_status HTTP requests grouped by status code\n# TYPE http_requests_by_status counter\nhttp_requests_by_status{status="2xx"} 1000\n...'
+                                    },
+                                    example: '# HELP http_requests_total Total number of HTTP requests\n# TYPE http_requests_total counter\nhttp_requests_total 1000\n# HELP http_requests_by_status HTTP requests grouped by status code\n# TYPE http_requests_by_status counter\nhttp_requests_by_status{status="2xx"} 900\nhttp_requests_by_status{status="4xx"} 100\n# HELP http_request_duration_average_ms Average request duration in milliseconds by method and route\n# TYPE http_request_duration_average_ms gauge\nhttp_request_duration_average_ms{method="GET",route="/api/saohua"} 15\n# HELP http_request_count_total Total requests by method and route\n# TYPE http_request_count_total counter\nhttp_request_count_total{method="GET",route="/api/saohua"} 42\n# HELP process_uptime_seconds Process uptime in seconds\n# TYPE process_uptime_seconds gauge\nprocess_uptime_seconds 3600\n# HELP process_memory_heap_used_bytes Process heap used memory in bytes\n# TYPE process_memory_heap_used_bytes gauge\nprocess_memory_heap_used_bytes 12345678\n'
                                 }
                             }
                         }

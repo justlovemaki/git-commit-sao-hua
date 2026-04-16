@@ -128,11 +128,99 @@ function resetMetrics() {
     metricsStore.recentErrors = [];
 }
 
+function sanitizePrometheusLabelValue(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    const str = String(value);
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}
+
+function sanitizePrometheusMetricValue(value) {
+    if (!Number.isFinite(value)) {
+        return 0;
+    }
+    return value;
+}
+
+function getPrometheusRouteMetrics() {
+    return Object.entries(metricsStore.routes)
+        .filter(([routeKey, data]) => routeKey.includes(' ') && typeof data === 'object' && data !== null)
+        .map(([routeKey, data]) => {
+            const firstSpaceIndex = routeKey.indexOf(' ');
+            const method = routeKey.slice(0, firstSpaceIndex);
+            const route = routeKey.slice(firstSpaceIndex + 1);
+
+            return {
+                method,
+                route,
+                count: sanitizePrometheusMetricValue(data.count),
+                avgTime: sanitizePrometheusMetricValue(data.avgTime)
+            };
+        });
+}
+
+function formatPrometheusMetrics() {
+    const mem = process.memoryUsage();
+    const uptime = process.uptime();
+    const lines = [];
+    const routeMetrics = getPrometheusRouteMetrics();
+
+    lines.push('# HELP http_requests_total Total number of HTTP requests');
+    lines.push('# TYPE http_requests_total counter');
+    lines.push(`http_requests_total ${sanitizePrometheusMetricValue(metricsStore.totalRequests)}`);
+
+    lines.push('# HELP http_requests_by_status HTTP requests grouped by status code');
+    lines.push('# TYPE http_requests_by_status counter');
+    for (const [status, count] of Object.entries(metricsStore.statusCodes)) {
+        lines.push(`http_requests_by_status{status="${sanitizePrometheusLabelValue(status)}"} ${sanitizePrometheusMetricValue(count)}`);
+    }
+
+    lines.push('# HELP http_request_duration_average_ms Average request duration in milliseconds by method and route');
+    lines.push('# TYPE http_request_duration_average_ms gauge');
+    for (const entry of routeMetrics) {
+        lines.push(
+            `http_request_duration_average_ms{method="${sanitizePrometheusLabelValue(entry.method)}",route="${sanitizePrometheusLabelValue(entry.route)}"} ${entry.avgTime}`
+        );
+    }
+
+    lines.push('# HELP http_request_count_total Total requests by method and route');
+    lines.push('# TYPE http_request_count_total counter');
+    for (const entry of routeMetrics) {
+        lines.push(
+            `http_request_count_total{method="${sanitizePrometheusLabelValue(entry.method)}",route="${sanitizePrometheusLabelValue(entry.route)}"} ${entry.count}`
+        );
+    }
+
+    lines.push('# HELP process_uptime_seconds Process uptime in seconds');
+    lines.push('# TYPE process_uptime_seconds gauge');
+    lines.push(`process_uptime_seconds ${sanitizePrometheusMetricValue(uptime)}`);
+
+    lines.push('# HELP process_memory_rss_bytes Process resident set size memory in bytes');
+    lines.push('# TYPE process_memory_rss_bytes gauge');
+    lines.push(`process_memory_rss_bytes ${sanitizePrometheusMetricValue(mem.rss)}`);
+
+    lines.push('# HELP process_memory_heap_used_bytes Process heap used memory in bytes');
+    lines.push('# TYPE process_memory_heap_used_bytes gauge');
+    lines.push(`process_memory_heap_used_bytes ${sanitizePrometheusMetricValue(mem.heapUsed)}`);
+
+    lines.push('# HELP process_memory_heap_total_bytes Process heap total memory in bytes');
+    lines.push('# TYPE process_memory_heap_total_bytes gauge');
+    lines.push(`process_memory_heap_total_bytes ${sanitizePrometheusMetricValue(mem.heapTotal)}`);
+
+    lines.push('# HELP process_memory_external_bytes Process external memory in bytes');
+    lines.push('# TYPE process_memory_external_bytes gauge');
+    lines.push(`process_memory_external_bytes ${sanitizePrometheusMetricValue(mem.external)}`);
+
+    return lines.join('\n') + '\n';
+}
+
 export {
     metricsMiddleware,
     getMetrics,
     getMetricsSnapshot,
     resetMetrics,
     metricsStore,
-    generateRequestId
+    generateRequestId,
+    formatPrometheusMetrics
 };

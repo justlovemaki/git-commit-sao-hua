@@ -9,7 +9,7 @@ import saoHuaCore from '../lib/index.js';
 import swaggerSpec from './swagger.js';
 import versionModule from '../lib/version.js';
 import { requireAuth } from './auth-middleware.js';
-import { metricsMiddleware, getMetricsSnapshot } from './metrics.js';
+import { metricsMiddleware, getMetricsSnapshot, formatPrometheusMetrics } from './metrics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -131,6 +131,12 @@ app.get('/api/health/ready', async (req, res) => {
 app.get('/api/metrics', (req, res) => {
     const metrics = getMetricsSnapshot();
     res.json(successResponse(metrics, '获取指标快照成功~'));
+});
+
+app.get('/api/metrics/prometheus', (req, res) => {
+    const prometheusOutput = formatPrometheusMetrics();
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(prometheusOutput);
 });
 
 app.get('/api/saohua', (req, res) => {
