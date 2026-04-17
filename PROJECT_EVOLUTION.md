@@ -36,6 +36,7 @@
 - ✅ **API 可观测性 / 运维治理** 已完成，新增 request ID、请求聚合指标、`/api/health/live`、`/api/health/ready` 与 `/api/metrics`，REST API 从“功能开放”继续前进到“可部署、可探测、可观测”的平台运行能力
 - ✅ **Prometheus 指标导出** 已完成，在 `/api/metrics` JSON 快照基础上新增 `/api/metrics/prometheus` 标准文本导出，补齐按方法+路由聚合的请求数与平均耗时、进程 uptime、内存使用等指标，API 从“可观测”继续前进到“可被主流监控系统直接抓取”的平台接入能力
 - ✅ **插件作者发布工具链** 已完成，CLI 新增 `plugin validate` 与 `plugin pack`，核心库补齐本地插件校验、SHA-256 计算、建议索引条目与 metadata 生成能力，平台从“插件可发现、可安装、可审计”继续前进到“插件作者可自助发布、可生成索引元数据、可降低接入摩擦”的生态生产力阶段
+- ✅ **Release Notes 自动生成** 已完成，CLI 新增 `release-notes` 子命令，核心库补齐 conventional commit 解析、Git 历史聚合与 Markdown 发布说明生成能力，平台从“能生成单条 commit 骚话”继续前进到“能沉淀版本叙事、可直接产出发布说明”的发布运营能力
 
 ---
 
@@ -45,7 +46,7 @@
 |---------|------|------|
 | **Web 体验页** | ✅ 完成 | 单 HTML 文件，可直接打开使用 |
 | **VSCode 插件** | ✅ 完成 | 骚话生成 + 智能检测 + 日志分析 + 统计 |
-| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理、交互式提交向导、全屏 TUI 提交流程 |
+| **CLI 命令行** | ✅ 完成 | 随机生成、类型/风格指定、智能检测、AI 生成、Hook 管理、配置初始化、插件管理、交互式提交向导、全屏 TUI 提交流程、自然语言提交 (v1.35.0) |
 | **GitHub Action** | ✅ 完成 | CI/CD 中自动生成骚话 commit message |
 | **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 并评论骚话 |
 | **REST API** | ✅ 完成 | Express.js HTTP 服务，支持全部生成能力 + AI + 统计 + 插件 CRUD，并补齐健康探针、请求追踪、运行时指标快照与 Prometheus 标准导出 |
@@ -58,7 +59,8 @@
 | **插件远程安装 / GitHub 简写分发** | ✅ 完成 | 支持从 HTTP/HTTPS URL、GitHub 仓库简写 `owner/repo[:path][@ref]` 安装插件，CLI/API/文档/测试已打通 |
 | **插件索引 / 市场入口** | ✅ 完成 | 支持从远程索引搜索插件并按名称安装，CLI/API/Swagger/README/测试已打通 |
 | **插件作者发布工具链** | ✅ 完成 | CLI 支持 `plugin validate` / `plugin pack`，核心库可生成 SHA-256、建议索引条目与 metadata JSON，降低第三方插件接入与发布成本 |
-| **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin，多端共用 |
+| **Release Notes / 发布说明生成** | ✅ 完成 | CLI `release-notes` 可基于 git log 直接输出 Markdown 发布说明，核心库可解析 conventional commit、按章节聚合并生成可直接贴到 GitHub Release / CHANGELOG 的内容 |
+| **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin + Release Notes，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
 | **Python SDK** | ✅ 完成 | 类型化客户端，覆盖全部 API 端点，21 个测试全通过 |
 | **Go SDK** | ✅ 完成 | 类型化客户端（resty），覆盖全部 API 端点，18 个测试用例，支持上下文 |
@@ -133,6 +135,7 @@
 8. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验、来源白名单与安装来源审计，但仍缺少签名、公钥信任链与发布者身份验证
 9. **多语言 SDK 版本治理尚未完全统一** — 当前主项目版本已纳入 `RELEASE.json`，但 Python / JavaScript SDK 仍保留各自包版本节奏，后续需要补齐更细粒度的发布矩阵与自动化校验
 10. **插件发布仍缺少签名与一键上架流程** — 当前已补齐插件作者本地校验、摘要与索引元数据生成，但尚未覆盖签名、公钥信任链、Release 资产自动上传与官方索引提交流水线
+11. **Release Notes 尚未联动 GitHub Release / PR 元数据** — 当前已支持基于 git log 生成 Markdown 发布说明，但还没有自动关联 PR 链接、作者、compare 链接与 GitHub Release 发布流
 
 ---
 
@@ -151,6 +154,7 @@
 - ✅ **API 可观测性 / 运维治理** — 已补齐 request ID、请求聚合指标、`/api/health/live`、`/api/health/ready` 与 `/api/metrics`，REST API 从“功能开放”继续前进到“可部署、可探测、可观测”的平台运维能力
 - ✅ **Prometheus 指标导出层** — 已在 `/api/metrics` JSON 快照基础上补齐 `/api/metrics/prometheus`，支持 Prometheus 文本协议抓取，暴露请求总量、状态码分布、按方法+路由聚合请求统计与进程资源指标
 - ✅ **插件作者发布工具链** — 已补齐 `plugin validate` / `plugin pack`、本地 SHA-256 计算、建议索引条目与 metadata JSON 生成，插件生态从“可安装、可审计”继续前进到“作者可自助发布、索引维护成本更低”
+- ✅ **Release Notes 自动生成** — 已补齐 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，核心库新增 conventional commit 解析、章节聚合与 Markdown 发布说明生成能力，项目从“会说单条骚话”前进到“会总结一整个版本的演进叙事”
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -172,8 +176,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-17 | 🚀 大演进 | 插件作者发布工具链 — 在 `lib/plugin-manager.js` 补齐 `validatePluginJson`、`calculateFileSha256`、`generateIndexEntry`、`generatePluginMetadata`、`packPlugin`，CLI 新增 `plugin validate <path>` 与 `plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>]`，并同步 README、lib/cli 测试与战略文档；项目从“插件可发现、可安装、可审计”继续前进到“插件作者可自助发布、可直接生成索引元数据”的生态发布能力 | Stage 5 不变（生态生产力增强） |
-| -1 | 2026-04-16 | 🚀 大演进 | Prometheus 指标导出层 — 在 `api/metrics.js` 增加标准文本格式导出，在 `api/server.js` 新增 `/api/metrics/prometheus`，并同步 Swagger、README、API 测试与战略文档；项目从“有基础可观测快照”继续前进到“可被 Prometheus 直接抓取接入”的平台运维集成能力 | Stage 5 不变（平台监控集成增强） |
-| -2 | 2026-04-16 | 🚀 大演进 | API 可观测性 / 运维治理 — 为 `api/server.js` 引入 request ID 与请求聚合中间件，新增 `/api/health/live`、`/api/health/ready`、`/api/metrics`，扩展 `/api/health` 运行态信息，并同步 Swagger、README、API 测试；项目从“API 功能完整”继续前进到“API 可部署、可探测、可观测”的平台运行能力 | Stage 5 不变（平台运维能力增强） |
-| -3 | 2026-04-15 | 🚀 大演进 | 插件来源锁定 / Inspect — 在 `lib/plugin-manager` 为插件安装补齐 provenance 元数据与 `plugins.lock.json` 锁文件，CLI 新增 `plugin inspect <name>`，REST API 新增 `GET /api/plugins/:name`，并同步 README / Swagger / lib+cli+api 测试；项目从“插件可发现、可安装”继续前进到“插件可审计、可追踪、可复盘”的平台治理能力 | Stage 5 不变（生态治理能力增强） |
-| -4 | 2026-04-15 | 🔧 中迭代 | GitHub 简写插件安装 — 在 `lib/plugin-manager` 新增 GitHub shorthand 解析与默认路径回退，CLI 增加 `plugin install --github`，REST API `/api/plugins/install` 支持 `githubSpec`，插件索引项支持 `github` 字段，并补齐 Swagger、CLI 文档、lib/API 测试；平台从“插件可远程分发”继续前进到“插件可直接由 GitHub 仓库名分发”的更低摩擦生态入口 | Stage 5 不变（插件生态分发体验增强） |
+| 最新 | 2026-04-17 | 🚀 大演进 | Release Notes 自动生成 — 新增 `lib/release-notes.js`，补齐 conventional commit 解析、Git 历史聚合与 Markdown 发布说明生成能力，CLI 新增 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，并同步 README、lib/cli 测试与战略文档；项目从“能生成单条骚话”继续前进到“能总结整个版本故事、直接产出发布说明”的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
+| -1 | 2026-04-17 | 🚀 大演进 | 插件作者发布工具链 — 在 `lib/plugin-manager.js` 补齐 `validatePluginJson`、`calculateFileSha256`、`generateIndexEntry`、`generatePluginMetadata`、`packPlugin`，CLI 新增 `plugin validate <path>` 与 `plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>]`，并同步 README、lib/cli 测试与战略文档；项目从“插件可发现、可安装、可审计”继续前进到“插件作者可自助发布、可直接生成索引元数据”的生态发布能力 | Stage 5 不变（生态生产力增强） |
+| -2 | 2026-04-16 | 🚀 大演进 | Prometheus 指标导出层 — 在 `api/metrics.js` 增加标准文本格式导出，在 `api/server.js` 新增 `/api/metrics/prometheus`，并同步 Swagger、README、API 测试与战略文档；项目从“有基础可观测快照”继续前进到“可被 Prometheus 直接抓取接入”的平台运维集成能力 | Stage 5 不变（平台监控集成增强） |
+| -3 | 2026-04-16 | 🚀 大演进 | API 可观测性 / 运维治理 — 为 `api/server.js` 引入 request ID 与请求聚合中间件，新增 `/api/health/live`、`/api/health/ready`、`/api/metrics`，扩展 `/api/health` 运行态信息，并同步 Swagger、README、API 测试；项目从“API 功能完整”继续前进到“API 可部署、可探测、可观测”的平台运行能力 | Stage 5 不变（平台运维能力增强） |
+| -4 | 2026-04-15 | 🚀 大演进 | 插件来源锁定 / Inspect — 在 `lib/plugin-manager` 为插件安装补齐 provenance 元数据与 `plugins.lock.json` 锁文件，CLI 新增 `plugin inspect <name>`，REST API 新增 `GET /api/plugins/:name`，并同步 README / Swagger / lib+cli+api 测试；项目从“插件可发现、可安装”继续前进到“插件可审计、可追踪、可复盘”的平台治理能力 | Stage 5 不变（生态治理能力增强） |

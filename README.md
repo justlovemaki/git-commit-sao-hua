@@ -46,6 +46,7 @@
 - 🤖 **GitHub Action** - 在 CI/CD 中自动生成骚话 commit message（v1.22.0）
 - 🐙 **GitHub App** - 自动监听 PR/Issue 创建，智能分析并自动评论骚话（v2.0.0）
 - 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制、健康探针、请求追踪与指标快照，兼容 Prometheus 抓取协议（v1.25.0 起持续增强）
+- 💬 **自然语言提交** - 用中文/英文描述自动生成 commit message，无需指定类型和风格（v1.35.0 新增）
 
 ## 🔗 Git Hook 自动集成（v1.26.0 新增 🎉）
 
@@ -96,7 +97,25 @@ git-sao-hua plugin validate <path>       # 校验插件 JSON 并输出 SHA-256 (
 git-sao-hua plugin pack <path>           # 生成插件发布摘要与建议索引条目 (v1.34.0)
 git-sao-hua plugin pack <path> --output <file> # 输出 metadata JSON (v1.34.0)
 git-sao-hua plugin remove <name>             # 删除插件
+git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
 ```
+
+### Release Notes 生成（新增）
+
+除了生成单条 commit message，现在 CLI 也可以直接从 Git 历史生成 Markdown 版发布说明，适合在发版、写 changelog、整理 PR merge 结果时使用：
+
+```bash
+# 基于明确 range 生成
+ git-sao-hua release-notes v1.34.0..HEAD
+
+# 用 from/to 参数生成并自定义标题
+ git-sao-hua release-notes --from v1.34.0 --to HEAD --title "v1.35.0 Release Notes"
+
+# 输出到文件
+ git-sao-hua release-notes HEAD --output ./RELEASE_NOTES.md
+```
+
+生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。
 
 ### 插件作者发布工具链（v1.34.0）
 
@@ -325,6 +344,17 @@ git-sao-hua -g
 # 指定输出语言
 git-sao-hua --lang en
 git-sao-hua -t feat -s love --lang zh-CN
+
+# 用自然语言描述生成 commit message（v1.35.0 新增）
+git-sao-hua -m "修复登录页面闪退 bug"
+git-sao-hua -m "新增用户注册功能"
+git-sao-hua -m "add new feature" --lang en
+git-sao-hua -m "更新依赖版本" -s love
+
+# 生成 Release Notes（新增）
+git-sao-hua release-notes HEAD~20..HEAD
+git-sao-hua release-notes --from v1.34.0 --to HEAD --title "v1.35.0 Release Notes"
+git-sao-hua release-notes HEAD --output ./RELEASE_NOTES.md
 ```
 
 详细文档见 [cli/README.md](cli/README.md)

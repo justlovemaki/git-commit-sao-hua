@@ -29,6 +29,7 @@ const VALID_TYPES = ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test'
 const VALID_STYLES = ['love', 'sao', 'zha', 'chu', 'fo'];
 const VALID_LANGUAGES = ['zh-CN', 'en'];
 const DEFAULT_LANGUAGE = 'zh-CN';
+const naturalLanguage = require('../lib/natural-language.js');
 
 function green(text) {
     return tui.green(text);
@@ -258,12 +259,14 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
     console.log('  ' + green('-s, --style <style>') + '    指定骚话风格');
     console.log('  ' + green('-a, --auto') + '             智能检测 commit 类型 (v1.20.0 新增)');
     console.log('  ' + green('--ai') + '                   使用 AI 生成个性化骚话 (v1.24.0 新增)');
+    console.log('  ' + green('-m, --msg <text>') + '       用自然语言描述生成 commit message (v1.35.0 新增)');
     console.log('  ' + green('-l, --list') + '             列出所有可用类型和风格');
     console.log('  ' + green('-c, --copy') + '             生成后复制到剪贴板');
     console.log('  ' + green('-g, --git') + '              直接执行 git commit');
@@ -313,6 +316,12 @@ function showHelp() {
     console.log('  git-sao-hua --ai');
     console.log(dim('\n  # AI 生成并指定风格'));
     console.log('  git-sao-hua --ai -s love');
+    console.log(dim('\n  # 用自然语言描述生成 commit (中文)'));
+    console.log('  git-sao-hua -m "修复登录页面闪退 bug"');
+    console.log(dim('\n  # 用自然语言描述生成 commit (英文)'));
+    console.log('  git-sao-hua -m "add new login feature" --lang en');
+    console.log(dim('\n  # 自然语言 + 指定风格'));
+    console.log('  git-sao-hua -m "新增支付功能" -s love');
     console.log(dim('\n  # 生成并复制到剪贴板'));
     console.log('  git-sao-hua -c');
     console.log(dim('\n  # 生成并直接提交'));
@@ -716,6 +725,7 @@ function parseArgs() {
         tui: false,
         auto: false,
         ai: false,
+        naturalText: null,
         help: false,
         version: false,
         language: DEFAULT_LANGUAGE
@@ -742,6 +752,8 @@ function parseArgs() {
             options.auto = true;
         } else if (arg === '--ai') {
             options.ai = true;
+        } else if (arg === '-m' || arg === '--msg') {
+            options.naturalText = args[++i];
         } else if (arg === '--lang' || arg === '--language') {
             options.language = args[++i] || DEFAULT_LANGUAGE;
         } else if (arg === '-h' || arg === '--help') {
@@ -910,6 +922,62 @@ async function handleInitCommand() {
         console.log(yellow('💡 提示：运行 git-sao-hua hook install 安装 Git Hook'));
     } else {
         console.log(red('✗ 配置文件创建失败'));
+        process.exit(1);
+    }
+}
+
+function handleReleaseNotesCommand(args = []) {
+    const getOptionValue = (flag) => {
+        const exactIndex = args.indexOf(flag);
+        if (exactIndex !== -1) {
+            return args[exactIndex + 1] || null;
+        }
+        const prefixed = args.find(arg => arg.startsWith(flag + '='));
+        return prefixed ? prefixed.slice(flag.length + 1) : null;
+    };
+
+    const positional = [];
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (['--from', '--to', '--title', '--output'].includes(arg)) {
+            i++;
+            continue;
+        }
+        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=')) {
+            continue;
+        }
+        if (!arg.startsWith('-')) {
+            positional.push(arg);
+        }
+    }
+
+    const fromRef = getOptionValue('--from');
+    const toRef = getOptionValue('--to');
+    const title = getOptionValue('--title') || 'Release Notes';
+    const outputFile = getOptionValue('--output');
+    const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
+
+    console.log(cyan('正在生成 Release Notes...'));
+    console.log(dim('  Git Range: ' + range));
+
+    try {
+        const result = data.generateReleaseNotes(range, {
+            title,
+            repoPath: process.cwd()
+        });
+
+        if (outputFile) {
+            const outputPath = path.resolve(process.cwd(), outputFile);
+            fs.writeFileSync(outputPath, result.markdown, 'utf8');
+            console.log(green('✓ Release Notes 已写入: ' + outputPath));
+            console.log(dim('  Commit 数量: ' + result.commits.length));
+            return;
+        }
+
+        console.log('');
+        process.stdout.write(result.markdown);
+    } catch (e) {
+        console.log(red('✗ 生成失败: ' + e.message));
         process.exit(1);
     }
 }
@@ -1333,7 +1401,7 @@ async function handlePluginCommand(action, args = []) {
 }
 
 async function main() {
-    // 处理子命令（hook / init / plugin）
+    // 处理子命令（hook / init / plugin / release-notes）
     const args = process.argv.slice(2);
     if (args[0] === 'hook') {
         handleHookCommand(args[1] || 'status');
@@ -1345,6 +1413,10 @@ async function main() {
     }
     if (args[0] === 'plugin') {
         await handlePluginCommand(args[1], args.slice(2));
+        return;
+    }
+    if (args[0] === 'release-notes') {
+        handleReleaseNotesCommand(args.slice(1));
         return;
     }
     if (args[0] === 'tui') {
@@ -1413,6 +1485,18 @@ async function main() {
     }
 
     const language = options.language;
+    
+    // 自然语言模式 (v1.35.0 新增)
+    if (options.naturalText) {
+        console.log(cyan('📝 正在分析自然语言描述...'));
+        const nlResult = naturalLanguage.generateFromNaturalLanguage(options.naturalText, language);
+        console.log(cyan(`✓ 识别类型：${green(nlResult.detectedType)} (置信度：${nlResult.confidence})`));
+        console.log(dim(`  主题：${nlResult.topic}`));
+        
+        // 使用识别出的类型和风格生成消息
+        type = nlResult.detectedType;
+        style = nlResult.detectedStyle;
+    }
     
     // AI 生成模式
     let msgObj;
