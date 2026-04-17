@@ -92,8 +92,36 @@ git-sao-hua plugin search [query]         # 搜索插件市场 (v1.29.0)
 git-sao-hua plugin search [query] --allow-host <host> # 搜索时允许额外索引 host (v1.31.0)
 git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
 git-sao-hua plugin install --from-index <name> --allow-host <host> # 从索引安装时允许额外 host (v1.31.0)
+git-sao-hua plugin validate <path>       # 校验插件 JSON 并输出 SHA-256 (v1.34.0)
+git-sao-hua plugin pack <path>           # 生成插件发布摘要与建议索引条目 (v1.34.0)
+git-sao-hua plugin pack <path> --output <file> # 输出 metadata JSON (v1.34.0)
 git-sao-hua plugin remove <name>             # 删除插件
 ```
+
+### 插件作者发布工具链（v1.34.0）
+
+现在除了“安装侧”能力，CLI 也补上了“发布侧”能力，方便第三方作者在发布前自检插件并生成索引元数据：
+
+```bash
+# 校验插件结构并输出 SHA-256
+ git-sao-hua plugin validate ./my-plugin.json
+
+# 生成打包摘要 + 建议索引条目
+ git-sao-hua plugin pack ./my-plugin.json
+
+# 生成 metadata JSON，便于提交到插件索引仓库或发布页
+ git-sao-hua plugin pack ./my-plugin.json --output ./dist/plugin-metadata.json
+
+# 同时带上预期分发地址或 GitHub 简写
+ git-sao-hua plugin pack ./my-plugin.json --source-url https://example.com/plugins/my-plugin.json
+ git-sao-hua plugin pack ./my-plugin.json --github owner/repo:path/to/plugin.json@main
+```
+
+`plugin pack` 会输出：
+- 插件名称、版本、语言、风格、文件大小
+- 当前文件的 `SHA-256`
+- 建议写入插件索引的 JSON 条目
+- 可选的 `metadata.json`（包含 `indexEntry`）
 
 ### 插件安装治理与锁文件（v1.33.0）
 
@@ -215,6 +243,8 @@ curl -X POST http://localhost:3000/api/plugins/install-from-index \
 
 必需字段：`name`, `version`, `sourceUrl`
 可选字段：`description`, `author`, `tags`, `homepage`, `checksum`
+
+如果你在维护插件索引，可以直接用 `git-sao-hua plugin pack <path>` 生成建议索引条目，再根据实际托管地址补齐 `sourceUrl` 或 `github`。
 
 API 安装方式：
 

@@ -96,4 +96,104 @@ const tui = require('./tui');
     }
 })();
 
+(function testPluginValidateShowsChecksum() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-validate-'));
+    const pluginPath = path.join(tmpDir, 'validate-test.json');
+    const plugin = {
+        name: 'validate-test',
+        version: '1.2.3',
+        description: 'Validate test plugin',
+        author: 'Test',
+        data: { 'zh-CN': { feat: { love: ['test'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'plugin', 'validate', pluginPath], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /✓ 插件校验通过/);
+        assert.match(output, /名称: validate-test/);
+        assert.match(output, /版本: 1.2.3/);
+        assert.match(output, /SHA-256:/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testPluginValidateRejectsInvalid() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-validate-'));
+    const pluginPath = path.join(tmpDir, 'invalid.json');
+    fs.writeFileSync(pluginPath, 'not json', 'utf8');
+
+    let exitCode = 0;
+    try {
+        execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'plugin', 'validate', pluginPath], {
+            encoding: 'utf8'
+        });
+    } catch (e) {
+        exitCode = e.status;
+    }
+
+    assert.strictEqual(exitCode, 1);
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+})();
+
+(function testPluginPackShowsSummaryAndIndexEntry() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-pack-'));
+    const pluginPath = path.join(tmpDir, 'pack-test.json');
+    const plugin = {
+        name: 'pack-test',
+        version: '2.0.0',
+        description: 'Pack test',
+        author: 'PackAuthor',
+        data: { 'zh-CN': { feat: { love: ['test'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'plugin', 'pack', pluginPath], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /✓ 打包成功/);
+        assert.match(output, /名称: pack-test/);
+        assert.match(output, /版本: 2.0.0/);
+        assert.match(output, /SHA-256:/);
+        assert.match(output, /建议索引条目:/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testPluginPackWithOutput() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-pack-'));
+    const pluginPath = path.join(tmpDir, 'pack-out.json');
+    const metadataPath = path.join(tmpDir, 'metadata-out.json');
+    const plugin = {
+        name: 'pack-metadata',
+        version: '3.0.0',
+        data: { 'zh-CN': { feat: { love: ['test'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'plugin', 'pack', pluginPath, '--output', metadataPath], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /✓ 元数据已写入/);
+        assert.ok(fs.existsSync(metadataPath));
+        const meta = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        assert.strictEqual(meta.name, 'pack-metadata');
+        assert.strictEqual(meta.indexEntry.name, 'pack-metadata');
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');

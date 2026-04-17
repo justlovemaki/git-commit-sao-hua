@@ -292,6 +292,11 @@ function showHelp() {
     console.log('  ' + green('plugin install --from-index <name>') + ' 从索引安装插件 (v1.29.0 新增)');
     console.log('  ' + green('plugin install --from-index <name> --allow-host <host>') + ' 允许 host (v1.31.0 新增)');
     console.log('  ' + green('plugin remove <name>') + '    删除插件 (v1.27.0 新增)');
+    console.log('  ' + green('plugin validate <path>') + '  校验插件 JSON (v1.34.0 新增)');
+    console.log('  ' + green('plugin pack <path>') + '     打包插件并生成摘要 (v1.34.0 新增)');
+    console.log('  ' + green('plugin pack <path> --output <file>') + '  输出 metadata JSON (v1.34.0 新增)');
+    console.log('  ' + green('plugin pack <path> --source-url <url>') + '  添加 source-url (v1.34.0 新增)');
+    console.log('  ' + green('plugin pack <path> --github <spec>') + '  添加 github 引用 (v1.34.0 新增)');
     console.log('');
     console.log(bold('示例:'));
     console.log(dim('  # 随机生成一条骚话'));
@@ -360,6 +365,16 @@ function showHelp() {
     console.log('  git-sao-hua plugin install --from-index my-plugin --allow-host example.com');
     console.log(dim('\n  # 删除插件'));
     console.log('  git-sao-hua plugin remove my-pack');
+    console.log(dim('\n  # 校验插件 JSON'));
+    console.log('  git-sao-hua plugin validate ./my-plugin.json');
+    console.log(dim('\n  # 打包插件并生成摘要'));
+    console.log('  git-sao-hua plugin pack ./my-plugin.json');
+    console.log(dim('\n  # 打包并输出 metadata JSON'));
+    console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json');
+    console.log(dim('\n  # 打包并添加 source-url'));
+    console.log('  git-sao-hua plugin pack ./my-plugin.json --source-url https://example.com/plugin.json');
+    console.log(dim('\n  # 打包并添加 github 引用'));
+    console.log('  git-sao-hua plugin pack ./my-plugin.json --github owner/repo');
 }
 
 function showList() {
@@ -1169,6 +1184,120 @@ async function handlePluginCommand(action, args = []) {
             }
             break;
         }
+        case 'validate': {
+            const sourcePath = args[0];
+            if (!sourcePath) {
+                console.log(red('错误：请指定插件路径'));
+                console.log(dim('用法: git-sao-hua plugin validate <path>'));
+                process.exit(1);
+            }
+
+            console.log(cyan('正在校验插件: ' + sourcePath));
+            const result = pluginManager.validatePluginJson(sourcePath);
+            if (result.valid) {
+                console.log(green('✓ 插件校验通过'));
+                console.log('');
+                console.log(bold('插件信息:'));
+                console.log('  名称: ' + green(result.plugin.name));
+                console.log('  版本: ' + result.plugin.version);
+                if (result.plugin.description) {
+                    console.log('  描述: ' + result.plugin.description);
+                }
+                if (result.plugin.author) {
+                    console.log('  作者: ' + result.plugin.author);
+                }
+                console.log('  文件: ' + dim(result.path));
+                console.log('  SHA-256: ' + dim(result.checksum));
+                console.log('');
+                console.log(green('插件结构有效'));
+            } else {
+                console.log(red('✗ 插件校验失败'));
+                console.log('');
+                console.log(red('错误: ' + result.error));
+                console.log('');
+                if (result.path) {
+                    console.log(dim('文件: ' + result.path));
+                }
+                process.exit(1);
+            }
+            break;
+        }
+        case 'pack': {
+            const sourcePath = args[0];
+            if (!sourcePath) {
+                console.log(red('错误：请指定插件路径'));
+                console.log(dim('用法: git-sao-hua plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>]'));
+                process.exit(1);
+            }
+
+            const outputArg = args.find(arg => arg.startsWith('--output=') || arg === '--output');
+            const outputValue = outputArg ? (outputArg === '--output' ? args[args.indexOf(outputArg) + 1] : outputArg.split('=')[1]) : null;
+
+            const sourceUrlArg = args.find(arg => arg.startsWith('--source-url=') || arg === '--source-url');
+            const sourceUrlValue = sourceUrlArg ? (sourceUrlArg === '--source-url' ? args[args.indexOf(sourceUrlArg) + 1] : sourceUrlArg.split('=')[1]) : null;
+
+            const githubArg = args.find(arg => arg.startsWith('--github=') || arg === '--github');
+            const githubValue = githubArg ? (githubArg === '--github' ? args[args.indexOf(githubArg) + 1] : githubArg.split('=')[1]) : null;
+
+            console.log(cyan('正在打包插件: ' + sourcePath));
+            if (sourceUrlValue) {
+                console.log(dim('  source-url: ' + sourceUrlValue));
+            }
+            if (githubValue) {
+                console.log(dim('  github: ' + githubValue));
+            }
+
+            const result = pluginManager.packPlugin(sourcePath, {
+                outputMetadata: outputValue,
+                sourceUrl: sourceUrlValue,
+                github: githubValue
+            });
+
+            if (result.success) {
+                console.log(green('\n✓ 打包成功'));
+                console.log('');
+                console.log(bold('====== 打包摘要 ======'));
+                console.log('  名称: ' + green(result.summary.name));
+                console.log('  版本: ' + result.summary.version);
+                if (result.summary.description) {
+                    console.log('  描述: ' + result.summary.description);
+                }
+                if (result.summary.author) {
+                    console.log('  作者: ' + result.summary.author);
+                }
+                console.log('  SHA-256: ' + dim(result.summary.sha256));
+                console.log('  文件大小: ' + result.summary.fileSize + ' bytes');
+                console.log('  文件路径: ' + dim(result.summary.filePath));
+                if (result.summary.languages && result.summary.languages.length > 0) {
+                    console.log('  语言: ' + result.summary.languages.join(', '));
+                }
+                if (result.summary.styles && result.summary.styles.length > 0) {
+                    console.log('  风格: ' + result.summary.styles.join(', '));
+                }
+                if (result.summary.sourceUrl) {
+                    console.log('  source-url: ' + dim(result.summary.sourceUrl));
+                }
+                if (result.summary.github) {
+                    console.log('  github: ' + dim(result.summary.github.spec || JSON.stringify(result.summary.github)));
+                }
+                if (result.indexEntry) {
+                    console.log('');
+                    console.log(bold('建议索引条目:'));
+                    console.log(dim(JSON.stringify(result.indexEntry, null, 2)));
+                }
+                if (result.metadataPath) {
+                    console.log('');
+                    console.log(green('✓ 元数据已写入: ' + result.metadataPath));
+                }
+                console.log('');
+            } else {
+                console.log(red('✗ 打包失败'));
+                console.log('');
+                console.log(red('错误: ' + result.error));
+                process.exit(1);
+            }
+            break;
+        }
         default:
             console.log(red('未知的 plugin 操作：' + (action || '')));
             console.log('');
@@ -1182,6 +1311,9 @@ async function handlePluginCommand(action, args = []) {
             console.log('  ' + green('git-sao-hua plugin search [query]') + '     搜索插件市场');
             console.log('  ' + green('git-sao-hua plugin install --from-index <name>') + ' 从索引安装插件');
             console.log('  ' + green('git-sao-hua plugin remove <name>') + '    删除插件');
+            console.log('  ' + green('git-sao-hua plugin validate <path>') + '  校验插件 JSON');
+            console.log('  ' + green('git-sao-hua plugin pack <path>') + '     打包插件并生成摘要');
+            console.log('  ' + green('git-sao-hua plugin pack <path> --output <file>') + '  输出 metadata JSON');
             console.log('');
             console.log(dim('示例:'));
             console.log('  git-sao-hua plugin list');
@@ -1193,6 +1325,8 @@ async function handlePluginCommand(action, args = []) {
             console.log('  git-sao-hua plugin search love');
             console.log('  git-sao-hua plugin search love --index https://example.com/index.json');
             console.log('  git-sao-hua plugin install --from-index my-plugin');
+            console.log('  git-sao-hua plugin validate ./my-plugin.json');
+            console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json');
             console.log('  git-sao-hua plugin remove my-pack');
             process.exit(1);
     }
