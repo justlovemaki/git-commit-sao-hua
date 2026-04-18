@@ -259,7 +259,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -939,11 +939,11 @@ function handleReleaseNotesCommand(args = []) {
     const positional = [];
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
-        if (['--from', '--to', '--title', '--output', '--repo'].includes(arg)) {
+        if (['--from', '--to', '--title', '--output', '--repo', '--format'].includes(arg)) {
             i++;
             continue;
         }
-        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=') || arg.startsWith('--repo=')) {
+        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=') || arg.startsWith('--repo=') || arg.startsWith('--format=')) {
             continue;
         }
         if (!arg.startsWith('-')) {
@@ -956,10 +956,14 @@ function handleReleaseNotesCommand(args = []) {
     const title = getOptionValue('--title') || 'Release Notes';
     const outputFile = getOptionValue('--output');
     const repo = getOptionValue('--repo');
+    const format = getOptionValue('--format') || 'markdown';
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
-    console.log(cyan('正在生成 Release Notes...'));
-    console.log(dim('  Git Range: ' + range));
+    if (format !== 'markdown' && format !== 'json') {
+        console.log(red('无效格式: ' + format));
+        console.log(dim('有效格式: markdown, json'));
+        process.exit(1);
+    }
 
     try {
         const result = data.generateReleaseNotes(range, {
@@ -968,22 +972,43 @@ function handleReleaseNotesCommand(args = []) {
             repo
         });
 
-        if (result.repo) {
-            console.log(dim('  Repository: ' + result.repo));
-        } else if (repo) {
-            console.log(dim('  Repository: ' + repo));
+        let output;
+        if (format === 'json') {
+            output = JSON.stringify(result.data, null, 2);
+        } else {
+            output = result.markdown;
         }
 
         if (outputFile) {
             const outputPath = path.resolve(process.cwd(), outputFile);
-            fs.writeFileSync(outputPath, result.markdown, 'utf8');
+            fs.writeFileSync(outputPath, output, 'utf8');
+            console.log(cyan('正在生成 Release Notes...'));
+            console.log(dim('  Git Range: ' + range));
+            console.log(dim('  Output Format: ' + format));
+            if (result.repo) {
+                console.log(dim('  Repository: ' + result.repo));
+            } else if (repo) {
+                console.log(dim('  Repository: ' + repo));
+            }
             console.log(green('✓ Release Notes 已写入: ' + outputPath));
             console.log(dim('  Commit 数量: ' + result.commits.length));
             return;
         }
 
-        console.log('');
-        process.stdout.write(result.markdown);
+        if (format === 'json') {
+            process.stdout.write(output);
+        } else {
+            console.log(cyan('正在生成 Release Notes...'));
+            console.log(dim('  Git Range: ' + range));
+            console.log(dim('  Output Format: ' + format));
+            if (result.repo) {
+                console.log(dim('  Repository: ' + result.repo));
+            } else if (repo) {
+                console.log(dim('  Repository: ' + repo));
+            }
+            console.log('');
+            process.stdout.write(output);
+        }
     } catch (e) {
         console.log(red('✗ 生成失败: ' + e.message));
         process.exit(1);

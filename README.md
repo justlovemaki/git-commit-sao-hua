@@ -102,10 +102,10 @@ git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Not
 
 ### Release Notes 生成（新增）
 
-除了生成单条 commit message，现在 CLI 也可以直接从 Git 历史生成 Markdown 版发布说明，适合在发版、写 changelog、整理 PR merge 结果时使用：
+除了生成单条 commit message，现在 CLI 也可以直接从 Git 历史生成 Markdown 版或 JSON 版发布说明，适合在发版、写 changelog、整理 PR merge 结果时使用：
 
 ```bash
- # 基于明确 range 生成
+ # 基于明确 range 生成 Markdown
   git-sao-hua release-notes v1.34.0..HEAD
 
  # 用 from/to 参数生成并自定义标题
@@ -119,6 +119,12 @@ git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Not
 
  # 未指定 repo 时自动从 git remote origin 推断
   git-sao-hua release-notes HEAD
+
+ # 输出 JSON 格式（适合自动化流水线消费）
+  git-sao-hua release-notes HEAD --format json
+
+ # JSON 输出到文件
+  git-sao-hua release-notes v1.34.0..HEAD --format json --output ./release.json
 ```
 
 生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。
@@ -127,6 +133,60 @@ git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Not
 - 每个 commit 行的 `[hash](commit link)` 链接
 - subject 中包含 `(#123)` 时自动生成 `[#123](pull link)` 链接
 - range 为 `from..to` 格式时生成 `[compare link]` 可比链接
+
+#### JSON 输出格式
+
+`--format json` 输出机器可读的结构化数据，适合自动化流水线、消费和 CI/CD 集成：
+
+```json
+{
+  "title": "v1.35.0 Release Notes",
+  "version": "v1.35.0 Release Notes",
+  "range": "v1.34.0..HEAD",
+  "repo": "owner/repo",
+  "baseUrl": "https://github.com/owner/repo",
+  "compare": {
+    "from": "v1.34.0",
+    "to": "HEAD",
+    "url": "https://github.com/owner/repo/compare/v1.34.0...HEAD"
+  },
+  "generatedAt": "2026-04-18T10:00:00.000Z",
+  "totalCommits": 15,
+  "summary": {
+    "Features": 5,
+    "Fixes": 3,
+    "Docs": 2
+  },
+  "sections": {
+    "Features": [...],
+    "Fixes": [...]
+  },
+  "commits": [
+    {
+      "hash": "abc123def456...",
+      "shortHash": "abc123d",
+      "type": "feat",
+      "scope": "cli",
+      "description": "add release notes",
+      "breaking": false,
+      "body": null,
+      "authorName": "Developer",
+      "authorEmail": "dev@example.com"
+    }
+  ]
+}
+```
+
+JSON 字段说明：
+- `title` / `version`: Release 标题
+- `range`: Git range 范围
+- `repo` / `baseUrl`: GitHub 仓库信息
+- `compare`: Compare 链接信息（含 `from`、`to`、`url`）
+- `generatedAt`: 生成时间（ISO 8601）
+- `totalCommits`: 提交总数
+- `summary`: 各类型提交数量统计
+- `sections`: 按类型分组的提交列表
+- `commits`: 完整提交列表（含 hash、type、scope、description、breaking、body、authorName、authorEmail）
 
 ### 插件作者发布工具链（v1.34.0）
 

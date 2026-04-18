@@ -256,4 +256,81 @@ const tui = require('./tui');
     }
 })();
 
+(function testReleaseNotesJsonFormat() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-notes-json-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add json output test'], { cwd: tmpDir, stdio: 'ignore' });
+        fs.writeFileSync(path.join(tmpDir, 'fix.txt'), 'fix', 'utf8');
+        execFileSync('git', ['add', 'fix.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'fix(core): resolve bug'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--format', 'json'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+
+        const lines = rawOutput.split('\n');
+        const jsonStartIdx = lines.findIndex(line => line.startsWith('{'));
+        const jsonText = lines.slice(jsonStartIdx).join('\n');
+        const json = JSON.parse(jsonText);
+
+        assert.strictEqual(json.title, 'vNext');
+        assert.strictEqual(json.totalCommits, 2);
+        assert.ok(json.commits);
+        assert.ok(json.commits.length > 0);
+        assert.ok(json.commits[0].hash);
+        assert.ok(json.commits[0].type);
+        assert.ok(json.commits[0].description);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesJsonFormatWithOutput() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-notes-json-out-'));
+    const outputPath = path.join(tmpDir, 'release.json');
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'test.txt'), 'test', 'utf8');
+        execFileSync('git', ['add', 'test.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(core): json output test'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--format', 'json',
+            '--output', 'release.json'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /Release Notes 已写入/);
+        assert.ok(fs.existsSync(outputPath));
+        const json = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+        assert.strictEqual(json.title, 'Release Notes');
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');
