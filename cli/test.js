@@ -225,4 +225,35 @@ const tui = require('./tui');
     }
 })();
 
+(function testReleaseNotesWithRepo() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-notes-repo-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add release notes (#100)'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--repo', 'owner/test-repo'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /owner\/test-repo/);
+        assert.match(output, /# vNext/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');

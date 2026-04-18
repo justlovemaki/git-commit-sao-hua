@@ -176,7 +176,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-17 | 🚀 大演进 | Release Notes 自动生成 — 新增 `lib/release-notes.js`，补齐 conventional commit 解析、Git 历史聚合与 Markdown 发布说明生成能力，CLI 新增 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，并同步 README、lib/cli 测试与战略文档；项目从“能生成单条骚话”继续前进到“能总结整个版本故事、直接产出发布说明”的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
+| 最新 | 2026-04-18 | 🚀 大演进 | Release Notes 增强 — 扩展 `lib/release-notes.js` 支持解析 authorName/authorEmail、生成 GitHub 风格 Markdown（commit/PR/compare 链接），CLI 新增 `--repo <owner/repo>` 参数并自动从 git remote origin 推断，同步 lib/cli 测试与 README；项目从“简单聚合”继续前进到“可直接贴到 GitHub Release、带完整链接”的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
+| -1 | 2026-04-17 | 🚀 大演进 | Release Notes 自动生成 — 新增 `lib/release-notes.js`，补齐 conventional commit 解析、Git 历史聚合与 Markdown 发布说明生成能力，CLI 新增 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，并同步 README、lib/cli 测试与战略文档；项目从“能生成单条骚话”继续前进到“能总结整个版本故事、直接产出发布说明”的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
 | -1 | 2026-04-17 | 🚀 大演进 | 插件作者发布工具链 — 在 `lib/plugin-manager.js` 补齐 `validatePluginJson`、`calculateFileSha256`、`generateIndexEntry`、`generatePluginMetadata`、`packPlugin`，CLI 新增 `plugin validate <path>` 与 `plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>]`，并同步 README、lib/cli 测试与战略文档；项目从“插件可发现、可安装、可审计”继续前进到“插件作者可自助发布、可直接生成索引元数据”的生态发布能力 | Stage 5 不变（生态生产力增强） |
 | -2 | 2026-04-16 | 🚀 大演进 | Prometheus 指标导出层 — 在 `api/metrics.js` 增加标准文本格式导出，在 `api/server.js` 新增 `/api/metrics/prometheus`，并同步 Swagger、README、API 测试与战略文档；项目从“有基础可观测快照”继续前进到“可被 Prometheus 直接抓取接入”的平台运维集成能力 | Stage 5 不变（平台监控集成增强） |
 | -3 | 2026-04-16 | 🚀 大演进 | API 可观测性 / 运维治理 — 为 `api/server.js` 引入 request ID 与请求聚合中间件，新增 `/api/health/live`、`/api/health/ready`、`/api/metrics`，扩展 `/api/health` 运行态信息，并同步 Swagger、README、API 测试；项目从“API 功能完整”继续前进到“API 可部署、可探测、可观测”的平台运行能力 | Stage 5 不变（平台运维能力增强） |

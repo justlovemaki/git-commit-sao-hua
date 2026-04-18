@@ -105,17 +105,28 @@ git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Not
 除了生成单条 commit message，现在 CLI 也可以直接从 Git 历史生成 Markdown 版发布说明，适合在发版、写 changelog、整理 PR merge 结果时使用：
 
 ```bash
-# 基于明确 range 生成
- git-sao-hua release-notes v1.34.0..HEAD
+ # 基于明确 range 生成
+  git-sao-hua release-notes v1.34.0..HEAD
 
-# 用 from/to 参数生成并自定义标题
- git-sao-hua release-notes --from v1.34.0 --to HEAD --title "v1.35.0 Release Notes"
+ # 用 from/to 参数生成并自定义标题
+  git-sao-hua release-notes --from v1.34.0 --to HEAD --title "v1.35.0 Release Notes"
 
-# 输出到文件
- git-sao-hua release-notes HEAD --output ./RELEASE_NOTES.md
+ # 输出到文件
+  git-sao-hua release-notes HEAD --output ./RELEASE_NOTES.md
+
+ # 指定 GitHub 仓库，生成完整链接（commit 链接 + PR 链接 + compare 链接）
+  git-sao-hua release-notes v1.34.0..HEAD --repo owner/repo
+
+ # 未指定 repo 时自动从 git remote origin 推断
+  git-sao-hua release-notes HEAD
 ```
 
 生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。
+
+当指定 `--repo owner/repo` 时，会自动生成：
+- 每个 commit 行的 `[hash](commit link)` 链接
+- subject 中包含 `(#123)` 时自动生成 `[#123](pull link)` 链接
+- range 为 `from..to` 格式时生成 `[compare link]` 可比链接
 
 ### 插件作者发布工具链（v1.34.0）
 

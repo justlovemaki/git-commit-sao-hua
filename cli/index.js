@@ -259,7 +259,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -939,11 +939,11 @@ function handleReleaseNotesCommand(args = []) {
     const positional = [];
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
-        if (['--from', '--to', '--title', '--output'].includes(arg)) {
+        if (['--from', '--to', '--title', '--output', '--repo'].includes(arg)) {
             i++;
             continue;
         }
-        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=')) {
+        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=') || arg.startsWith('--repo=')) {
             continue;
         }
         if (!arg.startsWith('-')) {
@@ -955,6 +955,7 @@ function handleReleaseNotesCommand(args = []) {
     const toRef = getOptionValue('--to');
     const title = getOptionValue('--title') || 'Release Notes';
     const outputFile = getOptionValue('--output');
+    const repo = getOptionValue('--repo');
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
     console.log(cyan('正在生成 Release Notes...'));
@@ -963,8 +964,15 @@ function handleReleaseNotesCommand(args = []) {
     try {
         const result = data.generateReleaseNotes(range, {
             title,
-            repoPath: process.cwd()
+            repoPath: process.cwd(),
+            repo
         });
+
+        if (result.repo) {
+            console.log(dim('  Repository: ' + result.repo));
+        } else if (repo) {
+            console.log(dim('  Repository: ' + repo));
+        }
 
         if (outputFile) {
             const outputPath = path.resolve(process.cwd(), outputFile);
