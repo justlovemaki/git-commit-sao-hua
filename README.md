@@ -94,8 +94,10 @@ git-sao-hua plugin search [query] --allow-host <host> # 搜索时允许额外索
 git-sao-hua plugin install --from-index <name> # 从索引安装插件 (v1.29.0)
 git-sao-hua plugin install --from-index <name> --allow-host <host> # 从索引安装时允许额外 host (v1.31.0)
 git-sao-hua plugin validate <path>       # 校验插件 JSON 并输出 SHA-256 (v1.34.0)
+git-sao-hua plugin verify <path|name>    # 校验插件签名 (v1.36.0)
 git-sao-hua plugin pack <path>           # 生成插件发布摘要与建议索引条目 (v1.34.0)
 git-sao-hua plugin pack <path> --output <file> # 输出 metadata JSON (v1.34.0)
+git-sao-hua plugin pack <path> --sign-private-key <pem> --public-key <pem> --key-id <id> # 生成签名 metadata (v1.36.0)
 git-sao-hua plugin remove <name>             # 删除插件
 git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
 ```
@@ -196,6 +198,9 @@ JSON 字段说明：
 # 校验插件结构并输出 SHA-256
  git-sao-hua plugin validate ./my-plugin.json
 
+# 强制校验插件签名（适合发布前或拉取后验货）
+ git-sao-hua plugin verify ./my-plugin.json
+
 # 生成打包摘要 + 建议索引条目
  git-sao-hua plugin pack ./my-plugin.json
 
@@ -205,11 +210,15 @@ JSON 字段说明：
 # 同时带上预期分发地址或 GitHub 简写
  git-sao-hua plugin pack ./my-plugin.json --source-url https://example.com/plugins/my-plugin.json
  git-sao-hua plugin pack ./my-plugin.json --github owner/repo:path/to/plugin.json@main
+
+# 生成带 Ed25519 签名的 metadata/indexEntry
+ git-sao-hua plugin pack ./my-plugin.json --output ./dist/plugin-metadata.json --sign-private-key ./keys/ed25519-private.pem --public-key ./keys/ed25519-public.pem --key-id release-key
 ```
 
 `plugin pack` 会输出：
 - 插件名称、版本、语言、风格、文件大小
 - 当前文件的 `SHA-256`
+- 可选的 `Ed25519` 签名信息（`signature`、`publicKey`、`keyId`、`algorithm`）
 - 建议写入插件索引的 JSON 条目
 - 可选的 `metadata.json`（包含 `indexEntry`）
 
@@ -217,8 +226,25 @@ JSON 字段说明：
 
 - 每次安装插件后，都会在插件目录生成或更新 `plugins.lock.json`
 - 锁文件会记录 `sourceType`、`sourceUrl`、`checksum`、`fromIndex`、`githubSpec`、`installedAt` 等元数据
+- 当插件或索引提供签名信息时，会额外记录 `signature`、`publicKey`、`keyId`、`algorithm`、`signatureVerified`
 - 可通过 `git-sao-hua plugin inspect <name>` 或 `GET /api/plugins/:name` 查看单个插件的来源审计信息
 - 这样在平台期可以更清楚地回答“这个插件从哪来、何时装的、是否带摘要校验”
+
+### 插件签名与验签（v1.36.0）
+
+平台期开始补插件供应链安全：
+
+- `plugin pack` 支持使用 `Ed25519` 私钥对插件 `SHA-256` 做签名
+- 生成的 `metadata.json` 和建议 `indexEntry` 会带上 `signature / publicKey / keyId / algorithm`
+- `plugin verify <path|name>` 可对本地插件或已安装插件执行强制验签
+- `plugin validate <path>` 在有签名信息时会顺带展示签名状态
+- 从插件索引安装时，如果索引条目带签名信息，会自动验签并把结果写入 `plugins.lock.json`
+
+建议做法：
+
+1. 发布前执行 `plugin pack --output ... --sign-private-key ... --public-key ...`
+2. 把生成的 `indexEntry` 或 `metadata.json` 提交到插件索引仓库
+3. 安装侧通过 `plugin inspect` / `plugin verify` 查看签名状态
 
 ### 插件格式
 

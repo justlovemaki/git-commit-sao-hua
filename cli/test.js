@@ -196,6 +196,89 @@ const tui = require('./tui');
     }
 })();
 
+(function testPluginPackWithSignature() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-pack-sign-'));
+    const pluginPath = path.join(tmpDir, 'pack-sign.json');
+    const metadataPath = path.join(tmpDir, 'signed-metadata.json');
+    const privateKeyPath = path.join(tmpDir, 'ed25519-private.pem');
+    const publicKeyPath = path.join(tmpDir, 'ed25519-public.pem');
+    const plugin = {
+        name: 'pack-sign',
+        version: '1.0.0',
+        data: { 'zh-CN': { feat: { love: ['test'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+    execFileSync(process.execPath, ['-e', `
+const { generateKeyPairSync } = require('crypto');
+const { writeFileSync } = require('fs');
+const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+writeFileSync(${JSON.stringify(privateKeyPath)}, privateKey.export({ type: 'pkcs8', format: 'pem' }));
+writeFileSync(${JSON.stringify(publicKeyPath)}, publicKey.export({ type: 'spki', format: 'pem' }));
+`]);
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'plugin', 'pack', pluginPath,
+            '--output', metadataPath,
+            '--sign-private-key', privateKeyPath,
+            '--public-key', publicKeyPath,
+            '--key-id', 'release-key'
+        ], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+
+        assert.match(output, /签名状态: 已验证|签名状态: 未验证/);
+        assert.match(output, /Key ID: release-key/);
+        assert.strictEqual(metadata.keyId, 'release-key');
+        assert.ok(metadata.signature);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testPluginVerifySignedFile() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-verify-'));
+    const pluginPath = path.join(tmpDir, 'verify-plugin.json');
+    const privateKeyPath = path.join(tmpDir, 'ed25519-private.pem');
+    const publicKeyPath = path.join(tmpDir, 'ed25519-public.pem');
+    const plugin = {
+        name: 'verify-plugin',
+        version: '1.0.0',
+        data: { 'zh-CN': { feat: { love: ['verify'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+    execFileSync(process.execPath, ['-e', `
+const { generateKeyPairSync, createHash, sign } = require('crypto');
+const { writeFileSync, readFileSync } = require('fs');
+const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+writeFileSync(${JSON.stringify(privateKeyPath)}, privateKey.export({ type: 'pkcs8', format: 'pem' }));
+writeFileSync(${JSON.stringify(publicKeyPath)}, publicKey.export({ type: 'spki', format: 'pem' }));
+const checksum = createHash('sha256').update(readFileSync(${JSON.stringify(pluginPath)}, 'utf8'), 'utf8').digest('hex');
+const signature = sign(null, Buffer.from(checksum, 'utf8'), privateKey).toString('base64');
+const plugin = JSON.parse(readFileSync(${JSON.stringify(pluginPath)}, 'utf8'));
+plugin.signature = signature;
+plugin.publicKey = readFileSync(${JSON.stringify(publicKeyPath)}, 'utf8');
+plugin.keyId = 'release-key';
+plugin.algorithm = 'Ed25519';
+writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
+`]);
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'plugin', 'verify', pluginPath], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /✓ 签名校验通过/);
+        assert.match(output, /Key ID: release-key/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 (function testReleaseNotesWritesMarkdown() {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-notes-'));
     const outputPath = path.join(tmpDir, 'RELEASE_NOTES.md');

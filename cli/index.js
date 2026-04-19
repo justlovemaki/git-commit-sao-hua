@@ -59,6 +59,40 @@ function red(text) {
     return COLORS.red + text + COLORS.reset;
 }
 
+function readArgValue(args, name) {
+    const arg = args.find(item => item.startsWith(name + '=') || item === name);
+    if (!arg) {
+        return null;
+    }
+    return arg === name ? args[args.indexOf(arg) + 1] : arg.split('=')[1];
+}
+
+function printSignatureStatus(signatureInfo, indent = '  ') {
+    if (!signatureInfo || (!signatureInfo.signature && signatureInfo.verified == null)) {
+        return;
+    }
+
+    const status = signatureInfo.verified === true
+        ? green('已验证')
+        : signatureInfo.verified === false
+            ? red('验证失败')
+            : yellow('未验证');
+
+    console.log(`${indent}签名状态: ${status}`);
+    if (signatureInfo.algorithm) {
+        console.log(`${indent}签名算法: ${signatureInfo.algorithm}`);
+    }
+    if (signatureInfo.keyId) {
+        console.log(`${indent}Key ID: ${signatureInfo.keyId}`);
+    }
+    if (signatureInfo.signature) {
+        console.log(`${indent}签名: ${dim(signatureInfo.signature)}`);
+    }
+    if (signatureInfo.error) {
+        console.log(`${indent}签名错误: ${red(signatureInfo.error)}`);
+    }
+}
+
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
@@ -296,10 +330,12 @@ function showHelp() {
     console.log('  ' + green('plugin install --from-index <name> --allow-host <host>') + ' 允许 host (v1.31.0 新增)');
     console.log('  ' + green('plugin remove <name>') + '    删除插件 (v1.27.0 新增)');
     console.log('  ' + green('plugin validate <path>') + '  校验插件 JSON (v1.34.0 新增)');
+    console.log('  ' + green('plugin verify <path|name>') + ' 校验插件签名 (v1.36.0 新增)');
     console.log('  ' + green('plugin pack <path>') + '     打包插件并生成摘要 (v1.34.0 新增)');
     console.log('  ' + green('plugin pack <path> --output <file>') + '  输出 metadata JSON (v1.34.0 新增)');
     console.log('  ' + green('plugin pack <path> --source-url <url>') + '  添加 source-url (v1.34.0 新增)');
     console.log('  ' + green('plugin pack <path> --github <spec>') + '  添加 github 引用 (v1.34.0 新增)');
+    console.log('  ' + green('plugin pack <path> --sign-private-key <pem>') + '  生成 Ed25519 签名 (v1.36.0 新增)');
     console.log('');
     console.log(bold('示例:'));
     console.log(dim('  # 随机生成一条骚话'));
@@ -376,10 +412,14 @@ function showHelp() {
     console.log('  git-sao-hua plugin remove my-pack');
     console.log(dim('\n  # 校验插件 JSON'));
     console.log('  git-sao-hua plugin validate ./my-plugin.json');
+    console.log(dim('\n  # 校验插件签名'));
+    console.log('  git-sao-hua plugin verify ./my-plugin.json');
     console.log(dim('\n  # 打包插件并生成摘要'));
     console.log('  git-sao-hua plugin pack ./my-plugin.json');
     console.log(dim('\n  # 打包并输出 metadata JSON'));
     console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json');
+    console.log(dim('\n  # 打包并输出带签名的 metadata JSON'));
+    console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json --sign-private-key ./ed25519-private.pem --public-key ./ed25519-public.pem --key-id release-key');
     console.log(dim('\n  # 打包并添加 source-url'));
     console.log('  git-sao-hua plugin pack ./my-plugin.json --source-url https://example.com/plugin.json');
     console.log(dim('\n  # 打包并添加 github 引用'));
@@ -1071,6 +1111,13 @@ async function handlePluginCommand(action, args = []) {
             if (plugin.checksum) console.log(`  SHA-256: ${plugin.checksum}`);
             if (plugin.installedAt) console.log(`  Installed At: ${plugin.installedAt}`);
             if (plugin.lockedAt) console.log(`  Locked At: ${plugin.lockedAt}`);
+            printSignatureStatus({
+                signature: plugin.signature,
+                keyId: plugin.keyId,
+                algorithm: plugin.algorithm,
+                verified: plugin.signatureVerified,
+                error: plugin.signatureVerified === false ? '签名校验失败' : null
+            }, '  ');
             console.log('');
             break;
         }
@@ -1142,20 +1189,11 @@ async function handlePluginCommand(action, args = []) {
         }
         case 'install': {
             const sourcePath = args[0];
-            const urlArg = args.find(arg => arg.startsWith('--url=') || arg === '--url');
-            const urlValue = urlArg ? (urlArg === '--url' ? args[args.indexOf(urlArg) + 1] : urlArg.split('=')[1]) : null;
-            
-            const githubArg = args.find(arg => arg.startsWith('--github=') || arg === '--github');
-            const githubValue = githubArg ? (githubArg === '--github' ? args[args.indexOf(githubArg) + 1] : githubArg.split('=')[1]) : null;
-            
-            const checksumArg = args.find(arg => arg.startsWith('--checksum=') || arg === '--checksum');
-            const checksumValue = checksumArg ? (checksumArg === '--checksum' ? args[args.indexOf(checksumArg) + 1] : checksumArg.split('=')[1]) : null;
-            
-            const fromIndexArg = args.find(arg => arg.startsWith('--from-index=') || arg === '--from-index');
-            const fromIndexValue = fromIndexArg ? (fromIndexArg === '--from-index' ? args[args.indexOf(fromIndexArg) + 1] : fromIndexArg.split('=')[1]) : null;
-            
-            const indexArg = args.find(arg => arg.startsWith('--index=') || arg === '--index');
-            const indexUrl = indexArg ? (indexArg === '--index' ? args[args.indexOf(indexArg) + 1] : indexArg.split('=')[1]) : null;
+            const urlValue = readArgValue(args, '--url');
+            const githubValue = readArgValue(args, '--github');
+            const checksumValue = readArgValue(args, '--checksum');
+            const fromIndexValue = readArgValue(args, '--from-index');
+            const indexUrl = readArgValue(args, '--index');
 
             const allowedHosts = args
                 .flatMap((arg, index) => {
@@ -1203,6 +1241,7 @@ async function handlePluginCommand(action, args = []) {
                     if (result.plugin.checksum) {
                         console.log(dim('  SHA-256: ' + result.plugin.checksum));
                     }
+                    printSignatureStatus(result.signatureInfo, '  ');
                 } else {
                     console.log(red('✗ 安装失败: ' + result.error));
                     process.exit(1);
@@ -1227,6 +1266,7 @@ async function handlePluginCommand(action, args = []) {
                     if (result.plugin.checksum) {
                         console.log(dim('  SHA-256: ' + result.plugin.checksum));
                     }
+                    printSignatureStatus(result.signatureInfo, '  ');
                 } else {
                     console.log(red('✗ 安装失败: ' + result.error));
                     process.exit(1);
@@ -1249,6 +1289,7 @@ async function handlePluginCommand(action, args = []) {
                     if (result.plugin.checksum) {
                         console.log(dim('  SHA-256: ' + result.plugin.checksum));
                     }
+                    printSignatureStatus(result.signatureInfo, '  ');
                 } else {
                     console.log(red('✗ 安装失败: ' + result.error));
                     process.exit(1);
@@ -1294,7 +1335,7 @@ async function handlePluginCommand(action, args = []) {
             }
 
             console.log(cyan('正在校验插件: ' + sourcePath));
-            const result = pluginManager.validatePluginJson(sourcePath);
+            const result = pluginManager.validatePluginJson(sourcePath, { verifySignature: true });
             if (result.valid) {
                 console.log(green('✓ 插件校验通过'));
                 console.log('');
@@ -1309,6 +1350,7 @@ async function handlePluginCommand(action, args = []) {
                 }
                 console.log('  文件: ' + dim(result.path));
                 console.log('  SHA-256: ' + dim(result.checksum));
+                printSignatureStatus(result.signatureInfo, '  ');
                 console.log('');
                 console.log(green('插件结构有效'));
             } else {
@@ -1323,22 +1365,65 @@ async function handlePluginCommand(action, args = []) {
             }
             break;
         }
+        case 'verify': {
+            const target = args[0];
+            if (!target) {
+                console.log(red('错误：请指定插件路径或已安装插件名称'));
+                console.log(dim('用法: git-sao-hua plugin verify <path|name>'));
+                process.exit(1);
+            }
+
+            const resolvedPath = fs.existsSync(target)
+                ? target
+                : path.join(pluginManager.getPluginsDir(), `${target}.json`);
+
+            console.log(cyan('正在校验插件签名: ' + target));
+            const result = pluginManager.validatePluginJson(resolvedPath, {
+                verifySignature: true,
+                requireSignature: true
+            });
+
+            if (!result.valid) {
+                console.log(red('✗ 签名校验失败'));
+                console.log('');
+                console.log(red('错误: ' + result.error));
+                process.exit(1);
+            }
+
+            console.log(green('✓ 签名校验通过'));
+            console.log('');
+            console.log('  插件: ' + green(result.plugin.name) + ' v' + result.plugin.version);
+            console.log('  文件: ' + dim(result.path));
+            console.log('  SHA-256: ' + dim(result.checksum));
+            printSignatureStatus(result.signatureInfo, '  ');
+            console.log('');
+            break;
+        }
         case 'pack': {
             const sourcePath = args[0];
             if (!sourcePath) {
                 console.log(red('错误：请指定插件路径'));
-                console.log(dim('用法: git-sao-hua plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>]'));
+                console.log(dim('用法: git-sao-hua plugin pack <path> [--output <file>] [--source-url <url>] [--github <spec>] [--sign-private-key <pem>] [--public-key <pem>] [--key-id <id>]'));
                 process.exit(1);
             }
 
-            const outputArg = args.find(arg => arg.startsWith('--output=') || arg === '--output');
-            const outputValue = outputArg ? (outputArg === '--output' ? args[args.indexOf(outputArg) + 1] : outputArg.split('=')[1]) : null;
+            const outputValue = readArgValue(args, '--output');
+            const sourceUrlValue = readArgValue(args, '--source-url');
+            const githubValue = readArgValue(args, '--github');
+            const signPrivateKeyPath = readArgValue(args, '--sign-private-key');
+            const publicKeyPath = readArgValue(args, '--public-key');
+            const keyIdValue = readArgValue(args, '--key-id');
+            const signPrivateKey = signPrivateKeyPath ? pluginManager.loadPemFile(signPrivateKeyPath) : null;
+            const publicKey = publicKeyPath ? pluginManager.loadPemFile(publicKeyPath) : null;
 
-            const sourceUrlArg = args.find(arg => arg.startsWith('--source-url=') || arg === '--source-url');
-            const sourceUrlValue = sourceUrlArg ? (sourceUrlArg === '--source-url' ? args[args.indexOf(sourceUrlArg) + 1] : sourceUrlArg.split('=')[1]) : null;
-
-            const githubArg = args.find(arg => arg.startsWith('--github=') || arg === '--github');
-            const githubValue = githubArg ? (githubArg === '--github' ? args[args.indexOf(githubArg) + 1] : githubArg.split('=')[1]) : null;
+            if (signPrivateKeyPath && !signPrivateKey.success) {
+                console.log(red('✗ 读取私钥失败: ' + signPrivateKey.error));
+                process.exit(1);
+            }
+            if (publicKeyPath && !publicKey.success) {
+                console.log(red('✗ 读取公钥失败: ' + publicKey.error));
+                process.exit(1);
+            }
 
             console.log(cyan('正在打包插件: ' + sourcePath));
             if (sourceUrlValue) {
@@ -1347,11 +1432,17 @@ async function handlePluginCommand(action, args = []) {
             if (githubValue) {
                 console.log(dim('  github: ' + githubValue));
             }
+            if (signPrivateKeyPath) {
+                console.log(dim('  sign-private-key: ' + signPrivateKeyPath));
+            }
 
             const result = pluginManager.packPlugin(sourcePath, {
                 outputMetadata: outputValue,
                 sourceUrl: sourceUrlValue,
-                github: githubValue
+                github: githubValue,
+                signPrivateKey: signPrivateKey ? signPrivateKey.pem : null,
+                publicKey: publicKey ? publicKey.pem : null,
+                keyId: keyIdValue
             });
 
             if (result.success) {
@@ -1381,6 +1472,7 @@ async function handlePluginCommand(action, args = []) {
                 if (result.summary.github) {
                     console.log('  github: ' + dim(result.summary.github.spec || JSON.stringify(result.summary.github)));
                 }
+                printSignatureStatus(result.signature, '  ');
                 if (result.indexEntry) {
                     console.log('');
                     console.log(bold('建议索引条目:'));
@@ -1413,6 +1505,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('  ' + green('git-sao-hua plugin install --from-index <name>') + ' 从索引安装插件');
             console.log('  ' + green('git-sao-hua plugin remove <name>') + '    删除插件');
             console.log('  ' + green('git-sao-hua plugin validate <path>') + '  校验插件 JSON');
+            console.log('  ' + green('git-sao-hua plugin verify <path|name>') + ' 校验插件签名');
             console.log('  ' + green('git-sao-hua plugin pack <path>') + '     打包插件并生成摘要');
             console.log('  ' + green('git-sao-hua plugin pack <path> --output <file>') + '  输出 metadata JSON');
             console.log('');
@@ -1427,6 +1520,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('  git-sao-hua plugin search love --index https://example.com/index.json');
             console.log('  git-sao-hua plugin install --from-index my-plugin');
             console.log('  git-sao-hua plugin validate ./my-plugin.json');
+            console.log('  git-sao-hua plugin verify ./my-plugin.json');
             console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json');
             console.log('  git-sao-hua plugin remove my-pack');
             process.exit(1);
