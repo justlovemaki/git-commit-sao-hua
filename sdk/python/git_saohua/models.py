@@ -1,7 +1,7 @@
 """Data models for git_saohua SDK — matches actual REST API responses."""
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 
 
 @dataclass
@@ -183,4 +183,74 @@ class PluginResult:
             path=data.get("path", ""),
             reloaded=data.get("reloaded", False),
             content=data.get("content", {}),
+        )
+
+
+@dataclass
+class BatchSaohuaItem:
+    """批量生成请求项。"""
+
+    mode: Literal["random", "typed", "typed_style", "ai"] = "random"
+    type: str = ""
+    style: str = ""
+    lang: str = "zh-CN"
+    diff: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"mode": self.mode}
+        if self.type:
+            result["type"] = self.type
+        if self.style:
+            result["style"] = self.style
+        if self.lang and self.lang != "zh-CN":
+            result["lang"] = self.lang
+        if self.diff:
+            result["diff"] = self.diff
+        return result
+
+
+@dataclass
+class BatchSaohuaResultItem:
+    """批量生成结果项。"""
+
+    success: bool = False
+    type: str = ""
+    style: str = ""
+    message: str = ""
+    full_message: str = ""
+    language: str = ""
+    error: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "BatchSaohuaResultItem":
+        return cls(
+            success=data.get("success", False),
+            type=data.get("type", ""),
+            style=data.get("style", ""),
+            message=data.get("message", ""),
+            full_message=data.get("fullMessage", ""),
+            language=data.get("language", ""),
+            error=data.get("error", ""),
+        )
+
+
+@dataclass
+class BatchSaohuaResult:
+    """批量生成结果。"""
+
+    items: List[BatchSaohuaResultItem] = field(default_factory=list)
+    count: int = 0
+    success_count: int = 0
+    failed_count: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "BatchSaohuaResult":
+        items = [
+            BatchSaohuaResultItem.from_dict(item) for item in data.get("items", [])
+        ]
+        return cls(
+            items=items,
+            count=data.get("count", len(items)),
+            success_count=data.get("successCount", 0),
+            failed_count=data.get("failedCount", 0),
         )

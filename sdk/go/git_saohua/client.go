@@ -254,6 +254,20 @@ func (c *Client) AiSaohua(diff, lang, style, commitType string) (*SaohuaData, er
 	return &result, nil
 }
 
+// BatchSaohua 批量生成骚话
+func (c *Client) BatchSaohua(items []BatchSaohuaItem) (*BatchSaohuaResult, error) {
+	body := map[string]interface{}{
+		"items": items,
+	}
+
+	var result BatchSaohuaResult
+	err := c.doRequest("POST", "/api/saohua/batch", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListTypes 获取所有 commit 类型
 func (c *Client) ListTypes(lang string) (*TypesData, error) {
 	path := "/api/types"

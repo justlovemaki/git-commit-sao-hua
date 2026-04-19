@@ -273,6 +273,67 @@ POST /api/saohua/ai
 - `style` - 可选 风格
 - `lang` - 可选 语言
 
+### 批量生成
+
+```
+POST /api/saohua/batch
+```
+
+一次请求生成多条骚话，支持最多 50 条。
+
+请求体:
+```json
+{
+  "items": [
+    { "mode": "random" },
+    { "mode": "typed", "type": "fix" },
+    { "mode": "typed_style", "type": "feat", "style": "love" },
+    { "mode": "ai", "diff": "diff --git a/test.js b/test.js\n+console.log('test');", "type": "feat" }
+  ]
+}
+```
+
+字段说明:
+- `items` - **必需** 生成请求数组
+- `items[].mode` - 生成模式：`random` | `typed` | `typed_style` | `ai`，默认 `random`
+- `items[].type` - commit 类型（typed/typed_style/ai 模式需要）
+- `items[].style` - 风格（typed/typed_style/ai 模式可选）
+- `items[].lang` - 语言，可选，默认为 `zh-CN`
+- `items[].diff` - git diff 内容（ai 模式需要）
+
+响应示例:
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      { "success": true, "type": "fix", "style": "sao", "message": "修 bug 和撩你，我都在行", "fullMessage": "fix: 修 bug 和撩你，我都在行", "language": "zh-CN" },
+      { "success": true, "type": "fix", "style": "love", "message": "修复 bug 也是爱你的表现", "fullMessage": "fix: 修复 bug 也是爱你的表现", "language": "zh-CN" },
+      { "success": true, "type": "feat", "style": "love", "message": "新功能也想和你贴贴", "fullMessage": "feat: 新功能也想和你贴贴", "language": "zh-CN" },
+      { "success": true, "type": "feat", "style": "sao", "message": "新功能get√，撩妹技能up↑", "fullMessage": "feat: 新功能get√，撩妹技能up↑", "language": "zh-CN" }
+    ],
+    "count": 4,
+    "successCount": 4,
+    "failedCount": 0
+  },
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00.000Z",
+    "message": "批量生成完成，成功 4/4~"
+  }
+}
+```
+
+错误响应（无效请求）:
+```json
+{
+  "success": false,
+  "error": "请提供有效的生成请求数组~",
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
 ### 获取类型列表
 
 ```

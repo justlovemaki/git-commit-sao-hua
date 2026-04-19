@@ -26,6 +26,9 @@ from .models import (
     PluginInfo,
     PluginsData,
     PluginResult,
+    BatchSaohuaItem,
+    BatchSaohuaResultItem,
+    BatchSaohuaResult,
 )
 
 __all__ = [
@@ -44,4 +47,7 @@ __all__ = [
     "PluginInfo",
     "PluginsData",
     "PluginResult",
+    "BatchSaohuaItem",
+    "BatchSaohuaResultItem",
+    "BatchSaohuaResult",
 ]

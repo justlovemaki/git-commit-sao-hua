@@ -530,10 +530,28 @@ console.log(result.fullMessage);
 
 - 健康检查、随机骚话、按类型 / 风格生成
 - AI 骚话生成
+- 批量骚话生成（最多 50 条/请求）
 - 类型 / 风格 / 统计查询
 - 插件列表、安装、删除、模板创建、重载
 - 插件索引搜索、按索引安装
 - API Key / Bearer Token / timeout / 自定义 headers
+
+JavaScript / TypeScript SDK 批量生成示例：
+
+```ts
+const batch = await client.batchSaohua([
+  { mode: 'random' },
+  { mode: 'typed', type: 'fix' },
+  { mode: 'typed_style', type: 'feat', style: 'love' },
+  {
+    mode: 'ai',
+    diff: 'diff --git a/api.js b/api.js\n+app.post("/demo")',
+    type: 'feat',
+  },
+]);
+
+console.log(batch.count, batch.successCount);
+```
 
 更多说明见：
 

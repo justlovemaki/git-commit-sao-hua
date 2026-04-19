@@ -268,6 +268,83 @@ const tests = {
         assert(res.data.success === false, 'Should have success: false');
     },
 
+    async testBatchGeneration() {
+        const res = await post('/api/saohua/batch', {
+            items: [
+                { mode: 'random' },
+                { mode: 'typed', type: 'fix' },
+                { mode: 'typed_style', type: 'feat', style: 'love' }
+            ]
+        });
+        assert(res.status === 200, 'Batch generation should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(Array.isArray(res.data.data.items), 'Should have items array');
+        assert(res.data.data.count === 3, 'Should have count 3');
+        assert(res.data.data.successCount === 3, 'Should have successCount 3');
+    },
+
+    async testBatchGenerationMixedModes() {
+        const res = await post('/api/saohua/batch', {
+            items: [
+                { mode: 'random' },
+                { mode: 'typed', type: 'fix' },
+                { mode: 'typed_style', type: 'feat', style: 'love' },
+                { mode: 'ai', diff: 'diff --git a/test.js b/test.js\n+console.log("test")', type: 'feat' }
+            ]
+        });
+        assert(res.status === 200, 'Should return 200');
+        assert(res.data.data.count === 4, 'Should have count 4');
+    },
+
+    async testBatchGenerationEmptyItems() {
+        const res = await post('/api/saohua/batch', { items: [] });
+        assert(res.status === 400, 'Empty items should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testBatchGenerationNoItems() {
+        const res = await post('/api/saohua/batch', {});
+        assert(res.status === 400, 'No items should return 400');
+    },
+
+    async testBatchGenerationTooManyItems() {
+        const items = Array.from({ length: 51 }, (_, i) => ({ mode: 'random' }));
+        const res = await post('/api/saohua/batch', { items });
+        assert(res.status === 400, 'Too many items should return 400');
+    },
+
+    async testBatchGenerationTypedWithoutType() {
+        const res = await post('/api/saohua/batch', {
+            items: [{ mode: 'typed' }]
+        });
+        assert(res.status === 200, 'Should return 200');
+        assert(res.data.data.items[0].success === false, 'Should have failed item');
+    },
+
+    async testBatchGenerationTypedStyleWithoutParams() {
+        const res = await post('/api/saohua/batch', {
+            items: [{ mode: 'typed_style' }]
+        });
+        assert(res.status === 200, 'Should return 200');
+        assert(res.data.data.items[0].success === false, 'Should have failed item');
+    },
+
+    async testBatchGenerationAIWithoutDiff() {
+        const res = await post('/api/saohua/batch', {
+            items: [{ mode: 'ai' }]
+        });
+        assert(res.status === 200, 'Should return 200');
+        assert(res.data.data.items[0].success === false, 'Should have failed item');
+    },
+
+    async testBatchGenerationInvalidMode() {
+        const res = await post('/api/saohua/batch', {
+            items: [{ mode: 'invalid_mode' }]
+        });
+        assert(res.status === 200, 'Should return 200');
+        assert(res.data.data.items[0].success === false, 'Should have failed item');
+    },
+
     async testTypesEndpoint() {
         const res = await get('/api/types');
         assert(res.status === 200, 'Types should return 200');

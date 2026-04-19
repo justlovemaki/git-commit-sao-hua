@@ -190,3 +190,70 @@ test('timeout failures raise SaohuaTimeoutError', async () => {
     return true;
   });
 });
+
+test('batchSaohua() posts items array', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      assert.equal(init.method, 'POST');
+      const body = JSON.parse(init.body);
+      assert.equal(body.items.length, 3);
+      assert.equal(body.items[0].mode, 'random');
+      assert.equal(body.items[1].mode, 'typed');
+      assert.equal(body.items[1].type, 'fix');
+      assert.equal(body.items[2].mode, 'typed_style');
+      assert.equal(body.items[2].type, 'feat');
+      assert.equal(body.items[2].style, 'love');
+      return jsonResponse({
+        success: true,
+        data: {
+          items: [
+            { success: true, type: 'fix', style: 'sao', message: 'message1', fullMessage: 'fix: message1', language: 'zh-CN' },
+            { success: true, type: 'fix', style: 'love', message: 'message2', fullMessage: 'fix: message2', language: 'zh-CN' },
+            { success: true, type: 'feat', style: 'love', message: 'message3', fullMessage: 'feat: message3', language: 'zh-CN' }
+          ],
+          count: 3,
+          successCount: 3,
+          failedCount: 0
+        },
+      });
+    }),
+  });
+
+  const result = await client.batchSaohua([
+    { mode: 'random' },
+    { mode: 'typed', type: 'fix' },
+    { mode: 'typed_style', type: 'feat', style: 'love' }
+  ]);
+  assert.equal(result.count, 3);
+  assert.equal(result.successCount, 3);
+  assert.equal(result.items[0].message, 'message1');
+});
+
+test('batchSaohua() handles mixed success/failure', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(() =>
+      jsonResponse({
+        success: true,
+        data: {
+          items: [
+            { success: true, type: 'fix', style: 'sao', message: 'ok', fullMessage: 'fix: ok', language: 'zh-CN' },
+            { success: false, error: 'ai 模式需要提供 diff 参数' }
+          ],
+          count: 2,
+          successCount: 1,
+          failedCount: 1
+        },
+      }),
+    ),
+  });
+
+  const result = await client.batchSaohua([
+    { mode: 'random' },
+    { mode: 'ai' }
+  ]);
+  assert.equal(result.successCount, 1);
+  assert.equal(result.failedCount, 1);
+  assert.equal(result.items[1].error, 'ai 模式需要提供 diff 参数');
+});

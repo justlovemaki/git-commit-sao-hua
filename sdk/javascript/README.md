@@ -63,6 +63,7 @@ const client = new SaohuaClient({
 - `saohuaByType(type, { lang?, style? })`
 - `saohuaByTypeAndStyle(type, style, lang?)`
 - `aiSaohua(diff, { lang?, style?, type? })`
+- `batchSaohua(items[])`
 - `listTypes(lang?)`
 - `listStyles(lang?)`
 - `stats(lang?)`
@@ -73,6 +74,23 @@ const client = new SaohuaClient({
 - `reloadPlugins()`
 - `searchPluginRegistry(query?, indexUrl?)`
 - `installFromIndex(name, indexUrl?)`
+
+### 批量生成示例
+
+```ts
+const batch = await client.batchSaohua([
+  { mode: 'random' },
+  { mode: 'typed', type: 'fix' },
+  { mode: 'typed_style', type: 'feat', style: 'love' },
+  {
+    mode: 'ai',
+    type: 'feat',
+    diff: 'diff --git a/app.js b/app.js\n+export function hello() {}',
+  },
+]);
+
+console.log(batch.successCount, batch.items.map((item) => item.fullMessage ?? item.error));
+```
 
 ## 开发
 

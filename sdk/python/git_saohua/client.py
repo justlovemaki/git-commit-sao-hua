@@ -1,6 +1,6 @@
 """Git Saohua Python SDK — 骚话 API 客户端。"""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import requests
 
@@ -13,6 +13,8 @@ from .models import (
     StatsData,
     PluginsData,
     PluginResult,
+    BatchSaohuaItem,
+    BatchSaohuaResult,
 )
 
 __all__ = ["SaohuaClient"]
@@ -212,6 +214,19 @@ class SaohuaClient:
             body["type"] = commit_type
         data = self._post("/api/saohua/ai", json_body=body)
         return SaohuaData.from_dict(data)
+
+    def batch_saohua(
+        self,
+        items: List[BatchSaohuaItem],
+    ) -> BatchSaohuaResult:
+        """批量生成多条骚话。
+
+        Args:
+            items: 批量生成请求列表，每项支持 mode/type/style/lang/diff。
+        """
+        body: Dict[str, Any] = {"items": [item.to_dict() for item in items]}
+        data = self._post("/api/saohua/batch", json_body=body)
+        return BatchSaohuaResult.from_dict(data)
 
     # ── 类型与风格 ───────────────────────────────────────
 

@@ -132,6 +132,31 @@ export interface AiSaohuaOptions {
   type?: string;
 }
 
+export interface BatchSaohuaItem {
+  mode?: 'random' | 'typed' | 'typed_style' | 'ai';
+  type?: string;
+  style?: string;
+  lang?: string;
+  diff?: string;
+}
+
+export interface BatchSaohuaResultItem {
+  success: boolean;
+  type?: string;
+  style?: string;
+  message?: string;
+  fullMessage?: string;
+  language?: string;
+  error?: string;
+}
+
+export interface BatchSaohuaResult {
+  items: BatchSaohuaResultItem[];
+  count: number;
+  successCount: number;
+  failedCount: number;
+}
+
 export interface ClientOptions {
   baseUrl?: string;
   apiKey?: string;
@@ -222,6 +247,10 @@ export class SaohuaClient {
       diff,
       ...options,
     });
+  }
+
+  async batchSaohua(items: BatchSaohuaItem[]): Promise<BatchSaohuaResult> {
+    return this.request('POST', '/api/saohua/batch', { items });
   }
 
   async listTypes(lang?: string): Promise<TypesData> {

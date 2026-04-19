@@ -273,6 +273,74 @@ const options = {
                         }
                     }
                 },
+                BatchSaohuaRequest: {
+                    type: 'object',
+                    required: ['items'],
+                    properties: {
+                        items: {
+                            type: 'array',
+                            description: '生成请求数组，每项支持 mode/type/style/lang/diff',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    mode: {
+                                        type: 'string',
+                                        description: '生成模式',
+                                        enum: ['random', 'typed', 'typed_style', 'ai'],
+                                        default: 'random'
+                                    },
+                                    type: {
+                                        type: 'string',
+                                        description: 'Commit 类型 (typed/typed_style/ai 模式需要)',
+                                        enum: ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix']
+                                    },
+                                    style: {
+                                        type: 'string',
+                                        description: '风格 (typed/typed_style/ai 模式可选)',
+                                        enum: ['love', 'sao', 'zha', 'chu', 'fo']
+                                    },
+                                    lang: {
+                                        type: 'string',
+                                        description: '语言 (可选)',
+                                        enum: ['zh-CN', 'en'],
+                                        default: 'zh-CN'
+                                    },
+                                    diff: {
+                                        type: 'string',
+                                        description: 'Git diff 内容 (ai 模式需要)',
+                                        example: 'diff --git a/test.js b/test.js\n+console.log("test")'
+                                    }
+                                }
+                            },
+                            minItems: 1,
+                            maxItems: 50
+                        }
+                    }
+                },
+                BatchSaohuaResponse: {
+                    type: 'object',
+                    properties: {
+                        items: {
+                            type: 'array',
+                            description: '生成结果数组',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    success: { type: 'boolean', example: true },
+                                    type: { type: 'string', example: 'fix' },
+                                    style: { type: 'string', example: 'sao' },
+                                    message: { type: 'string', example: '修 bug 和撩你，我都在行' },
+                                    fullMessage: { type: 'string', example: 'fix: 修 bug 和撩你，我都在行' },
+                                    language: { type: 'string', example: 'zh-CN' },
+                                    error: { type: 'string', description: '失败时返回的错误信息' }
+                                }
+                            }
+                        },
+                        count: { type: 'integer', example: 3, description: '请求总数' },
+                        successCount: { type: 'integer', example: 2, description: '成功数量' },
+                        failedCount: { type: 'integer', example: 1, description: '失败数量' }
+                    }
+                },
                 PluginsData: {
                     type: 'object',
                     properties: {
@@ -981,6 +1049,90 @@ const options = {
                         },
                         '500': {
                             description: 'AI 生成失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/saohua/batch': {
+                post: {
+                    tags: ['Saohua'],
+                    summary: '批量骚话生成',
+                    description: '一次请求生成多条骚话，支持 random/typed/typed_style/ai 四种模式',
+                    operationId: 'batchSaohua',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/BatchSaohuaRequest' },
+                                example: {
+                                    items: [
+                                        { mode: 'random' },
+                                        { mode: 'typed', type: 'fix' },
+                                        { mode: 'typed_style', type: 'feat', style: 'love' },
+                                        { mode: 'ai', diff: 'diff --git a/test.js b/test.js\n+console.log("test");', type: 'feat' }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '批量生成成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            {
+                                                properties: {
+                                                    data: { $ref: '#/components/schemas/BatchSaohuaResponse' }
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            items: [
+                                                { success: true, type: 'fix', style: 'sao', message: '修 bug 和撩你，我都在行', fullMessage: 'fix: 修 bug 和撩你，我都在行', language: 'zh-CN' },
+                                                { success: true, type: 'fix', style: 'love', message: '修复 bug 也是爱你的表现', fullMessage: 'fix: 修复 bug 也是爱你的表现', language: 'zh-CN' },
+                                                { success: false, error: 'ai 模式需要提供 diff 参数' },
+                                                { success: true, type: 'feat', style: 'love', message: '新功能也想和你贴贴', fullMessage: 'feat: 新功能也想和你贴贴', language: 'zh-CN' }
+                                            ],
+                                            count: 4,
+                                            successCount: 3,
+                                            failedCount: 1
+                                        },
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z',
+                                            message: '批量生成完成，成功 3/4~'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '请求参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' },
+                                    example: {
+                                        success: false,
+                                        error: '请提供有效的生成请求数组~',
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z'
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '批量生成失败',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }

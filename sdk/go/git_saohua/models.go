@@ -133,3 +133,31 @@ type TimeoutError struct {
 func (e *TimeoutError) Error() string {
 	return e.Message
 }
+
+// BatchSaohuaItem 批量生成请求项
+type BatchSaohuaItem struct {
+	Mode       string `json:"mode,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Style     string `json:"style,omitempty"`
+	Lang      string `json:"lang,omitempty"`
+	Diff      string `json:"diff,omitempty"`
+}
+
+// BatchSaohuaResultItem 批量生成结果项
+type BatchSaohuaResultItem struct {
+	Success    bool   `json:"success"`
+	Type      string `json:"type,omitempty"`
+	Style     string `json:"style,omitempty"`
+	Message   string `json:"message,omitempty"`
+	FullMessage string `json:"fullMessage,omitempty"`
+	Language  string `json:"language,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+// BatchSaohuaResult 批量生成结果
+type BatchSaohuaResult struct {
+	Items        []BatchSaohuaResultItem `json:"items"`
+	Count        int                 `json:"count"`
+	SuccessCount int                 `json:"successCount"`
+	FailedCount int                 `json:"failedCount"`
+}
