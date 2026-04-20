@@ -416,6 +416,85 @@ writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
     }
 })();
 
+(function testReleaseNotesGitHubReleaseJsonFormat() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-gh-json-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add github release payload (#100)'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--format', 'github-release-json',
+            '--repo', 'owner/test-repo',
+            '--tag', 'v1.2.3',
+            '--target', 'main',
+            '--draft',
+            '--prerelease',
+            '--body', '附加说明'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+
+        const json = JSON.parse(rawOutput);
+
+        assert.strictEqual(json.tag_name, 'v1.2.3');
+        assert.strictEqual(json.name, 'vNext');
+        assert.strictEqual(json.target_commitish, 'main');
+        assert.strictEqual(json.draft, true);
+        assert.strictEqual(json.prerelease, true);
+        assert.match(json.body, /### Features/);
+        assert.match(json.body, /附加说明/);
+        assert.match(json.body, /owner\/test-repo\/pull\/100/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesGitHubReleaseJsonWithOutput() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-gh-json-out-'));
+    const outputPath = path.join(tmpDir, 'github-release.json');
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): write github release file'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--format', 'github-release-json',
+            '--output', 'github-release.json'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /Release Notes 已写入/);
+        assert.ok(fs.existsSync(outputPath));
+        const json = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+        assert.strictEqual(json.tag_name, 'Release Notes');
+        assert.ok(typeof json.body === 'string');
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 (function testBatchCommandTextOutput() {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-batch-'));
     const batchFile = path.join(tmpDir, 'items.json');

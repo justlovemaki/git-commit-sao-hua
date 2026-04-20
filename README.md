@@ -101,6 +101,7 @@ git-sao-hua plugin pack <path> --sign-private-key <pem> --public-key <pem> --key
 git-sao-hua plugin remove <name>             # 删除插件
 git-sao-hua batch --file <json>              # 批量生成骚话 (v1.37.0)
 git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
+git-sao-hua release-notes [<range>] --format github-release-json # 输出 GitHub Release API payload (v1.38.0)
 ```
 
 ### 批量生成（v1.37.0）
@@ -170,6 +171,12 @@ git-sao-hua batch --file ./items.json --format json
 
  # JSON 输出到文件
   git-sao-hua release-notes v1.34.0..HEAD --format json --output ./release.json
+
+ # 输出 GitHub Releases API 可直接消费的 JSON payload
+  git-sao-hua release-notes v1.34.0..HEAD --format github-release-json --tag v1.38.0 --target main --repo owner/repo
+
+ # 将 GitHub Release payload 写入文件，供 CI / GitHub API 直接 POST
+  git-sao-hua release-notes v1.34.0..HEAD --format github-release-json --output ./github-release.json
 ```
 
 生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。
@@ -178,6 +185,28 @@ git-sao-hua batch --file ./items.json --format json
 - 每个 commit 行的 `[hash](commit link)` 链接
 - subject 中包含 `(#123)` 时自动生成 `[#123](pull link)` 链接
 - range 为 `from..to` 格式时生成 `[compare link]` 可比链接
+
+#### GitHub Release JSON 输出
+
+`--format github-release-json` 会输出可直接提交给 GitHub Releases API 的 payload，适合 CI/CD 或发布脚本：
+
+```json
+{
+  "tag_name": "v1.38.0",
+  "name": "v1.38.0 Release Notes",
+  "body": "### Features\n- **cli:** ...",
+  "draft": false,
+  "prerelease": false,
+  "target_commitish": "main"
+}
+```
+
+可配合这些参数使用：
+- `--tag <tag>`: 指定 `tag_name`
+- `--target <ref>`: 指定 `target_commitish`
+- `--draft`: 生成草稿 release payload
+- `--prerelease`: 标记为预发布
+- `--body <text>`: 在自动生成的章节后追加自定义说明
 
 #### JSON 输出格式
 

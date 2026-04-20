@@ -293,7 +293,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -1078,13 +1078,15 @@ function handleReleaseNotesCommand(args = []) {
     };
 
     const positional = [];
+    const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body'];
+
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
-        if (['--from', '--to', '--title', '--output', '--repo', '--format'].includes(arg)) {
+        if (valueFlags.includes(arg)) {
             i++;
             continue;
         }
-        if (arg.startsWith('--from=') || arg.startsWith('--to=') || arg.startsWith('--title=') || arg.startsWith('--output=') || arg.startsWith('--repo=') || arg.startsWith('--format=')) {
+        if (valueFlags.some(flag => arg.startsWith(flag + '='))) {
             continue;
         }
         if (!arg.startsWith('-')) {
@@ -1100,21 +1102,34 @@ function handleReleaseNotesCommand(args = []) {
     const format = getOptionValue('--format') || 'markdown';
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
-    if (format !== 'markdown' && format !== 'json') {
+    const validFormats = ['markdown', 'json', 'github-release-json'];
+    if (!validFormats.includes(format)) {
         console.log(red('无效格式: ' + format));
-        console.log(dim('有效格式: markdown, json'));
+        console.log(dim('有效格式: ' + validFormats.join(', ')));
         process.exit(1);
     }
 
     try {
+        const tagName = getOptionValue('--tag') || (format === 'github-release-json' ? title : null);
+        const targetCommitish = getOptionValue('--target');
+        const isDraft = args.includes('--draft');
+        const isPrerelease = args.includes('--prerelease');
+
         const result = data.generateReleaseNotes(range, {
             title,
+            tagName,
+            body: getOptionValue('--body') || '',
+            targetCommitish,
+            draft: isDraft,
+            prerelease: isPrerelease,
             repoPath: process.cwd(),
             repo
         });
 
         let output;
-        if (format === 'json') {
+        if (format === 'github-release-json') {
+            output = JSON.stringify(result.githubRelease, null, 2);
+        } else if (format === 'json') {
             output = JSON.stringify(result.data, null, 2);
         } else {
             output = result.markdown;
@@ -1136,7 +1151,7 @@ function handleReleaseNotesCommand(args = []) {
             return;
         }
 
-        if (format === 'json') {
+        if (format === 'json' || format === 'github-release-json') {
             process.stdout.write(output);
         } else {
             console.log(cyan('正在生成 Release Notes...'));

@@ -39,6 +39,7 @@
 - ✅ **插件作者发布工具链** 已完成，CLI 新增 `plugin validate` 与 `plugin pack`，核心库补齐本地插件校验、SHA-256 计算、建议索引条目与 metadata 生成能力，平台从“插件可发现、可安装、可审计”继续前进到“插件作者可自助发布、可生成索引元数据、可降低接入摩擦”的生态生产力阶段
 - ✅ **Release Notes 自动生成** 已完成，CLI 新增 `release-notes` 子命令，核心库补齐 conventional commit 解析、Git 历史聚���与 Markdown 发布说明生成能力，平台从“能生成单条 commit 骚话”继续前进到“能沉淀版本叙事、可直接产出发布说明”的发布运营能力
 - ✅ **Release Notes 结构化输出** 已完成，CLI `--format json` 输出 machine-readable JSON，含 title/version/range/repo/baseUrl/compare/summary/sections/commits 全字段，兼容自动化流水线消费
+- ✅ **GitHub Release Payload 输出** 已完成，CLI `release-notes --format github-release-json` 与核心库 `buildGitHubReleasePayload` 可直接产出 GitHub Releases API 兼容 payload（含 `tag_name/name/body/draft/prerelease/target_commitish`），发布链路从“能写发布说明”继续前进到“可直接驱动 GitHub Release 自动化”
 
 ---
 
@@ -62,6 +63,7 @@
 | **插件索引 / 市场入口** | ✅ 完成 | 支持从远程索引搜索插件并按名称安装，CLI/API/Swagger/README/测试已打通 |
 | **插件作者发布工具链** | ✅ 完成 | CLI 支持 `plugin validate` / `plugin pack`，核心库可生成 SHA-256、建议索引条目与 metadata JSON，降低第三方插件接入与发布成本 |
 | **Release Notes / 发布说明生成** | ✅ 完成 | CLI `release-notes` 可基于 git log 直接输出 Markdown/JSON 发布说明，核心库可解析 conventional commit、按章节聚合并生成结构化产物 |
+| **GitHub Release 自动化 Payload** | ✅ 完成 | CLI `release-notes --format github-release-json` 与核心库 `buildGitHubReleasePayload` 可直接输出 GitHub Releases API 兼容 JSON，支持 tag/target/draft/prerelease/附加说明 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin + Release Notes，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
 | **Python SDK** | ✅ 完成 | 类型化客户端，覆盖全部 API 端点，并补齐批量骚话生成请求/结果模型 |
@@ -141,7 +143,7 @@
 8. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验、来源白名单、安装来源审计与 Ed25519 签名验签，但仍缺少公钥信任链、签名策略治理与发布者身份验证
 9. **多语言 SDK 版本治理尚未完全统一** — 当前主项目版本已纳入 `RELEASE.json`，但 Python / JavaScript SDK 仍保留各自包版本节奏，后续需要补齐更细粒度的发布矩阵与自动化校验
 10. **插件发布仍缺少一键上架流程** — 当前已补齐插件作者本地校验、摘要、签名与索引元数据生成，但尚未覆盖官方索引自动提交、Release 资产自动上传与公钥托管治理
-11. **Release Notes 尚未联动 GitHub Release / PR 元数据** — 当前已支持 Markdown/JSON 输出，但还没有自动关联 GitHub Release 发布流、PR 资产自动上传与 CHANGELOG 索引联动
+11. **Release Notes 仍缺少 GitHub 实时元数据富化** — 当前已支持 Markdown/JSON 输出与 GitHub Release payload 生成，但还没有自动拉取 PR labels/author/category、也未打通 Release 资产自动上传与 CHANGELOG 索引联动
 
 ---
 
@@ -163,6 +165,7 @@
 - ✅ **插件签名 / 验签链路** — 已补齐 `plugin pack --sign-private-key`、`plugin verify <path|name>`、索引签名验签、锁文件签名状态记录与 CLI inspect/validate 安全反馈，插件生态从“可校验摘要”继续前进到“可验证发布者签名、具备更强供应链治理”的平台安全能力
 - ✅ **Release Notes 自动生成** — 已补齐 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，核心库新增 conventional commit 解析、章节聚合与 Markdown 发布说明生成能力，项目从“会说单条骚话”前进到“会总结一整个版本的演进叙事”
 - ✅ **Release Notes 结构化输出** — 已补齐 `--format json` 输出 machine-readable JSON，含 title/version/range/repo/compare/summary/sections/commits 全字段，兼容自动化流水线消费
+- ✅ **GitHub Release payload 输出** — 已补齐 `--format github-release-json`、`--tag`、`--target`、`--draft`、`--prerelease`、`--body`，核心库新增 `buildGitHubReleasePayload`，项目从“只能生成发布说明文案”继续前进到“可直接喂给 GitHub Releases API 的发布自动化产物”
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -185,9 +188,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-20 🚀 大演进 | 共享批量生成核心下沉 + CLI 批处理入口 — 在 `lib/generator.js` 新增共享 `generateBatch` / `MAX_BATCH_SIZE`，让 REST API 改为复用核心批量逻辑，CLI 新增 `git-sao-hua batch --file <json> [--format text|json]`，支持文本汇总和纯 JSON 输出；同步补齐 lib/cli 测试、README / cli/README 文档，项目从“API+SDK 有批量能力”继续前进到“CLI / API / SDK 共用同一批处理核心”的平台一致性能力 | Stage 5 不变（平台批处理能力增强） |
-| -1 | 2026-04-19 🚀 大演进 | 批量骚话生成能力 — 在 `api/server.js` 新增 `POST /api/saohua/batch`，支持 `random / typed / typed_style / ai` 四种批量模式、最大 50 条请求、逐项成功/失败结果与汇总统计；同步扩展 `api/swagger.js`、`api/test.js`、README / API README，并在 JavaScript / Python / Go SDK 中补齐批量请求/结果模型与客户端方法，项目从“单次调用式 API”继续前进到“可被自动化流水线成批消费”的平台集成能力 | Stage 5 不变（平台批处理能力增强） |
-| -2 | 2026-04-19 🚀 大演进 | 插件签名 / 验签链路 — 在 `lib/plugin-manager.js` 新增 Ed25519 签名与验签工具、签名 metadata/indexEntry 生成、索引安装自动验签与 `plugins.lock.json` 签名状态记录；CLI 新增 `plugin verify <path|name>` 与 `plugin pack --sign-private-key --public-key --key-id`，并在 `inspect/validate/install/pack` 输出签名状态，同步补齐 lib/cli 测试与 README；项目从"只有摘要校验"继续前进到"插件生态具备基础发布者签名与供应链校验"的安全治理能力 | Stage 5 不变（生态安全治理增强） |
-| -3 | 2026-04-18 🚀 大演进 | Release Notes 结构化输出 — 扩展 `lib/release-notes.js` 新增 `buildReleaseNotesData` 函数输出 machine-readable JSON（含 title/version/range/repo/baseUrl/compare/summary/sections/commits），CLI 新增 `--format markdown\|json`（默认 markdown）参数支持 JSON 模式 stdout 或 --output 文件输出，同步补齐 lib/cli 测试与 README/文档；项目从"纯 Markdown 输出"继续前进到"可被自动化流水线消费的结构化产物"的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
-| -4 | 2026-04-18 🚀 大演进 | Release Notes 增强 — 扩展 `lib/release-notes.js` 支持解析 authorName/authorEmail、生成 GitHub 风格 Markdown（commit/PR/compare 链接），CLI 新增 `--repo <owner/repo>` 参数并自动从 git remote origin 推断，同步 lib/cli 测试与 README；项目从"简单聚合"继续前进到"可直接贴到 GitHub Release、带完整链接"的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
-| -5 | 2026-04-17 🚀 大演进 | Release Notes 自动生成 — 新增 `lib/release-notes.js`，补齐 conventional commit 解析、Git 历史聚合与 Markdown 发布说明生成能力，CLI 新增 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，并同步 README、lib/cli 测试与战略文档；项目从"能生成单条骚话"继续前进到"能总结整个版本故事、直接产出发布说明"的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
+| 最新 | 2026-04-20 🚀 大演进 | GitHub Release payload 自动化 — 在 `lib/release-notes.js` 新增 `buildGitHubReleasePayload`，CLI `release-notes` 支持 `--format github-release-json`、`--tag`、`--target`、`--draft`、`--prerelease`、`--body`，可直接输出 GitHub Releases API 兼容 JSON；同步补齐 lib/cli 测试与 README，项目从“能写 release notes”继续前进到“可直接驱动 GitHub Release 自动化”的发布运营能力 | Stage 5 不变（发布自动化能力增强） |
+| -1 | 2026-04-20 🚀 大演进 | 共享批量生成核心下沉 + CLI 批处理入口 — 在 `lib/generator.js` 新增共享 `generateBatch` / `MAX_BATCH_SIZE`，让 REST API 改为复用核心批量逻辑，CLI 新增 `git-sao-hua batch --file <json> [--format text|json]`，支持文本汇总和纯 JSON 输出；同步补齐 lib/cli 测试、README / cli/README 文档，项目从“API+SDK 有批量能力”继续前进到“CLI / API / SDK 共用同一批处理核心”的平台一致性能力 | Stage 5 不变（平台批处理能力增强） |
+| -2 | 2026-04-19 🚀 大演进 | 批量骚话生成能力 — 在 `api/server.js` 新增 `POST /api/saohua/batch`，支持 `random / typed / typed_style / ai` 四种批量模式、最大 50 条请求、逐项成功/失败结果与汇总统计；同步扩展 `api/swagger.js`、`api/test.js`、README / API README，并在 JavaScript / Python / Go SDK 中补齐批量请求/结果模型与客户端方法，项目从“单次调用式 API”继续前进到“可被自动化流水线成批消费”的平台集成能力 | Stage 5 不变（平台批处理能力增强） |
+| -3 | 2026-04-19 🚀 大演进 | 插件签名 / 验签链路 — 在 `lib/plugin-manager.js` 新增 Ed25519 签名与验签工具、签名 metadata/indexEntry 生成、索引安装自动验签与 `plugins.lock.json` 签名状态记录；CLI 新增 `plugin verify <path|name>` 与 `plugin pack --sign-private-key --public-key --key-id`，并在 `inspect/validate/install/pack` 输出签名状态，同步补齐 lib/cli 测试与 README；项目从"只有摘要校验"继续前进到"插件生态具备基础发布者签名与供应链校验"的安全治理能力 | Stage 5 不变（生态安全治理增强） |
+| -4 | 2026-04-18 🚀 大演进 | Release Notes 结构化输出 — 扩展 `lib/release-notes.js` 新增 `buildReleaseNotesData` 函数输出 machine-readable JSON（含 title/version/range/repo/baseUrl/compare/summary/sections/commits），CLI 新增 `--format markdown\|json`（默认 markdown）参数支持 JSON 模式 stdout 或 --output 文件输出，同步补齐 lib/cli 测试与 README/文档；项目从"纯 Markdown 输出"继续前进到"可被自动化流水线消费的结构化产物"的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
+| -5 | 2026-04-18 🚀 大演进 | Release Notes 增强 — 扩展 `lib/release-notes.js` 支持解析 authorName/authorEmail、生成 GitHub 风格 Markdown（commit/PR/compare 链接），CLI 新增 `--repo <owner/repo>` 参数并自动从 git remote origin 推断，同步 lib/cli 测试与 README；项目从"简单聚合"继续前进到"可直接贴到 GitHub Release、带完整链接"的发布运营能力 | Stage 5 不变（发布叙事能力增强） |
