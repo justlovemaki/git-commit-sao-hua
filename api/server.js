@@ -239,77 +239,22 @@ app.post('/api/saohua/batch', async (req, res) => {
     try {
         const { items } = req.body;
         
-        if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json(errorResponse('请提供有效的生成请求数组~'));
+        if (!items) {
+            return res.status(400).json(errorResponse('请提供 items 数组~'));
         }
         
-        if (items.length > 50) {
-            return res.status(400).json(errorResponse('单次请求最多支持 50 条~'));
+        const result = await saoHuaCore.generateBatch(items);
+        
+        if (!result.success) {
+            return res.status(400).json(errorResponse(result.error));
         }
-        
-        const results = [];
-        
-        for (const item of items) {
-            const { mode = 'random', type, style, lang, diff } = item;
-            const language = lang || 'zh-CN';
-            
-            try {
-                let result;
-                
-                switch (mode) {
-                    case 'random':
-                        result = saoHuaCore.generateRandom(language);
-                        break;
-                    case 'typed':
-                        if (!type) {
-                            results.push({ success: false, error: 'typed 模式需要提供 type 参数' });
-                            continue;
-                        }
-                        result = saoHuaCore.generateByType(type, style, language);
-                        break;
-                    case 'typed_style':
-                        if (!type || !style) {
-                            results.push({ success: false, error: 'typed_style 模式需要提供 type 和 style 参数' });
-                            continue;
-                        }
-                        result = saoHuaCore.generateByType(type, style, language);
-                        break;
-                    case 'ai':
-                        if (!diff) {
-                            results.push({ success: false, error: 'ai 模式需要提供 diff 参数' });
-                            continue;
-                        }
-                        try {
-                            result = await saoHuaCore.generateWithAIAsync(diff, {
-                                type,
-                                style,
-                                language
-                            });
-                        } catch (aiError) {
-                            console.warn('AI 生成失败，使用 fallback:', aiError.message);
-                            const msgType = type || 'chore';
-                            result = saoHuaCore.generateByType(msgType, style, language);
-                        }
-                        break;
-                    default:
-                        results.push({ success: false, error: `不支持的模式: ${mode}` });
-                        continue;
-                }
-                
-                results.push({ success: true, ...result });
-            } catch (itemError) {
-                results.push({ success: false, error: itemError.message });
-            }
-        }
-        
-        const successCount = results.filter(r => r.success).length;
         
         res.json(successResponse({
-            items: results,
-            count: results.length,
-            successCount,
-            failedCount: results.length - successCount
-        }, `批量生成完成，成功 ${successCount}/${results.length}~`));
+            items: result.items,
+            count: result.count,
+            successCount: result.successCount,
+            failedCount: result.failedCount
+        }, `批量生成完成，成功 ${result.successCount}/${result.count}~`));
     } catch (error) {
         res.status(500).json(errorResponse('批量生成失败: ' + error.message));
     }

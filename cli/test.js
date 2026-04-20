@@ -416,4 +416,50 @@ writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
     }
 })();
 
+(function testBatchCommandTextOutput() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-batch-'));
+    const batchFile = path.join(tmpDir, 'items.json');
+    fs.writeFileSync(batchFile, JSON.stringify({
+        items: [
+            { mode: 'random' },
+            { mode: 'typed', type: 'fix' }
+        ]
+    }, null, 2), 'utf8');
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'batch', '--file', batchFile], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /正在批量生成/);
+        assert.match(output, /统计:/);
+        assert.match(output, /生成结果:/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testBatchCommandJsonOutputIsMachineReadable() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-batch-json-'));
+    const batchFile = path.join(tmpDir, 'items.json');
+    fs.writeFileSync(batchFile, JSON.stringify([
+        { mode: 'typed_style', type: 'feat', style: 'love' }
+    ], null, 2), 'utf8');
+
+    try {
+        const output = execFileSync(process.execPath, [path.join(__dirname, 'index.js'), 'batch', '--file', batchFile, '--format', 'json'], {
+            encoding: 'utf8'
+        });
+        const parsed = JSON.parse(output);
+
+        assert.strictEqual(parsed.success, true);
+        assert.strictEqual(parsed.count, 1);
+        assert.strictEqual(parsed.items[0].success, true);
+        assert.strictEqual(parsed.items[0].type, 'feat');
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');

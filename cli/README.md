@@ -156,6 +156,45 @@ git-sao-hua plugin install --from-index my-plugin
 git-sao-hua plugin remove my-pack
 ```
 
+## 批量生成
+
+```bash
+# 批量生成骚话（需要先准备 JSON 文件）
+git-sao-hua batch --file items.json
+
+# 输出 JSON 格式（适合程序处理）
+git-sao-hua batch --file items.json --format json
+```
+
+JSON 文件格式：
+
+```json
+{
+  "items": [
+    { "mode": "random" },
+    { "mode": "typed", "type": "fix" },
+    { "mode": "typed_style", "type": "feat", "style": "love" },
+    { "mode": "ai", "type": "feat", "diff": "diff content..." }
+  ]
+}
+```
+
+或者直接使用数组：
+
+```json
+[
+  { "mode": "random" },
+  { "mode": "typed", "type": "fix" }
+]
+```
+
+支持四种生成模式：
+
+- `random` - 随机类型和风格
+- `typed` - 指定类型，随机风格
+- `typed_style` - 指定类型和风格
+- `ai` - AI 生成（需要 diff 参数）
+
 ## 本地开发
 
 ```bash

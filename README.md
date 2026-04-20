@@ -99,8 +99,51 @@ git-sao-hua plugin pack <path>           # 生成插件发布摘要与建议索�
 git-sao-hua plugin pack <path> --output <file> # 输出 metadata JSON (v1.34.0)
 git-sao-hua plugin pack <path> --sign-private-key <pem> --public-key <pem> --key-id <id> # 生成签名 metadata (v1.36.0)
 git-sao-hua plugin remove <name>             # 删除插件
+git-sao-hua batch --file <json>              # 批量生成骚话 (v1.37.0)
 git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
 ```
+
+### 批量生成（v1.37.0）
+
+除了 REST API 和多语言 SDK，现在 CLI 也能直接消费批量输入文件，方便脚本、流水线和人工预览共用同一份 `items` 定义：
+
+```bash
+# 文本模式，输出汇总统计和逐条结果
+git-sao-hua batch --file ./items.json
+
+# JSON 模式，输出纯 JSON，便于脚本直接消费
+git-sao-hua batch --file ./items.json --format json
+```
+
+`items.json` 支持两种结构：
+
+```json
+{
+  "items": [
+    { "mode": "random" },
+    { "mode": "typed", "type": "fix" },
+    { "mode": "typed_style", "type": "feat", "style": "love" },
+    { "mode": "ai", "type": "feat", "diff": "diff --git a/a.js b/a.js\n+console.log('hi')" }
+  ]
+}
+```
+
+或直接传数组：
+
+```json
+[
+  { "mode": "random" },
+  { "mode": "typed", "type": "docs" }
+]
+```
+
+支持模式：
+- `random`
+- `typed`
+- `typed_style`
+- `ai`
+
+单次最多 50 条，CLI / API / SDK 共用同一套核心批量生成逻辑。
 
 ### Release Notes 生成（新增）
 

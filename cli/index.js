@@ -315,6 +315,7 @@ function showHelp() {
     console.log('  ' + green('hook uninstall') + '         卸载 hook');
     console.log('  ' + green('hook status') + '            查看 hook 安装状态');
     console.log('  ' + green('init') + '                   在当前目录创建 .saohuarc.json 配置文件（交互式）');
+    console.log('  ' + green('batch --file <json>') + '      批量生成骚话 (v1.37.0 新增)');
     console.log('  ' + green('plugin list') + '            列出已安装的插件 (v1.27.0 新增)');
     console.log('  ' + green('plugin inspect <name>') + '  查看插件来源与锁定信息 (v1.33.0 新增)');
     console.log('  ' + green('plugin create [name]') + '    创建插件模板 (v1.27.0 新增)');
@@ -424,6 +425,10 @@ function showHelp() {
     console.log('  git-sao-hua plugin pack ./my-plugin.json --source-url https://example.com/plugin.json');
     console.log(dim('\n  # 打包并添加 github 引用'));
     console.log('  git-sao-hua plugin pack ./my-plugin.json --github owner/repo');
+    console.log(dim('\n  # 批量生成骚话'));
+    console.log('  git-sao-hua batch --file items.json');
+    console.log(dim('\n  # 批量生成并输出 JSON 格式'));
+    console.log('  git-sao-hua batch --file items.json --format json');
 }
 
 function showList() {
@@ -964,6 +969,102 @@ async function handleInitCommand() {
         console.log(red('✗ 配置文件创建失败'));
         process.exit(1);
     }
+}
+
+async function handleBatchCommand(args = []) {
+    const fileArg = readArgValue(args, '--file');
+    const formatArg = readArgValue(args, '--format') || 'text';
+    const isJsonOutput = formatArg === 'json';
+    
+    if (!fileArg) {
+        console.log(red('错误：请使用 --file 指定 JSON 文件路径'));
+        console.log(dim('用法: git-sao-hua batch --file <json> [--format text|json]'));
+        console.log(dim('示例: git-sao-hua batch --file items.json'));
+        console.log(dim('       git-sao-hua batch --file items.json --format json'));
+        process.exit(1);
+    }
+
+    if (formatArg !== 'text' && formatArg !== 'json') {
+        console.log(red('错误：--format 仅支持 text 或 json'));
+        process.exit(1);
+    }
+    
+    const filePath = path.resolve(process.cwd(), fileArg);
+    if (!fs.existsSync(filePath)) {
+        console.log(red('错误：文件不存在: ' + filePath));
+        process.exit(1);
+    }
+    
+    let content;
+    try {
+        content = fs.readFileSync(filePath, 'utf8');
+    } catch (e) {
+        console.log(red('错误：读取文件失败: ' + e.message));
+        process.exit(1);
+    }
+    
+    let jsonData;
+    try {
+        jsonData = JSON.parse(content);
+    } catch (e) {
+        console.log(red('错误：无效 JSON 格式: ' + e.message));
+        process.exit(1);
+    }
+    
+    const items = jsonData.items || jsonData;
+    if (!Array.isArray(items)) {
+        console.log(red('错误：JSON 应包含 items 数组'));
+        process.exit(1);
+    }
+    
+    if (items.length > data.MAX_BATCH_SIZE) {
+        console.log(red('错误：单次请求最多支持 ' + data.MAX_BATCH_SIZE + ' 条'));
+        process.exit(1);
+    }
+    
+    if (!isJsonOutput) {
+        console.log(cyan('正在批量生成...'));
+        console.log(dim('  文件: ' + fileArg));
+        console.log(dim('  数量: ' + items.length));
+        console.log(dim('  格式: ' + formatArg));
+    }
+    
+    const result = await data.generateBatch(items);
+    
+    if (isJsonOutput) {
+        process.stdout.write(JSON.stringify({
+            success: result.success,
+            count: result.count,
+            successCount: result.successCount,
+            failedCount: result.failedCount,
+            items: result.items
+        }, null, 2) + '\n');
+        return;
+    }
+    
+    console.log('');
+    console.log(bold('====== 批量生成结果 ======'));
+    console.log('');
+    
+    const successCount = result.successCount;
+    const failedCount = result.failedCount;
+    
+    console.log(bold('统计:'));
+    console.log('  ' + green('✓ 成功: ') + successCount);
+    console.log('  ' + red('✗ 失败: ') + failedCount);
+    console.log('  ' + dim('总计: ') + result.count);
+    console.log('');
+    
+    console.log(bold('生成结果:'));
+    result.items.forEach((item, index) => {
+        const num = (index + 1).toString().padStart(2, ' ');
+        if (item.success) {
+            console.log(`  ${green(num + '. ' + item.fullMessage)}`);
+        } else {
+            console.log(`  ${red(num + '. [失败] ' + item.error)}`);
+        }
+    });
+    console.log('');
 }
 
 function handleReleaseNotesCommand(args = []) {
@@ -1528,7 +1629,6 @@ async function handlePluginCommand(action, args = []) {
 }
 
 async function main() {
-    // 处理子命令（hook / init / plugin / release-notes）
     const args = process.argv.slice(2);
     if (args[0] === 'hook') {
         handleHookCommand(args[1] || 'status');
@@ -1548,6 +1648,10 @@ async function main() {
     }
     if (args[0] === 'tui') {
         await tuiMode();
+        return;
+    }
+    if (args[0] === 'batch') {
+        await handleBatchCommand(args.slice(1));
         return;
     }
 
