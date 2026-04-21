@@ -235,6 +235,42 @@ app.post('/api/saohua/ai', async (req, res) => {
     }
 });
 
+app.post('/api/saohua/natural/analyze', (req, res) => {
+    try {
+        const { text, lang } = req.body || {};
+
+        if (!text) {
+            return res.status(400).json(errorResponse('请提供 text 自然语言描述~'));
+        }
+
+        const language = lang || 'zh-CN';
+        const result = saoHuaCore.generateFromNaturalLanguage(text, language);
+        res.json(successResponse(result, '自然语言分析成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('自然语言分析失败: ' + error.message));
+    }
+});
+
+app.post('/api/saohua/natural/generate', (req, res) => {
+    try {
+        const { text, lang, style, type } = req.body || {};
+
+        if (!text) {
+            return res.status(400).json(errorResponse('请提供 text 自然语言描述~'));
+        }
+
+        const language = lang || 'zh-CN';
+        const result = saoHuaCore.generateCommitFromNaturalLanguage(text, {
+            language,
+            style,
+            type
+        });
+        res.json(successResponse(result, '自然语言骚话生成成功~'));
+    } catch (error) {
+        res.status(400).json(errorResponse(error.message));
+    }
+});
+
 app.post('/api/saohua/batch', async (req, res) => {
     try {
         const { items } = req.body;

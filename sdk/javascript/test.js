@@ -257,3 +257,66 @@ test('batchSaohua() handles mixed success/failure', async () => {
   assert.equal(result.failedCount, 1);
   assert.equal(result.items[1].error, 'ai 模式需要提供 diff 参数');
 });
+
+test('analyzeNaturalLanguage() posts text and returns detection fields', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      assert.equal(init.method, 'POST');
+      const body = JSON.parse(init.body);
+      assert.equal(body.text, '修复登录按钮点击无效');
+      assert.equal(body.lang, 'zh-CN');
+      return jsonResponse({
+        success: true,
+        data: {
+          naturalText: body.text,
+          detectedType: 'fix',
+          detectedStyle: 'sao',
+          topic: '登录按钮点击无效',
+          confidence: 'medium',
+          reason: '检测到类型关键词: fix',
+          language: 'zh-CN',
+        },
+      });
+    }),
+  });
+
+  const result = await client.analyzeNaturalLanguage('修复登录按钮点击无效', 'zh-CN');
+  assert.equal(result.detectedType, 'fix');
+  assert.equal(result.topic, '登录按钮点击无效');
+});
+
+test('generateFromNaturalLanguage() supports override type and style', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.text, '新增分享海报下载功能');
+      assert.equal(body.type, 'feat');
+      assert.equal(body.style, 'love');
+      return jsonResponse({
+        success: true,
+        data: {
+          naturalText: body.text,
+          detectedType: 'feat',
+          detectedStyle: 'sao',
+          topic: '分享海报下载功能',
+          confidence: 'medium',
+          reason: '检测到类型关键词: feat',
+          language: 'zh-CN',
+          type: 'feat',
+          style: 'love',
+          message: '新功能也想和你贴贴',
+          fullMessage: 'feat: 新功能也想和你贴贴',
+        },
+      });
+    }),
+  });
+
+  const result = await client.generateFromNaturalLanguage('新增分享海报下载功能', {
+    type: 'feat',
+    style: 'love',
+  });
+  assert.equal(result.style, 'love');
+  assert.equal(result.fullMessage, 'feat: 新功能也想和你贴贴');
+});

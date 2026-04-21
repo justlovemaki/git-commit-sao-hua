@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 
 from git_saohua import SaohuaClient, APIError, TimeoutError, NetworkError
 from git_saohua.models import SaohuaData, HealthData, TypesData, StylesData, StatsData, PluginsData, PluginResult
+from git_saohua.models import NaturalLanguageAnalysisData, NaturalLanguageGenerateData
 
 
 def _mock_response(json_data, status_code=200):
@@ -129,6 +130,44 @@ class TestSaohuaClient(unittest.TestCase):
             "diff content", lang="en", style="love", commit_type="fix"
         )
         self.assertIsInstance(result, SaohuaData)
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_analyze_natural_language(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "naturalText": "修复登录表单提交异常",
+            "detectedType": "fix",
+            "detectedStyle": "sao",
+            "topic": "登录表单提交异常",
+            "confidence": "medium",
+            "reason": "检测到类型关键词: fix",
+            "language": "zh-CN"
+        }))
+        result = self.client.analyze_natural_language("修复登录表单提交异常", lang="zh-CN")
+        self.assertIsInstance(result, NaturalLanguageAnalysisData)
+        self.assertEqual(result.detected_type, "fix")
+        self.assertEqual(result.topic, "登录表单提交异常")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_from_natural_language(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "naturalText": "新增分享海报功能",
+            "detectedType": "feat",
+            "detectedStyle": "sao",
+            "topic": "分享海报功能",
+            "confidence": "medium",
+            "reason": "检测到类型关键词: feat",
+            "language": "zh-CN",
+            "type": "feat",
+            "style": "love",
+            "message": "新功能也想和你贴贴",
+            "fullMessage": "feat: 新功能也想和你贴贴"
+        }))
+        result = self.client.generate_from_natural_language(
+            "新增分享海报功能", style="love", commit_type="feat"
+        )
+        self.assertIsInstance(result, NaturalLanguageGenerateData)
+        self.assertEqual(result.style, "love")
+        self.assertEqual(result.full_message, "feat: 新功能也想和你贴贴")
 
     # ── list_types ───────────────────────────────────
 

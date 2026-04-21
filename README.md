@@ -602,6 +602,7 @@ console.log(result.fullMessage);
 
 - 健康检查、随机骚话、按类型 / 风格生成
 - AI 骚话生成
+- 自然语言提交分析 / 直接生成 commit 骚话
 - 批量骚话生成（最多 50 条/请求）
 - 类型 / 风格 / 统计查询
 - 插件列表、安装、删除、模板创建、重载
@@ -623,6 +624,27 @@ const batch = await client.batchSaohua([
 ]);
 
 console.log(batch.count, batch.successCount);
+
+const analysis = await client.analyzeNaturalLanguage('修复登录按钮点击无效');
+console.log(analysis.detectedType, analysis.topic);
+
+const naturalCommit = await client.generateFromNaturalLanguage('新增分享海报下载功能', {
+  type: 'feat',
+  style: 'love',
+});
+console.log(naturalCommit.fullMessage);
+```
+
+REST API 自然语言端点：
+
+```bash
+curl -X POST http://localhost:3000/api/saohua/natural/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"修复登录按钮点击无效"}'
+
+curl -X POST http://localhost:3000/api/saohua/natural/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"新增分享海报下载功能","type":"feat","style":"love"}'
 ```
 
 更多说明见：

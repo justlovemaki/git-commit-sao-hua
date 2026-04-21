@@ -169,6 +169,50 @@ const options = {
                         }
                     }
                 },
+                NaturalLanguageAnalyzeRequest: {
+                    type: 'object',
+                    required: ['text'],
+                    properties: {
+                        text: { type: 'string', example: '修复登录按钮点击无效' },
+                        lang: { type: 'string', example: 'zh-CN' }
+                    }
+                },
+                NaturalLanguageGenerateRequest: {
+                    type: 'object',
+                    required: ['text'],
+                    properties: {
+                        text: { type: 'string', example: '新增分享海报下载功能' },
+                        lang: { type: 'string', example: 'zh-CN' },
+                        type: { type: 'string', example: 'feat' },
+                        style: { type: 'string', example: 'love' }
+                    }
+                },
+                NaturalLanguageAnalysisData: {
+                    type: 'object',
+                    properties: {
+                        naturalText: { type: 'string', example: '修复登录按钮点击无效' },
+                        detectedType: { type: 'string', example: 'fix' },
+                        detectedStyle: { type: 'string', example: 'sao' },
+                        topic: { type: 'string', example: '登录按钮点击无效' },
+                        confidence: { type: 'string', example: 'medium' },
+                        reason: { type: 'string', example: '检测到类型关键词: fix' },
+                        language: { type: 'string', example: 'zh-CN' }
+                    }
+                },
+                NaturalLanguageGenerateData: {
+                    allOf: [
+                        { $ref: '#/components/schemas/NaturalLanguageAnalysisData' },
+                        {
+                            type: 'object',
+                            properties: {
+                                type: { type: 'string', example: 'feat' },
+                                style: { type: 'string', example: 'love' },
+                                message: { type: 'string', example: '新功能也想和你贴贴' },
+                                fullMessage: { type: 'string', example: 'feat: 新功能也想和你贴贴' }
+                            }
+                        }
+                    ]
+                },
                 TypesData: {
                     type: 'object',
                     properties: {
@@ -1049,6 +1093,84 @@ const options = {
                         },
                         '500': {
                             description: 'AI 生成失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/saohua/natural/analyze': {
+                post: {
+                    tags: ['Saohua'],
+                    summary: '分析自然语言提交描述',
+                    description: '从自然语言中识别 commit 类型、默认风格、主题和置信度。',
+                    operationId: 'analyzeNaturalLanguage',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/NaturalLanguageAnalyzeRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '自然语言分析成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { properties: { data: { $ref: '#/components/schemas/NaturalLanguageAnalysisData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '缺少必要参数',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/saohua/natural/generate': {
+                post: {
+                    tags: ['Saohua'],
+                    summary: '从自然语言直接生成 commit 骚话',
+                    description: '统一返回分析结果与最终生成的 commit message/fullMessage，可选覆盖 type/style。',
+                    operationId: 'generateFromNaturalLanguage',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/NaturalLanguageGenerateRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '自然语言骚话生成成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { properties: { data: { $ref: '#/components/schemas/NaturalLanguageGenerateData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '请求参数错误',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }

@@ -188,6 +188,23 @@ JSON 文件格式：
 ]
 ```
 
+## 自然语言提交
+
+CLI 已支持直接输入自然语言描述，让核心先分析类型/风格，再生成 commit 骚话：
+
+```bash
+git-sao-hua --natural-text "修复登录按钮点击无效"
+git-sao-hua --natural-text "新增分享海报下载功能" --style love
+```
+
+如果你需要在服务侧复用同一能力，可调用 REST API：
+
+```bash
+curl -X POST http://localhost:3000/api/saohua/natural/analyze \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"修复登录按钮点击无效"}'
+```
+
 支持四种生成模式：
 
 - `random` - 随机类型和风格

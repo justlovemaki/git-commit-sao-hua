@@ -190,6 +190,50 @@ diff --git a/app.py b/app.py
 	t.Logf("AI generated: %s", saohua.FullMessage)
 }
 
+func TestAnalyzeNaturalLanguage(t *testing.T) {
+	client := git_saohua.NewClient(getTestBaseURL())
+	defer client.Close()
+
+	result, err := client.AnalyzeNaturalLanguage("修复登录按钮点击无效", "zh-CN")
+	if err != nil {
+		t.Fatalf("AnalyzeNaturalLanguage failed: %v", err)
+	}
+
+	if result.DetectedType == "" {
+		t.Error("Expected detectedType to be non-empty")
+	}
+
+	if result.Topic == "" {
+		t.Error("Expected topic to be non-empty")
+	}
+
+	t.Logf("Natural analysis: %s -> %s", result.DetectedType, result.Topic)
+}
+
+func TestGenerateFromNaturalLanguage(t *testing.T) {
+	client := git_saohua.NewClient(getTestBaseURL())
+	defer client.Close()
+
+	result, err := client.GenerateFromNaturalLanguage("新增分享海报下载功能", "zh-CN", "love", "feat")
+	if err != nil {
+		t.Fatalf("GenerateFromNaturalLanguage failed: %v", err)
+	}
+
+	if result.Type != "feat" {
+		t.Errorf("Expected type 'feat', got '%s'", result.Type)
+	}
+
+	if result.Style != "love" {
+		t.Errorf("Expected style 'love', got '%s'", result.Style)
+	}
+
+	if result.FullMessage == "" {
+		t.Error("Expected fullMessage to be non-empty")
+	}
+
+	t.Logf("Natural generated: %s", result.FullMessage)
+}
+
 func TestListPlugins(t *testing.T) {
 	client := git_saohua.NewClient(getTestBaseURL())
 	defer client.Close()

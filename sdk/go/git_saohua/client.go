@@ -268,6 +268,46 @@ func (c *Client) BatchSaohua(items []BatchSaohuaItem) (*BatchSaohuaResult, error
 	return &result, nil
 }
 
+// AnalyzeNaturalLanguage 分析自然语言提交描述
+func (c *Client) AnalyzeNaturalLanguage(text, lang string) (*NaturalLanguageAnalysisData, error) {
+	body := map[string]interface{}{
+		"text": text,
+	}
+	if lang != "" {
+		body["lang"] = lang
+	}
+
+	var result NaturalLanguageAnalysisData
+	err := c.doRequest("POST", "/api/saohua/natural/analyze", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GenerateFromNaturalLanguage 从自然语言描述生成 commit 骚话
+func (c *Client) GenerateFromNaturalLanguage(text, lang, style, commitType string) (*NaturalLanguageGenerateData, error) {
+	body := map[string]interface{}{
+		"text": text,
+	}
+	if lang != "" {
+		body["lang"] = lang
+	}
+	if style != "" {
+		body["style"] = style
+	}
+	if commitType != "" {
+		body["type"] = commitType
+	}
+
+	var result NaturalLanguageGenerateData
+	err := c.doRequest("POST", "/api/saohua/natural/generate", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListTypes 获取所有 commit 类型
 func (c *Client) ListTypes(lang string) (*TypesData, error) {
 	path := "/api/types"

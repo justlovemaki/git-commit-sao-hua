@@ -161,3 +161,23 @@ type BatchSaohuaResult struct {
 	SuccessCount int                 `json:"successCount"`
 	FailedCount int                 `json:"failedCount"`
 }
+
+// NaturalLanguageAnalysisData 自然语言分析结果
+type NaturalLanguageAnalysisData struct {
+	NaturalText   string `json:"naturalText"`
+	DetectedType  string `json:"detectedType"`
+	DetectedStyle string `json:"detectedStyle"`
+	Topic         string `json:"topic"`
+	Confidence    string `json:"confidence"`
+	Reason        string `json:"reason"`
+	Language      string `json:"language"`
+}
+
+// NaturalLanguageGenerateData 自然语言生成结果
+type NaturalLanguageGenerateData struct {
+	NaturalLanguageAnalysisData
+	Type        string `json:"type"`
+	Style       string `json:"style"`
+	Message     string `json:"message"`
+	FullMessage string `json:"fullMessage"`
+}

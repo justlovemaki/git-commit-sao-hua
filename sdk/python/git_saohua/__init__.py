@@ -29,6 +29,8 @@ from .models import (
     BatchSaohuaItem,
     BatchSaohuaResultItem,
     BatchSaohuaResult,
+    NaturalLanguageAnalysisData,
+    NaturalLanguageGenerateData,
 )
 
 __all__ = [
@@ -50,4 +52,6 @@ __all__ = [
     "BatchSaohuaItem",
     "BatchSaohuaResultItem",
     "BatchSaohuaResult",
+    "NaturalLanguageAnalysisData",
+    "NaturalLanguageGenerateData",
 ]

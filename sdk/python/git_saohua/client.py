@@ -15,6 +15,8 @@ from .models import (
     PluginResult,
     BatchSaohuaItem,
     BatchSaohuaResult,
+    NaturalLanguageAnalysisData,
+    NaturalLanguageGenerateData,
 )
 
 __all__ = ["SaohuaClient"]
@@ -227,6 +229,36 @@ class SaohuaClient:
         body: Dict[str, Any] = {"items": [item.to_dict() for item in items]}
         data = self._post("/api/saohua/batch", json_body=body)
         return BatchSaohuaResult.from_dict(data)
+
+    def analyze_natural_language(
+        self,
+        text: str,
+        lang: Optional[str] = None,
+    ) -> NaturalLanguageAnalysisData:
+        """分析自然语言提交描述。"""
+        body: Dict[str, Any] = {"text": text}
+        if lang:
+            body["lang"] = lang
+        data = self._post("/api/saohua/natural/analyze", json_body=body)
+        return NaturalLanguageAnalysisData.from_dict(data)
+
+    def generate_from_natural_language(
+        self,
+        text: str,
+        lang: Optional[str] = None,
+        style: Optional[str] = None,
+        commit_type: Optional[str] = None,
+    ) -> NaturalLanguageGenerateData:
+        """从自然语言描述直接生成 commit 骚话。"""
+        body: Dict[str, Any] = {"text": text}
+        if lang:
+            body["lang"] = lang
+        if style:
+            body["style"] = style
+        if commit_type:
+            body["type"] = commit_type
+        data = self._post("/api/saohua/natural/generate", json_body=body)
+        return NaturalLanguageGenerateData.from_dict(data)
 
     # ── 类型与风格 ───────────────────────────────────────
 

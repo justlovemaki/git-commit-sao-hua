@@ -157,6 +157,23 @@ export interface BatchSaohuaResult {
   failedCount: number;
 }
 
+export interface NaturalLanguageAnalysisData {
+  naturalText: string;
+  detectedType: string;
+  detectedStyle: string;
+  topic: string;
+  confidence: string;
+  reason: string;
+  language: string;
+}
+
+export interface NaturalLanguageGenerateData extends NaturalLanguageAnalysisData {
+  type: string;
+  style: string;
+  message: string;
+  fullMessage: string;
+}
+
 export interface ClientOptions {
   baseUrl?: string;
   apiKey?: string;
@@ -251,6 +268,20 @@ export class SaohuaClient {
 
   async batchSaohua(items: BatchSaohuaItem[]): Promise<BatchSaohuaResult> {
     return this.request('POST', '/api/saohua/batch', { items });
+  }
+
+  async analyzeNaturalLanguage(text: string, lang?: string): Promise<NaturalLanguageAnalysisData> {
+    return this.request('POST', '/api/saohua/natural/analyze', { text, lang });
+  }
+
+  async generateFromNaturalLanguage(
+    text: string,
+    options: { lang?: string; style?: string; type?: string } = {},
+  ): Promise<NaturalLanguageGenerateData> {
+    return this.request('POST', '/api/saohua/natural/generate', {
+      text,
+      ...options,
+    });
   }
 
   async listTypes(lang?: string): Promise<TypesData> {

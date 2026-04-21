@@ -262,6 +262,45 @@ const tests = {
         assert(res.data.data.type === 'feat', 'Type should be feat');
     },
 
+    async testNaturalLanguageAnalyze() {
+        const res = await post('/api/saohua/natural/analyze', {
+            text: '修复登录按钮点击无效',
+            lang: 'zh-CN'
+        });
+        assert(res.status === 200, 'Natural analyze should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.detectedType === 'fix', 'Detected type should be fix');
+        assert(res.data.data.topic, 'Should have topic');
+        assert(res.data.data.reason, 'Should have reason');
+    },
+
+    async testNaturalLanguageAnalyzeValidation() {
+        const res = await post('/api/saohua/natural/analyze', {});
+        assert(res.status === 400, 'Missing text should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
+    async testNaturalLanguageGenerate() {
+        const res = await post('/api/saohua/natural/generate', {
+            text: '新增分享海报下载功能',
+            type: 'feat',
+            style: 'love',
+            lang: 'zh-CN'
+        });
+        assert(res.status === 200, 'Natural generate should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.detectedType === 'feat', 'Detected type should be feat');
+        assert(res.data.data.type === 'feat', 'Generated type should be feat');
+        assert(res.data.data.style === 'love', 'Generated style should be love');
+        assert(res.data.data.fullMessage, 'Should have fullMessage');
+    },
+
+    async testNaturalLanguageGenerateValidation() {
+        const res = await post('/api/saohua/natural/generate', {});
+        assert(res.status === 400, 'Missing text should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
     async testAIGenerationNoDiff() {
         const res = await post('/api/saohua/ai', {});
         assert(res.status === 400, 'No diff should return 400');

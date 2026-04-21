@@ -254,3 +254,55 @@ class BatchSaohuaResult:
             success_count=data.get("successCount", 0),
             failed_count=data.get("failedCount", 0),
         )
+
+
+@dataclass
+class NaturalLanguageAnalysisData:
+    """自然语言分析结果。"""
+
+    natural_text: str = ""
+    detected_type: str = ""
+    detected_style: str = ""
+    topic: str = ""
+    confidence: str = ""
+    reason: str = ""
+    language: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NaturalLanguageAnalysisData":
+        return cls(
+            natural_text=data.get("naturalText", ""),
+            detected_type=data.get("detectedType", ""),
+            detected_style=data.get("detectedStyle", ""),
+            topic=data.get("topic", ""),
+            confidence=data.get("confidence", ""),
+            reason=data.get("reason", ""),
+            language=data.get("language", ""),
+        )
+
+
+@dataclass
+class NaturalLanguageGenerateData(NaturalLanguageAnalysisData):
+    """自然语言生成结果。"""
+
+    type: str = ""
+    style: str = ""
+    message: str = ""
+    full_message: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NaturalLanguageGenerateData":
+        base = NaturalLanguageAnalysisData.from_dict(data)
+        return cls(
+            natural_text=base.natural_text,
+            detected_type=base.detected_type,
+            detected_style=base.detected_style,
+            topic=base.topic,
+            confidence=base.confidence,
+            reason=base.reason,
+            language=base.language,
+            type=data.get("type", ""),
+            style=data.get("style", ""),
+            message=data.get("message", ""),
+            full_message=data.get("fullMessage", ""),
+        )
