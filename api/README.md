@@ -334,6 +334,44 @@ POST /api/saohua/batch
 }
 ```
 
+### 流式生成（SSE）
+
+```
+GET /api/saohua/stream
+```
+
+通过 `text/event-stream` 连续推送骚话候选，适合终端、机器人、前端实时预览场景。
+
+查询参数:
+- `type` - 可选 commit 类型
+- `style` - 可选风格
+- `lang` - 可选语言，默认 `zh-CN`
+- `count` - 可选生成条数，范围 `1-100`，默认 `10`
+- `intervalMs` - 可选推送间隔毫秒数，范围 `100-10000`，默认 `100`
+
+示例:
+```
+GET /api/saohua/stream?type=fix&count=3&intervalMs=100
+```
+
+响应事件顺序:
+- `meta` - 首包，返回本次流的元信息
+- `item` - 每条骚话候选
+- `done` - 全部发送完成
+- `error` - 生成过程中的错误
+
+SSE 响应示例:
+```text
+event: meta
+data: {"count":3,"interval":100,"language":"zh-CN","type":"fix"}
+
+event: item
+data: {"type":"fix","style":"sao","message":"修 bug 和撩你，我都在行","fullMessage":"fix: 修 bug 和撩你，我都在行","language":"zh-CN","index":1}
+
+event: done
+data: {"total":3}
+```
+
 ### 获取类型列表
 
 ```

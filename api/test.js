@@ -46,9 +46,26 @@ async function getRaw(path) {
         status: response.status,
         data,
         headers: {
-            contentType: response.headers.get('content-type')
+            contentType: response.headers.get('content-type'),
+            'content-type': response.headers.get('content-type')
         }
     };
+}
+
+function parseSseEvents(payload) {
+    return payload
+        .split('\n\n')
+        .map(chunk => chunk.trim())
+        .filter(Boolean)
+        .map(chunk => {
+            const lines = chunk.split('\n');
+            const eventLine = lines.find(line => line.startsWith('event:'));
+            const dataLines = lines.filter(line => line.startsWith('data:'));
+            return {
+                event: eventLine ? eventLine.slice(6).trim() : 'message',
+                data: dataLines.map(line => line.slice(5).trim()).join('\n')
+            };
+        });
 }
 
 async function post(path, body) {
@@ -376,12 +393,51 @@ const tests = {
         assert(res.data.data.items[0].success === false, 'Should have failed item');
     },
 
-    async testBatchGenerationInvalidMode() {
+async testBatchGenerationInvalidMode() {
         const res = await post('/api/saohua/batch', {
             items: [{ mode: 'invalid_mode' }]
         });
         assert(res.status === 200, 'Should return 200');
         assert(res.data.data.items[0].success === false, 'Should have failed item');
+    },
+
+    async testStreamSaohuaEndpoint() {
+        const res = await getRaw('/api/saohua/stream?count=3&intervalMs=50');
+        assert(res.status === 200, `SSE endpoint should return 200, got ${res.status}: ${res.data.substring(0, 200)}`);
+        assert(res.headers['content-type']?.includes('text/event-stream'), 'Should be text/event-stream');
+        const events = parseSseEvents(res.data);
+        assert(events[0]?.event === 'meta', 'First event should be meta');
+        assert(events.filter(item => item.event === 'item').length === 3, 'Should stream 3 item events');
+        assert(events.at(-1)?.event === 'done', 'Last event should be done');
+    },
+
+    async testStreamSaohuaWithType() {
+        const res = await getRaw('/api/saohua/stream?type=fix&count=2&intervalMs=50');
+        assert(res.status === 200, 'Should return 200');
+        const events = parseSseEvents(res.data).filter(item => item.event === 'item');
+        assert(events.length === 2, 'Should stream 2 item events');
+        const payloads = events.map(item => JSON.parse(item.data));
+        assert(payloads.every(item => item.type === 'fix'), 'All streamed items should be fix type');
+    },
+
+    async testStreamSaohuaWithInvalidType() {
+        const res = await getRaw('/api/saohua/stream?type=invalid_type');
+        assert(res.status === 400, 'Should return 400 for invalid type');
+    },
+
+    async testStreamSaohuaWithInvalidStyle() {
+        const res = await getRaw('/api/saohua/stream?style=invalid_style');
+        assert(res.status === 400, 'Should return 400 for invalid style');
+    },
+
+    async testStreamSaohuaCountLimit() {
+        const res = await getRaw('/api/saohua/stream?count=200&intervalMs=1');
+        assert(res.status === 200, 'Should return 200 with capped count');
+        const events = parseSseEvents(res.data);
+        const meta = JSON.parse(events.find(item => item.event === 'meta').data);
+        const done = JSON.parse(events.find(item => item.event === 'done').data);
+        assert(meta.count === 100, 'Count should be capped to 100');
+        assert(done.total === 100, 'Done total should match capped count');
     },
 
     async testTypesEndpoint() {

@@ -601,6 +601,7 @@ console.log(result.fullMessage);
 支持能力：
 
 - 健康检查、随机骚话、按类型 / 风格生成
+- SSE 流式骚话生成（实时推送 meta/item/done/error 事件）
 - AI 骚话生成
 - 自然语言提交分析 / 直接生成 commit 骚话
 - 批量骚话生成（最多 50 条/请求）
@@ -633,6 +634,27 @@ const naturalCommit = await client.generateFromNaturalLanguage('新增分享海�
   style: 'love',
 });
 console.log(naturalCommit.fullMessage);
+
+const stream = client.streamSaohua(
+  { type: 'fix', count: 3, intervalMs: 100 },
+  {
+    onMeta(meta) {
+      console.log('stream meta', meta);
+    },
+    onItem(item) {
+      console.log('candidate', item.fullMessage);
+    },
+    onDone(done) {
+      console.log('stream done', done.total);
+    },
+    onError(error) {
+      console.error('stream error', error.message);
+    },
+  },
+);
+
+// 需要时可手动中止
+// stream.abort();
 ```
 
 REST API 自然语言端点：
@@ -645,6 +667,9 @@ curl -X POST http://localhost:3000/api/saohua/natural/analyze \
 curl -X POST http://localhost:3000/api/saohua/natural/generate \
   -H 'Content-Type: application/json' \
   -d '{"text":"新增分享海报下载功能","type":"feat","style":"love"}'
+
+# SSE 流式生成 3 条 fix 候选
+curl -N 'http://localhost:3000/api/saohua/stream?type=fix&count=3&intervalMs=100'
 ```
 
 更多说明见：

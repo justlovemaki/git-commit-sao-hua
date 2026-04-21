@@ -27,6 +27,17 @@ function jsonResponse(payload, status = 200) {
   });
 }
 
+function sseResponse(events) {
+  const payload = events
+    .map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`)
+    .join('');
+
+  return new Response(payload, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
 test('health() returns parsed server status', async () => {
   const client = new SaohuaClient({
     baseUrl: 'http://test.local',
@@ -256,6 +267,60 @@ test('batchSaohua() handles mixed success/failure', async () => {
   assert.equal(result.successCount, 1);
   assert.equal(result.failedCount, 1);
   assert.equal(result.items[1].error, 'ai 模式需要提供 diff 参数');
+});
+
+test('streamSaohua() consumes SSE meta/item/done events', async () => {
+  const seen = [];
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch((url) => {
+      const parsed = new URL(url);
+      assert.equal(parsed.pathname, '/api/saohua/stream');
+      assert.equal(parsed.searchParams.get('type'), 'fix');
+      assert.equal(parsed.searchParams.get('count'), '2');
+
+      return sseResponse([
+        { type: 'meta', data: { count: 2, interval: 100, language: 'zh-CN', type: 'fix' } },
+        {
+          type: 'item',
+          data: { type: 'fix', style: 'sao', message: 'm1', fullMessage: 'fix: m1', language: 'zh-CN', index: 1 },
+        },
+        {
+          type: 'item',
+          data: { type: 'fix', style: 'love', message: 'm2', fullMessage: 'fix: m2', language: 'zh-CN', index: 2 },
+        },
+        { type: 'done', data: { total: 2 } },
+      ]);
+    }),
+  });
+
+  await new Promise((resolve, reject) => {
+    client.streamSaohua(
+      { type: 'fix', count: 2 },
+      {
+        onMeta(meta) {
+          seen.push(['meta', meta.count]);
+        },
+        onItem(item) {
+          seen.push(['item', item.index, item.type]);
+        },
+        onDone(done) {
+          seen.push(['done', done.total]);
+          resolve(undefined);
+        },
+        onError(error) {
+          reject(new Error(error.message));
+        },
+      },
+    );
+  });
+
+  assert.deepEqual(seen, [
+    ['meta', 2],
+    ['item', 1, 'fix'],
+    ['item', 2, 'fix'],
+    ['done', 2],
+  ]);
 });
 
 test('analyzeNaturalLanguage() posts text and returns detection fields', async () => {

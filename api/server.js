@@ -11,6 +11,11 @@ import versionModule from '../lib/version.js';
 import { requireAuth } from './auth-middleware.js';
 import { metricsMiddleware, getMetricsSnapshot, formatPrometheusMetrics } from './metrics.js';
 
+const MAX_STREAM_COUNT = 100;
+const MAX_INTERVAL_MS = 10000;
+const MIN_INTERVAL_MS = 100;
+const DEFAULT_STREAM_INTERVAL_MS = 100;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -156,6 +161,83 @@ app.get('/api/saohua', (req, res) => {
     } catch (error) {
         res.status(500).json(errorResponse('生成失败: ' + error.message));
     }
+});
+
+app.get('/api/saohua/stream', (req, res) => {
+    const { type, style, lang, count, intervalMs } = req.query;
+
+    const language = lang || 'zh-CN';
+    const msgType = type || undefined;
+    const msgStyle = style || undefined;
+    const requestCount = Math.min(Math.max(parseInt(count) || 10, 1), MAX_STREAM_COUNT);
+    const interval = Math.min(
+        Math.max(parseInt(intervalMs) || DEFAULT_STREAM_INTERVAL_MS, MIN_INTERVAL_MS),
+        MAX_INTERVAL_MS
+    );
+
+    const validTypes = saoHuaCore.getAllTypes(language);
+    if (msgType && !validTypes.includes(msgType)) {
+        res.status(400).json(errorResponse(`无效的类型: ${msgType}`));
+        return;
+    }
+
+    const validStyles = saoHuaCore.getAllStyles(language);
+    if (msgStyle && !validStyles.includes(msgStyle)) {
+        res.status(400).json(errorResponse(`无效的风格: ${msgStyle}`));
+        return;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    res.write(`event: meta\ndata: ${JSON.stringify({ count: requestCount, interval, language, type: msgType, style: msgStyle })}\n\n`);
+
+    let currentIndex = 0;
+    let closed = false;
+
+    const sendEvent = (eventName, data) => {
+        if (closed) return;
+        res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    const generateNext = () => {
+        if (closed || currentIndex >= requestCount) {
+            sendEvent('done', { total: currentIndex });
+            res.end();
+            return;
+        }
+
+        try {
+            let result;
+            if (msgType && msgStyle) {
+                result = saoHuaCore.generateByType(msgType, msgStyle, language);
+            } else if (msgType) {
+                result = saoHuaCore.generateByType(msgType, undefined, language);
+            } else if (msgStyle) {
+                const types = saoHuaCore.getAllTypes(language);
+                const randomType = types[Math.floor(Math.random() * types.length)];
+                result = saoHuaCore.generateByType(randomType, msgStyle, language);
+            } else {
+                result = saoHuaCore.generateRandom(language);
+            }
+
+            sendEvent('item', { ...result, index: currentIndex + 1 });
+            currentIndex++;
+
+            setTimeout(generateNext, interval);
+        } catch (error) {
+            sendEvent('error', { message: error.message, index: currentIndex + 1 });
+            res.end();
+        }
+    };
+
+    req.on('close', () => {
+        closed = true;
+    });
+
+    generateNext();
 });
 
 app.get('/api/saohua/:type', (req, res) => {

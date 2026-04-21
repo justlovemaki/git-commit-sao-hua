@@ -64,6 +64,7 @@ const client = new SaohuaClient({
 - `saohuaByTypeAndStyle(type, style, lang?)`
 - `aiSaohua(diff, { lang?, style?, type? })`
 - `batchSaohua(items[])`
+- `streamSaohua({ type?, style?, lang?, count?, intervalMs? }, callbacks)`
 - `listTypes(lang?)`
 - `listStyles(lang?)`
 - `stats(lang?)`
@@ -90,6 +91,30 @@ const batch = await client.batchSaohua([
 ]);
 
 console.log(batch.successCount, batch.items.map((item) => item.fullMessage ?? item.error));
+```
+
+### SSE 流式生成示例
+
+```ts
+const stream = client.streamSaohua(
+  { type: 'fix', count: 3, intervalMs: 100 },
+  {
+    onMeta(meta) {
+      console.log('stream meta:', meta);
+    },
+    onItem(item) {
+      console.log('candidate:', item.fullMessage);
+    },
+    onDone(done) {
+      console.log('done:', done.total);
+    },
+    onError(error) {
+      console.error('stream error:', error.message);
+    },
+  },
+);
+
+// stream.abort();
 ```
 
 ## 开发

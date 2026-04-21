@@ -385,6 +385,40 @@ const options = {
                         failedCount: { type: 'integer', example: 1, description: '失败数量' }
                     }
                 },
+                StreamSaohuaMeta: {
+                    type: 'object',
+                    properties: {
+                        count: { type: 'integer', example: 10, description: '请求生成的总条数' },
+        interval: { type: 'integer', example: 100, description: '每条消息间隔毫秒数' },
+                        language: { type: 'string', example: 'zh-CN', description: '语言代码' },
+                        type: { type: 'string', example: 'fix', description: 'Commit 类型 (可选)' },
+                        style: { type: 'string', example: 'love', description: '风格类型 (可选)' }
+                    }
+                },
+                StreamSaohuaItem: {
+                    type: 'object',
+                    properties: {
+                        type: { type: 'string', example: 'fix', description: 'Commit 类型' },
+                        style: { type: 'string', example: 'sao', description: '风格类型' },
+                        message: { type: 'string', example: '修 bug 和撩你，我都在行', description: '骚话内容' },
+                        fullMessage: { type: 'string', example: 'fix: 修 bug 和撩你，我都在行', description: '完整 Commit 消息' },
+                        language: { type: 'string', example: 'zh-CN', description: '语言代码' },
+                        index: { type: 'integer', example: 1, description: '当前序号' }
+                    }
+                },
+                StreamSaohuaDone: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'integer', example: 10, description: '已发送的总条数' }
+                    }
+                },
+                StreamSaohuaError: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string', example: '生成失败', description: '错误信息' },
+                        index: { type: 'integer', example: 5, description: '发生错误的序号' }
+                    }
+                },
                 PluginsData: {
                     type: 'object',
                     properties: {
@@ -1258,6 +1292,101 @@ const options = {
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/saohua/stream': {
+                get: {
+                    tags: ['Saohua'],
+                    summary: '流式骚话生成 (SSE)',
+                    description: '通过 Server-Sent Events (SSE) 流式推送多条骚话候选，支持指定 type/style/lang/count/intervalMs 参数。事件格式: meta(初始元数据) -> item(每条骚话) -> done(完成) / error(错误)',
+                    operationId: 'streamSaohua',
+                    produces: ['text/event-stream'],
+                    parameters: [
+                        {
+                            name: 'type',
+                            in: 'query',
+                            description: 'Commit 类型 (可选)',
+                            schema: {
+                                type: 'string',
+                                enum: ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix']
+                            },
+                            example: 'fix'
+                        },
+                        {
+                            name: 'style',
+                            in: 'query',
+                            description: '风格类型 (可选)',
+                            schema: {
+                                type: 'string',
+                                enum: ['love', 'sao', 'zha', 'chu', 'fo']
+                            },
+                            example: 'love'
+                        },
+                        {
+                            name: 'lang',
+                            in: 'query',
+                            description: '语言代码',
+                            schema: {
+                                type: 'string',
+                                enum: ['zh-CN', 'en'],
+                                default: 'zh-CN'
+                            },
+                            example: 'zh-CN'
+                        },
+                        {
+                            name: 'count',
+                            in: 'query',
+                            description: '生成条数 (1-100, 默认 10)',
+                            schema: {
+                                type: 'integer',
+                                minimum: 1,
+                                maximum: 100,
+                                default: 10
+                            },
+                            example: 10
+                        },
+                        {
+                            name: 'intervalMs',
+                            in: 'query',
+                description: '每条消息间隔毫秒数 (100-10000, 默认 100)',
+                schema: {
+                    type: 'integer',
+                    minimum: 100,
+                    maximum: 10000,
+                    default: 100
+                },
+                example: 100
+                        }
+                    ],
+                    responses: {
+                        '200': {
+                            description: 'SSE 流式响应',
+                            content: {
+                                'text/event-stream': {
+                                    schema: {
+                                        type: 'string',
+                                        description: 'SSE 事件流，事件类型: meta, item, done, error'
+                                    },
+                        example: 'event: meta\ndata: {"count":10,"interval":100,"language":"zh-CN"}\n\nevent: item\ndata: {"type":"fix","style":"sao","message":"修 bug 和撩你，我都在行","fullMessage":"fix: 修 bug 和撩你，我都在行","language":"zh-CN","index":1}\n\nevent: done\ndata: {"total":10}\n'
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' },
+                                    example: {
+                                        success: false,
+                                        error: '无效的风格: invalid-style',
+                                        meta: {
+                                            timestamp: '2024-01-01T00:00:00.000Z'
+                                        }
+                                    }
                                 }
                             }
                         }

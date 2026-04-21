@@ -174,6 +174,75 @@ export interface NaturalLanguageGenerateData extends NaturalLanguageAnalysisData
   fullMessage: string;
 }
 
+export interface StreamSaohuaOptions {
+  type?: string;
+  style?: string;
+  lang?: string;
+  count?: number;
+  intervalMs?: number;
+}
+
+export interface StreamSaohuaMeta {
+  count: number;
+  interval: number;
+  language: string;
+  type?: string;
+  style?: string;
+}
+
+export interface StreamSaohuaItem extends SaohuaData {
+  index: number;
+}
+
+export interface StreamSaohuaDone {
+  total: number;
+}
+
+export interface StreamSaohuaError {
+  message: string;
+  index: number;
+}
+
+export type StreamEvent =
+  | { type: 'meta'; data: StreamSaohuaMeta }
+  | { type: 'item'; data: StreamSaohuaItem }
+  | { type: 'done'; data: StreamSaohuaDone }
+  | { type: 'error'; data: StreamSaohuaError };
+
+function parseSseChunks(buffer: string): { events: StreamEvent[]; remainder: string } {
+  const blocks = buffer.split('\n\n');
+  const remainder = blocks.pop() ?? '';
+  const events: StreamEvent[] = [];
+
+  for (const block of blocks) {
+    const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0) {
+      continue;
+    }
+
+    const eventLine = lines.find((line) => line.startsWith('event:'));
+    const dataLines = lines.filter((line) => line.startsWith('data:'));
+    if (!dataLines.length) {
+      continue;
+    }
+
+    const eventType = (eventLine?.slice(6).trim() ?? 'message') as StreamEvent['type'] | 'message';
+    const payload = dataLines.map((line) => line.slice(5).trim()).join('\n');
+
+    if (eventType === 'message') {
+      continue;
+    }
+
+    try {
+      events.push({ type: eventType, data: JSON.parse(payload) } as StreamEvent);
+    } catch {
+      // ignore invalid event payloads
+    }
+  }
+
+  return { events, remainder };
+}
+
 export interface ClientOptions {
   baseUrl?: string;
   apiKey?: string;
@@ -268,6 +337,89 @@ export class SaohuaClient {
 
   async batchSaohua(items: BatchSaohuaItem[]): Promise<BatchSaohuaResult> {
     return this.request('POST', '/api/saohua/batch', { items });
+  }
+
+  streamSaohua(
+    options: StreamSaohuaOptions = {},
+    callbacks: {
+      onMeta?: (meta: StreamSaohuaMeta) => void;
+      onItem?: (item: StreamSaohuaItem) => void;
+      onDone?: (done: StreamSaohuaDone) => void;
+      onError?: (error: StreamSaohuaError) => void;
+    } = {},
+  ): { abort: () => void } {
+    const { type, style, lang, count, intervalMs } = options;
+    const query = new URLSearchParams();
+    if (type) query.set('type', type);
+    if (style) query.set('style', style);
+    if (lang) query.set('lang', lang);
+    if (count) query.set('count', String(count));
+    if (intervalMs) query.set('intervalMs', String(intervalMs));
+
+    const url = `${this.baseUrl}/api/saohua/stream?${query.toString()}`;
+    const controller = new AbortController();
+
+    const headers: Record<string, string> = {
+      Accept: 'text/event-stream',
+      ...this.defaultHeaders,
+    };
+
+    const handleEvent = (eventName: string, data: unknown) => {
+      switch (eventName) {
+        case 'meta':
+          callbacks.onMeta?.(data as StreamSaohuaMeta);
+          break;
+        case 'item':
+          callbacks.onItem?.(data as StreamSaohuaItem);
+          break;
+        case 'done':
+          callbacks.onDone?.(data as StreamSaohuaDone);
+          break;
+        case 'error':
+          callbacks.onError?.(data as StreamSaohuaError);
+          break;
+      }
+    };
+
+    this.fetchImpl(url, { method: 'GET', headers, signal: controller.signal })
+      .then((response) => {
+        if (!response.ok || !response.body) {
+          throw new SaohuaApiError(`SSE 连接失败: HTTP ${response.status}`, response.status);
+        }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const read = (): void => {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              const finalChunk = decoder.decode();
+              if (finalChunk) {
+                const parsed = parseSseChunks(buffer + finalChunk);
+                parsed.events.forEach((event) => handleEvent(event.type, event.data));
+              }
+              return;
+            }
+            buffer += decoder.decode(value, { stream: true });
+            const parsed = parseSseChunks(buffer);
+            buffer = parsed.remainder;
+            parsed.events.forEach((event) => handleEvent(event.type, event.data));
+
+            read();
+          });
+        };
+
+        read();
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          callbacks.onError?.({ message: err.message, index: 0 });
+        }
+      });
+
+    return {
+      abort: () => controller.abort(),
+    };
   }
 
   async analyzeNaturalLanguage(text: string, lang?: string): Promise<NaturalLanguageAnalysisData> {
