@@ -239,6 +239,43 @@ writeFileSync(${JSON.stringify(publicKeyPath)}, publicKey.export({ type: 'spki',
     }
 })();
 
+(function testPluginReleaseKitGeneratesBundle() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-kit-'));
+    const pluginPath = path.join(tmpDir, 'release-kit.json');
+    const outputDir = path.join(tmpDir, 'dist');
+    const plugin = {
+        name: 'release-kit-plugin',
+        version: '1.0.0',
+        description: 'Release kit test plugin',
+        author: 'Release Author',
+        data: { 'zh-CN': { feat: { love: ['release'] } } }
+    };
+    fs.writeFileSync(pluginPath, JSON.stringify(plugin, null, 2), 'utf8');
+
+    try {
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'plugin', 'release-kit', pluginPath,
+            '--output-dir', outputDir,
+            '--github', 'owner/repo:plugins/release-kit.json@main'
+        ], {
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /发布交付包已生成/);
+        assert.match(output, /release-kit-plugin/);
+        assert.match(output, /提交模板:/);
+
+        const generated = fs.readdirSync(outputDir);
+        assert.ok(generated.some(name => name.endsWith('.metadata.json')));
+        assert.ok(generated.some(name => name.endsWith('.index-entry.json')));
+        assert.ok(generated.some(name => name.endsWith('.submission.md')));
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 (function testPluginVerifySignedFile() {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-verify-'));
     const pluginPath = path.join(tmpDir, 'verify-plugin.json');

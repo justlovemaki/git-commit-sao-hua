@@ -152,6 +152,9 @@ git-sao-hua plugin search love
 # 从索引安装插件
 git-sao-hua plugin install --from-index my-plugin
 
+# 生成插件发布交付包
+git-sao-hua plugin release-kit ./my-plugin.json --output-dir ./dist --github owner/repo:path/to/plugin.json@main
+
 # 删除插件
 git-sao-hua plugin remove my-pack
 ```

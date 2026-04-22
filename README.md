@@ -98,6 +98,7 @@ git-sao-hua plugin verify <path|name>    # 校验插件签名 (v1.36.0)
 git-sao-hua plugin pack <path>           # 生成插件发布摘要与建议索引条目 (v1.34.0)
 git-sao-hua plugin pack <path> --output <file> # 输出 metadata JSON (v1.34.0)
 git-sao-hua plugin pack <path> --sign-private-key <pem> --public-key <pem> --key-id <id> # 生成签名 metadata (v1.36.0)
+git-sao-hua plugin release-kit <path> --output-dir <dir> # 生成插件发布交付包 (v1.39.0)
 git-sao-hua plugin remove <name>             # 删除插件
 git-sao-hua batch --file <json>              # 批量生成骚话 (v1.37.0)
 git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
@@ -285,6 +286,9 @@ JSON 字段说明：
 
 # 生成带 Ed25519 签名的 metadata/indexEntry
  git-sao-hua plugin pack ./my-plugin.json --output ./dist/plugin-metadata.json --sign-private-key ./keys/ed25519-private.pem --public-key ./keys/ed25519-public.pem --key-id release-key
+
+# 一次性生成发布交付包（metadata + index entry + submission markdown）
+ git-sao-hua plugin release-kit ./my-plugin.json --output-dir ./dist --github owner/repo:path/to/plugin.json@main
 ```
 
 `plugin pack` 会输出：
@@ -293,6 +297,11 @@ JSON 字段说明：
 - 可选的 `Ed25519` 签名信息（`signature`、`publicKey`、`keyId`、`algorithm`）
 - 建议写入插件索引的 JSON 条目
 - 可选的 `metadata.json`（包含 `indexEntry`）
+
+`plugin release-kit` 会额外生成：
+- `*.metadata.json`，用于归档或附加到 release 资产
+- `*.index-entry.json`，可直接复制到插件索引仓库
+- `*.submission.md`，内含插件信息、校验和、签名字段、索引条目和提交流程清单
 
 ### 插件安装治理与锁文件（v1.33.0）
 

@@ -337,6 +337,7 @@ function showHelp() {
     console.log('  ' + green('plugin pack <path> --source-url <url>') + '  添加 source-url (v1.34.0 新增)');
     console.log('  ' + green('plugin pack <path> --github <spec>') + '  添加 github 引用 (v1.34.0 新增)');
     console.log('  ' + green('plugin pack <path> --sign-private-key <pem>') + '  生成 Ed25519 签名 (v1.36.0 新增)');
+    console.log('  ' + green('plugin release-kit <path>') + '  生成插件发布交付包 (v1.39.0 新增)');
     console.log('');
     console.log(bold('示例:'));
     console.log(dim('  # 随机生成一条骚话'));
@@ -1607,6 +1608,82 @@ async function handlePluginCommand(action, args = []) {
             }
             break;
         }
+        case 'release-kit': {
+            const sourcePath = args[0];
+            if (!sourcePath) {
+                console.log(red('错误：请指定插件路径'));
+                console.log(dim('用法: git-sao-hua plugin release-kit <path> [--output-dir <dir>] [--source-url <url>] [--github <spec>] [--sign-private-key <pem>] [--public-key <pem>] [--key-id <id>]'));
+                process.exit(1);
+            }
+
+            const outputDirValue = readArgValue(args, '--output-dir');
+            const sourceUrlValue = readArgValue(args, '--source-url');
+            const githubValue = readArgValue(args, '--github');
+            const signPrivateKeyPath = readArgValue(args, '--sign-private-key');
+            const publicKeyPath = readArgValue(args, '--public-key');
+            const keyIdValue = readArgValue(args, '--key-id');
+            const signPrivateKey = signPrivateKeyPath ? pluginManager.loadPemFile(signPrivateKeyPath) : null;
+            const publicKey = publicKeyPath ? pluginManager.loadPemFile(publicKeyPath) : null;
+
+            if (signPrivateKeyPath && !signPrivateKey.success) {
+                console.log(red('✗ 读取私钥失败: ' + signPrivateKey.error));
+                process.exit(1);
+            }
+            if (publicKeyPath && !publicKey.success) {
+                console.log(red('✗ 读取公钥失败: ' + publicKey.error));
+                process.exit(1);
+            }
+
+            console.log(cyan('正在生成插件发布交付包: ' + sourcePath));
+            if (outputDirValue) {
+                console.log(dim('  output-dir: ' + outputDirValue));
+            }
+            if (sourceUrlValue) {
+                console.log(dim('  source-url: ' + sourceUrlValue));
+            }
+            if (githubValue) {
+                console.log(dim('  github: ' + githubValue));
+            }
+
+            const result = pluginManager.generateReleaseKit(sourcePath, {
+                outputDir: outputDirValue,
+                sourceUrl: sourceUrlValue,
+                github: githubValue,
+                signPrivateKey: signPrivateKey ? signPrivateKey.pem : null,
+                publicKey: publicKey ? publicKey.pem : null,
+                keyId: keyIdValue
+            });
+
+            if (!result.success) {
+                console.log(red('✗ 生成发布交付包失败'));
+                console.log('');
+                console.log(red('错误: ' + result.error));
+                process.exit(1);
+            }
+
+            console.log(green('\n✓ 发布交付包已生成'));
+            console.log('');
+            console.log(bold('====== 发布摘要 ======'));
+            console.log('  名称: ' + green(result.summary.name));
+            console.log('  版本: ' + result.summary.version);
+            if (result.summary.description) {
+                console.log('  描述: ' + result.summary.description);
+            }
+            if (result.summary.author) {
+                console.log('  作者: ' + result.summary.author);
+            }
+            console.log('  SHA-256: ' + dim(result.summary.checksum));
+            console.log('  输出目录: ' + dim(result.releases.outputDir));
+            console.log('  元数据: ' + dim(result.releases.metadataPath));
+            console.log('  索引条目: ' + dim(result.releases.indexEntryPath));
+            console.log('  提交模板: ' + dim(result.releases.submissionMdPath));
+            printSignatureStatus(result.signature, '  ');
+            console.log('');
+            console.log(bold('建议索引条目:'));
+            console.log(dim(JSON.stringify(result.indexEntry, null, 2)));
+            console.log('');
+            break;
+        }
         default:
             console.log(red('未知的 plugin 操作：' + (action || '')));
             console.log('');
@@ -1624,6 +1701,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('  ' + green('git-sao-hua plugin verify <path|name>') + ' 校验插件签名');
             console.log('  ' + green('git-sao-hua plugin pack <path>') + '     打包插件并生成摘要');
             console.log('  ' + green('git-sao-hua plugin pack <path> --output <file>') + '  输出 metadata JSON');
+            console.log('  ' + green('git-sao-hua plugin release-kit <path>') + '  生成插件发布交付包');
             console.log('');
             console.log(dim('示例:'));
             console.log('  git-sao-hua plugin list');
@@ -1638,6 +1716,7 @@ async function handlePluginCommand(action, args = []) {
             console.log('  git-sao-hua plugin validate ./my-plugin.json');
             console.log('  git-sao-hua plugin verify ./my-plugin.json');
             console.log('  git-sao-hua plugin pack ./my-plugin.json --output metadata.json');
+            console.log('  git-sao-hua plugin release-kit ./my-plugin.json --output-dir ./dist --github owner/repo:path/to/plugin.json@main');
             console.log('  git-sao-hua plugin remove my-pack');
             process.exit(1);
     }
