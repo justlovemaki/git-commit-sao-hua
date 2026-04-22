@@ -532,6 +532,57 @@ writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
     }
 })();
 
+(function testReleaseNotesWithGitHubMetadataFile() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-gh-meta-'));
+    const metadataPath = path.join(tmpDir, 'github-metadata.json');
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add enriched release notes (#101)'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(metadataPath, JSON.stringify({
+            prs: {
+                '101': {
+                    number: 101,
+                    title: 'Ship release notes UX',
+                    url: 'https://github.com/owner/test-repo/pull/101',
+                    user: 'maki',
+                    labels: ['release', 'feature'],
+                    mergedAt: '2026-04-22T10:00:00Z',
+                    state: 'closed'
+                }
+            }
+        }, null, 2), 'utf8');
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--repo', 'owner/test-repo',
+            '--github-metadata-file', metadataPath
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /GitHub Enrichment: enabled/);
+        assert.match(output, /PRs: 1/);
+        assert.match(output, /Labels: release, feature/);
+        assert.match(output, /PR Authors: @maki/);
+        assert.match(output, /\[`release`\]/);
+        assert.match(output, /\[@maki\]/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 (function testBatchCommandTextOutput() {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-batch-'));
     const batchFile = path.join(tmpDir, 'items.json');

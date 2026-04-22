@@ -293,7 +293,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json] [--enrich-github]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -1068,7 +1068,7 @@ async function handleBatchCommand(args = []) {
     console.log('');
 }
 
-function handleReleaseNotesCommand(args = []) {
+async function handleReleaseNotesCommand(args = []) {
     const getOptionValue = (flag) => {
         const exactIndex = args.indexOf(flag);
         if (exactIndex !== -1) {
@@ -1079,7 +1079,7 @@ function handleReleaseNotesCommand(args = []) {
     };
 
     const positional = [];
-    const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body'];
+    const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body', '--github-token', '--github-metadata-file'];
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -1101,6 +1101,9 @@ function handleReleaseNotesCommand(args = []) {
     const outputFile = getOptionValue('--output');
     const repo = getOptionValue('--repo');
     const format = getOptionValue('--format') || 'markdown';
+    const githubToken = getOptionValue('--github-token') || process.env.GIT_SAO_HUA_GITHUB_TOKEN || null;
+    const githubMetadataFile = getOptionValue('--github-metadata-file');
+    const enrichGitHub = args.includes('--enrich-github');
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
     const validFormats = ['markdown', 'json', 'github-release-json'];
@@ -1115,8 +1118,18 @@ function handleReleaseNotesCommand(args = []) {
         const targetCommitish = getOptionValue('--target');
         const isDraft = args.includes('--draft');
         const isPrerelease = args.includes('--prerelease');
+        let githubMetadata = null;
 
-        const result = data.generateReleaseNotes(range, {
+        if (githubMetadataFile) {
+            const metadataPath = path.resolve(process.cwd(), githubMetadataFile);
+            githubMetadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        }
+
+        const generator = enrichGitHub || githubMetadata
+            ? data.generateReleaseNotesWithGitHub
+            : data.generateReleaseNotes;
+
+        const result = await generator(range, {
             title,
             tagName,
             body: getOptionValue('--body') || '',
@@ -1124,7 +1137,10 @@ function handleReleaseNotesCommand(args = []) {
             draft: isDraft,
             prerelease: isPrerelease,
             repoPath: process.cwd(),
-            repo
+            repo,
+            enrichGitHub,
+            githubToken,
+            githubMetadata
         });
 
         let output;
@@ -1147,6 +1163,9 @@ function handleReleaseNotesCommand(args = []) {
             } else if (repo) {
                 console.log(dim('  Repository: ' + repo));
             }
+            if (enrichGitHub || githubMetadata) {
+                console.log(dim('  GitHub Enrichment: enabled'));
+            }
             console.log(green('✓ Release Notes 已写入: ' + outputPath));
             console.log(dim('  Commit 数量: ' + result.commits.length));
             return;
@@ -1162,6 +1181,9 @@ function handleReleaseNotesCommand(args = []) {
                 console.log(dim('  Repository: ' + result.repo));
             } else if (repo) {
                 console.log(dim('  Repository: ' + repo));
+            }
+            if (enrichGitHub || githubMetadata) {
+                console.log(dim('  GitHub Enrichment: enabled'));
             }
             console.log('');
             process.stdout.write(output);
@@ -1737,7 +1759,7 @@ async function main() {
         return;
     }
     if (args[0] === 'release-notes') {
-        handleReleaseNotesCommand(args.slice(1));
+        await handleReleaseNotesCommand(args.slice(1));
         return;
     }
     if (args[0] === 'tui') {

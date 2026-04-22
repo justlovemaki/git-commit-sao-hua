@@ -68,6 +68,7 @@
 | **插件作者发布工具链** | ✅ 完成 | CLI 支持 `plugin validate` / `plugin pack`，核心库可生成 SHA-256、建议索引条目与 metadata JSON，降低第三方插件接入与发布成本 |
 | **插件发布交付包 / Submission Kit** | ✅ 完成 | CLI `plugin release-kit` 与核心库 `generateReleaseKit()` 可一次性生成 metadata、独立索引条目和提交模板 Markdown，覆盖插件上架前的交付物准备 |
 | **Release Notes / 发布说明生成** | ✅ 完成 | CLI `release-notes` 可基于 git log 直接输出 Markdown/JSON 发布说明，核心库可解析 conventional commit、按章节聚合并生成结构化产物 |
+| **Release Notes GitHub 元数据富化** | ✅ 完成 | CLI `release-notes --enrich-github` 可基于 PR 编号补充 labels / author / PR 汇总信息，也支持 `--github-metadata-file` 离线注入 metadata，核心库已补齐富化能力与结构化输出 |
 | **GitHub Release 自动化 Payload** | ✅ 完成 | CLI `release-notes --format github-release-json` 与核心库 `buildGitHubReleasePayload` 可直接输出 GitHub Releases API 兼容 JSON，支持 tag/target/draft/prerelease/附加说明 |
 | **共享核心库 (lib/)** | ✅ 完成 | 骚话数据 + 生成逻辑 + 智能检测 + AI + Hook + Config + Plugin + Release Notes，多端共用 |
 | **AI 智能生成** | ✅ 完成 | 基于 diff 分析 + AI API + fallback 机制 |
@@ -149,7 +150,7 @@
 8. **供应链防护仍不完整** — 已补齐 SHA-256 摘要校验、来源白名单、安装来源审计与 Ed25519 签名验签，但仍缺少公钥信任链、签名策略治理与发布者身份验证
 9. **多语言 SDK 版本治理尚未完全统一** — 当前主项目版本已纳入 `RELEASE.json`，但 Python / JavaScript SDK 仍保留各自包版本节奏，后续需要补齐更细粒度的发布矩阵与自动化校验
 10. **插件发布仍缺少真正自动上架** — 当前已补齐插件作者本地校验、摘要、签名、索引元数据与 submission kit 生成，但尚未覆盖官方索引自动提交、Release 资产自动上传与公钥托管治理
-11. **Release Notes 仍缺少 GitHub 实时元数据富化** — 当前已支持 Markdown/JSON 输出与 GitHub Release payload 生成，但还没有自动拉取 PR labels/author/category、也未打通 Release 资产自动上传与 CHANGELOG 索引联动
+11. **Release 资产自动上传与 CHANGELOG 索引联动仍缺失** — 当前 Release Notes 已支持 GitHub PR labels/author 富化与 GitHub Release payload 生成，但尚未自动上传 release assets，也未打通 CHANGELOG 回写或索引联动
 
 ---
 
@@ -172,6 +173,7 @@
 - ✅ **Release Notes 自动生成** — 已补齐 `git-sao-hua release-notes [range] [--from ref --to ref --title text --output file]`，核心库新增 conventional commit 解析、章节聚合与 Markdown 发布说明生成能力，项目从“会说单条骚话”前进到“会总结一整个版本的演进叙事”
 - ✅ **Release Notes 结构化输出** — 已补齐 `--format json` 输出 machine-readable JSON，含 title/version/range/repo/compare/summary/sections/commits 全字段，兼容自动化流水线消费
 - ✅ **GitHub Release payload 输出** — 已补齐 `--format github-release-json`、`--tag`、`--target`、`--draft`、`--prerelease`、`--body`，核心库新增 `buildGitHubReleasePayload`，项目从“只能生成发布说明文案”继续前进到“可直接喂给 GitHub Releases API 的发布自动化产物”
+- ✅ **Release Notes GitHub 元数据富化** — 已补齐 `--enrich-github`、`--github-token` 与 `--github-metadata-file`，核心库新增 GitHub PR 元数据抓取与结构化富化能力，Markdown/JSON/GitHub Release payload 现可补充 PR labels、作者与顶部汇总信息，发布运营链路从“静态 git log 汇总”继续前进到“带 PR 语义上下文的版本叙事”
 - ✅ **自然语言提交 API / SDK 下沉** — 已补齐 `POST /api/saohua/natural/analyze` 与 `POST /api/saohua/natural/generate`，JavaScript / Python / Go SDK 同步开放分析与生成方法，CLI / API / SDK 开始共享统一自然语言提交能力
 - ✅ **SSE 实时流式骚话推送** — 已补齐 `GET /api/saohua/stream`，支持按类型/风格/语言/数量/间隔流式输出骚话候选，并在 JavaScript / TypeScript SDK 中同步开放 `streamSaohua()`，让前端、终端和机器人可直接消费实时候选流
 - ✅ **插件发布交付包 / Submission Kit** — 已补齐 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性输出 `*.metadata.json`、`*.index-entry.json` 与 `*.submission.md`，并内置校验和、签名字段、索引条目与提交清单，插件生态从“作者只能手工拼装上架材料”继续前进到“作者可直接产出标准交付包、显著降低上架索引的摩擦”
@@ -197,9 +199,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-22 🚀 大演进 | 插件发布交付包 / Submission Kit — 在 `lib/plugin-manager.js` 新增 `generateReleaseKit()`、`generateSubmissionChecklist()` 与 `generateSubmissionMarkdown()`，CLI 新增 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性生成 `metadata`、独立 `index-entry` 与面向索引仓库的 `submission.md`；同步补齐 lib/cli 测试与 README / cli README 文档，项目从“插件作者只能本地打包 + 手工整理上架材料”继续前进到“插件作者可直接产出标准化交付包，明显降低生态接入摩擦”的平台生态状态 | Stage 5 不变（生态生产力与上架交付能力增强） |
-| -1 | 2026-04-21 🚀 大演进 | SSE 实时流式骚话推送 — 在 `api/server.js` 新增 `GET /api/saohua/stream`，支持 `type/style/lang/count/intervalMs` 参数并通过 `meta/item/done/error` 事件持续输出骚话候选；同步扩展 `api/swagger.js`、`api/README.md`、根 README、`api/test.js`，并在 JavaScript / TypeScript SDK 中新增 `streamSaohua()` 与测试，项目从“单次返回式 API”继续前进到“前端 / 终端 / 机器人可直接实时消费候选流”的平台实时集成状态 | Stage 5 不变（平台实时流式接入能力增强） |
-| -2 | 2026-04-21 🚀 大演进 | 自然语言提交能力 API / SDK 下沉 — 在 `lib/natural-language.js` 新增统一 `generateCommitFromNaturalLanguage`，REST API 新增 `POST /api/saohua/natural/analyze` 与 `POST /api/saohua/natural/generate`，并在 JavaScript / Python / Go SDK、Swagger、README、CLI 文档与测试中同步补齐；项目从“CLI 独享自然语言入口”继续前进到“服务端与多语言客户端都可直接消费 NL commit 能力”的平台集成状态 | Stage 5 不变（平台自然语言接入能力增强） |
-| -3 | 2026-04-20 🚀 大演进 | GitHub Release payload 自动化 — 在 `lib/release-notes.js` 新增 `buildGitHubReleasePayload`，CLI `release-notes` 支持 `--format github-release-json`、`--tag`、`--target`、`--draft`、`--prerelease`、`--body`，可直接输出 GitHub Releases API 兼容 JSON；同步补齐 lib/cli 测试与 README，项目从“能写 release notes”继续前进到“可直接驱动 GitHub Release 自动化”的发布运营能力 | Stage 5 不变（发布自动化能力增强） |
-| -4 | 2026-04-20 🚀 大演进 | 共享批量生成核心下沉 + CLI 批处理入口 — 在 `lib/generator.js` 新增共享 `generateBatch` / `MAX_BATCH_SIZE`，让 REST API 改为复用核心批量逻辑，CLI 新增 `git-sao-hua batch --file <json> [--format text|json]`，支持文本汇总和纯 JSON 输出；同步补齐 lib/cli 测试、README / cli/README 文档，项目从“API+SDK 有批量能力”继续前进到“CLI / API / SDK 共用同一批处理核心”的平台一致性能力 | Stage 5 不变（平台批处理能力增强） |
-| -5 | 2026-04-19 🚀 大演进 | 批量骚话生成能力 — 在 `api/server.js` 新增 `POST /api/saohua/batch`，支持 `random / typed / typed_style / ai` 四种批量模式、最大 50 条请求、逐项成功/失败结果与汇总统计；同步扩展 `api/swagger.js`、`api/test.js`、README / API README，并在 JavaScript / Python / Go SDK 中补齐批量请求/结果模型与客户端方法，项目从“单次调用式 API”继续前进到“可被自动化流水线成批消费”的平台集成能力 | Stage 5 不变（平台批处理能力增强） |
+| 最新 | 2026-04-22 🔧 中迭代 | Release Notes GitHub 元数据富化 — 在 `lib/release-notes.js` 新增 `fetchGitHubMetadata()`、`generateReleaseNotesWithGitHub()` 与 commit 级 GitHub 信息映射，CLI `release-notes` 新增 `--enrich-github`、`--github-token`、`--github-metadata-file`，让 Markdown / JSON / GitHub Release payload 都能补充 PR labels、作者与顶部汇总信息；同步补齐 lib/cli 测试与 README，项目从“静态 git log 摘要”继续前进到“带 GitHub PR 语义上下文的发布说明生成” | Stage 5 不变（发布运营能力增强） |
+| -1 | 2026-04-22 🚀 大演进 | 插件发布交付包 / Submission Kit — 在 `lib/plugin-manager.js` 新增 `generateReleaseKit()`、`generateSubmissionChecklist()` 与 `generateSubmissionMarkdown()`，CLI 新增 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性生成 `metadata`、独立 `index-entry` 与面向索引仓库的 `submission.md`；同步补齐 lib/cli 测试与 README / cli README 文档，项目从“插件作者只能本地打包 + 手工整理上架材料”继续前进到“插件作者可直接产出标准化交付包，明显降低生态接入摩擦”的平台生态状态 | Stage 5 不变（生态生产力与上架交付能力增强） |
+| -2 | 2026-04-21 🚀 大演进 | SSE 实时流式骚话推送 — 在 `api/server.js` 新增 `GET /api/saohua/stream`，支持 `type/style/lang/count/intervalMs` 参数并通过 `meta/item/done/error` 事件持续输出骚话候选；同步扩展 `api/swagger.js`、`api/README.md`、根 README、`api/test.js`，并在 JavaScript / TypeScript SDK 中新增 `streamSaohua()` 与测试，项目从“单次返回式 API”继续前进到“前端 / 终端 / 机器人可直接实时消费候选流”的平台实时集成状态 | Stage 5 不变（平台实时流式接入能力增强） |
+| -3 | 2026-04-21 🚀 大演进 | 自然语言提交能力 API / SDK 下沉 — 在 `lib/natural-language.js` 新增统一 `generateCommitFromNaturalLanguage`，REST API 新增 `POST /api/saohua/natural/analyze` 与 `POST /api/saohua/natural/generate`，并在 JavaScript / Python / Go SDK、Swagger、README、CLI 文档与测试中同步补齐；项目从“CLI 独享自然语言入口”继续前进到“服务端与多语言客户端都可直接消费 NL commit 能力”的平台集成状态 | Stage 5 不变（平台自然语言接入能力增强） |
+| -4 | 2026-04-20 🚀 大演进 | GitHub Release payload 自动化 — 在 `lib/release-notes.js` 新增 `buildGitHubReleasePayload`，CLI `release-notes` 支持 `--format github-release-json`、`--tag`、`--target`、`--draft`、`--prerelease`、`--body`，可直接输出 GitHub Releases API 兼容 JSON；同步补齐 lib/cli 测试与 README，项目从“能写 release notes”继续前进到“可直接驱动 GitHub Release 自动化”的发布运营能力 | Stage 5 不变（发布自动化能力增强） |
+| -5 | 2026-04-20 🚀 大演进 | 共享批量生成核心下沉 + CLI 批处理入口 — 在 `lib/generator.js` 新增共享 `generateBatch` / `MAX_BATCH_SIZE`，让 REST API 改为复用核心批量逻辑，CLI 新增 `git-sao-hua batch --file <json> [--format text|json]`，支持文本汇总和纯 JSON 输出；同步补齐 lib/cli 测试、README / cli/README 文档，项目从“API+SDK 有批量能力”继续前进到“CLI / API / SDK 共用同一批处理核心”的平台一致性能力 | Stage 5 不变（平台批处理能力增强） |
