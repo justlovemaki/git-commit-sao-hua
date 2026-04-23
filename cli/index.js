@@ -293,7 +293,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json] [--enrich-github]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json] [--enrich-github] [--sync-changelog] [--changelog <path>]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -1079,7 +1079,7 @@ async function handleReleaseNotesCommand(args = []) {
     };
 
     const positional = [];
-    const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body', '--github-token', '--github-metadata-file'];
+    const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body', '--github-token', '--github-metadata-file', '--changelog'];
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
@@ -1104,6 +1104,8 @@ async function handleReleaseNotesCommand(args = []) {
     const githubToken = getOptionValue('--github-token') || process.env.GIT_SAO_HUA_GITHUB_TOKEN || null;
     const githubMetadataFile = getOptionValue('--github-metadata-file');
     const enrichGitHub = args.includes('--enrich-github');
+    const syncChangelog = args.includes('--sync-changelog');
+    const changelogPath = getOptionValue('--changelog') || 'CHANGELOG.md';
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
     const validFormats = ['markdown', 'json', 'github-release-json'];
@@ -1142,6 +1144,28 @@ async function handleReleaseNotesCommand(args = []) {
             githubToken,
             githubMetadata
         });
+
+        if (syncChangelog) {
+            const syncResult = data.syncReleaseNotesToChangelog(result.markdown, {
+                changelogPath: changelogPath,
+                versionTitle: title,
+                repoPath: process.cwd()
+            });
+            if (!syncResult.success) {
+                console.log(red('✗ 同步 CHANGELOG 失败: ' + syncResult.error));
+                process.exit(1);
+            }
+            console.log(cyan('正在同步 CHANGELOG...'));
+            console.log(dim('  Changelog 路径: ' + syncResult.path));
+            if (syncResult.replaced) {
+                console.log(dim('  状态: 已替换现有版本'));
+            } else if (syncResult.existed) {
+                console.log(dim('  状态: 已追加新版本'));
+            } else {
+                console.log(dim('  状态: 已创建新文件'));
+            }
+            return;
+        }
 
         let output;
         if (format === 'github-release-json') {

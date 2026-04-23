@@ -629,4 +629,106 @@ writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
     }
 })();
 
+(function testReleaseNotesSyncToChangelog() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-changelog-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add changelog test'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'v1.0.0',
+            '--sync-changelog'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /正在同步 CHANGELOG/);
+        assert.match(output, /Changelog 路径:/);
+        assert.ok(fs.existsSync(path.join(tmpDir, 'CHANGELOG.md')));
+        const changelog = fs.readFileSync(path.join(tmpDir, 'CHANGELOG.md'), 'utf8');
+        assert.ok(changelog.includes('## v1.0.0'));
+        assert.ok(changelog.includes('Features'));
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesSyncToChangelogWithCustomPath() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-changelog-custom-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): test custom path'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'v2.0.0',
+            '--sync-changelog',
+            '--changelog', 'HISTORY.md'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /HISTORY.md/);
+        assert.ok(fs.existsSync(path.join(tmpDir, 'HISTORY.md')));
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesSyncToChangelogReplacesExistingSection() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-changelog-replace-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'CHANGELOG.md'), '# Changelog\n\n## v1.0.0\n\n- old content\n\n## v0.9.0\n\n- old release', 'utf8');
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): updated feature'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'v1.0.0',
+            '--sync-changelog'
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /已替换现有版本/);
+        const changelog = fs.readFileSync(path.join(tmpDir, 'CHANGELOG.md'), 'utf8');
+        assert.ok(changelog.includes('updated feature'));
+        assert.ok(!changelog.includes('old content'));
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');

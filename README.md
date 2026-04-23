@@ -184,9 +184,15 @@ git-sao-hua batch --file ./items.json --format json
 
  # 将 GitHub Release payload 写入文件，供 CI / GitHub API 直接 POST
   git-sao-hua release-notes v1.34.0..HEAD --format github-release-json --output ./github-release.json
+
+ # 直接把本次 Release Notes 同步进 CHANGELOG
+  git-sao-hua release-notes HEAD~10..HEAD --title "v1.40.0" --sync-changelog
+
+ # 指定自定义 changelog 文件路径，适合 HISTORY.md 等命名
+  git-sao-hua release-notes HEAD --title "v1.40.0" --sync-changelog --changelog HISTORY.md
 ```
 
-生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。
+生成结果会按 conventional commit 类型聚合为 Features、Fixes、Docs、Chores 等章节，并自动附带 commit short hash，方便直接贴到 GitHub Release、CHANGELOG 或飞书发布说明里。开启 `--sync-changelog` 后，会自动创建 changelog 文件，并在已有版本章节存在时执行替换，避免重复追加同一版本。
 
 当指定 `--repo owner/repo` 时，会自动生成：
 - 每个 commit 行的 `[hash](commit link)` 链接
@@ -543,6 +549,11 @@ git-sao-hua -m "更新依赖版本" -s love
 git-sao-hua release-notes HEAD~20..HEAD
 git-sao-hua release-notes --from v1.34.0 --to HEAD --title "v1.35.0 Release Notes"
 git-sao-hua release-notes HEAD --output ./RELEASE_NOTES.md
+
+# 同步 Release Notes 到 CHANGELOG（v1.40.0 新增）
+git-sao-hua release-notes HEAD~10..HEAD --sync-changelog
+git-sao-hua release-notes HEAD~10..HEAD --title "v1.40.0" --sync-changelog
+git-sao-hua release-notes HEAD --title "v1.40.0" --sync-changelog --changelog HISTORY.md
 ```
 
 详细文档见 [cli/README.md](cli/README.md)
