@@ -731,4 +731,189 @@ writeFileSync(${JSON.stringify(pluginPath)}, JSON.stringify(plugin, null, 2));
     }
 })();
 
+(function testReleaseNotesWithAssetParameter() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-asset-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add release asset test'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const zipPath = path.join(tmpDir, 'app.zip');
+        fs.writeFileSync(zipPath, 'fake zip content', 'utf8');
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--asset', zipPath
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /Assets: 1 file\(s\)/);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesGitHubReleaseManifestJsonFormat() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-manifest-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): add manifest test (#100)'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const zipPath = path.join(tmpDir, 'app.zip');
+        fs.writeFileSync(zipPath, 'fake zip content', 'utf8');
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--format', 'github-release-manifest-json',
+            '--repo', 'owner/test-repo',
+            '--tag', 'v1.2.3',
+            '--asset', zipPath
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+
+        const json = JSON.parse(rawOutput);
+
+        assert.strictEqual(json.githubRelease.tag_name, 'v1.2.3');
+        assert.ok(json.assets);
+        assert.strictEqual(json.assets.length, 1);
+        assert.strictEqual(json.assets[0].name, 'app.zip');
+        assert.strictEqual(json.assets[0].contentType, 'application/zip');
+        assert.ok(json.assets[0].sha256);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesGitHubReleaseManifestJsonWithOutput() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-manifest-out-'));
+    const outputPath = path.join(tmpDir, 'release-manifest.json');
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): write manifest file'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const zipPath = path.join(tmpDir, 'app.zip');
+        fs.writeFileSync(zipPath, 'content', 'utf8');
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--format', 'github-release-manifest-json',
+            '--output', 'release-manifest.json',
+            '--asset', zipPath
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+        const output = tui.stripAnsi(rawOutput);
+
+        assert.match(output, /Release Notes 已写入/);
+        assert.ok(fs.existsSync(outputPath));
+        const json = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+        assert.strictEqual(json.githubRelease.tag_name, 'Release Notes');
+        assert.ok(json.assets);
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesWithMultipleAssets() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-multi-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): multi asset test'], { cwd: tmpDir, stdio: 'ignore' });
+
+        const file1 = path.join(tmpDir, 'app.zip');
+        const file2 = path.join(tmpDir, 'data.json');
+        fs.writeFileSync(file1, 'zip content', 'utf8');
+        fs.writeFileSync(file2, '{"key": "value"}', 'utf8');
+
+        const rawOutput = execFileSync(process.execPath, [
+            path.join(__dirname, 'index.js'),
+            'release-notes',
+            'HEAD',
+            '--title', 'vNext',
+            '--format', 'github-release-manifest-json',
+            '--asset', file1,
+            '--asset', file2
+        ], {
+            cwd: tmpDir,
+            encoding: 'utf8'
+        });
+
+        const json = JSON.parse(rawOutput);
+        assert.strictEqual(json.assets.length, 2);
+        assert.strictEqual(json.assets[0].name, 'app.zip');
+        assert.strictEqual(json.assets[1].name, 'data.json');
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
+(function testReleaseNotesManifestShouldFailWhenAssetMissing() {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saohua-cli-release-missing-'));
+
+    try {
+        execFileSync('git', ['init'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.name', 'CLI Test'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['config', 'user.email', 'cli@example.com'], { cwd: tmpDir, stdio: 'ignore' });
+
+        fs.writeFileSync(path.join(tmpDir, 'feature.txt'), 'hello', 'utf8');
+        execFileSync('git', ['add', 'feature.txt'], { cwd: tmpDir, stdio: 'ignore' });
+        execFileSync('git', ['commit', '-m', 'feat(cli): missing asset test'], { cwd: tmpDir, stdio: 'ignore' });
+
+        try {
+            execFileSync(process.execPath, [
+                path.join(__dirname, 'index.js'),
+                'release-notes',
+                'HEAD',
+                '--format', 'github-release-manifest-json',
+                '--asset', path.join(tmpDir, 'missing.zip')
+            ], {
+                cwd: tmpDir,
+                encoding: 'utf8'
+            });
+            assert.fail('expected release-notes command to fail for missing asset');
+        } catch (error) {
+            assert.match(String(error.stdout || error.message || ''), /File not found|资产文件收集失败/);
+        }
+    } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+})();
+
 console.log('CLI TUI tests passed');

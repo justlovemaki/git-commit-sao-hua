@@ -293,7 +293,7 @@ function showHelp() {
     console.log('  git-sao-hua hook <install|uninstall|status>');
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
-    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json] [--enrich-github] [--sync-changelog] [--changelog <path>]');
+    console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json|github-release-manifest-json] [--enrich-github] [--sync-changelog] [--changelog <path>] [--asset <path>]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -1080,9 +1080,23 @@ async function handleReleaseNotesCommand(args = []) {
 
     const positional = [];
     const valueFlags = ['--from', '--to', '--title', '--output', '--repo', '--format', '--tag', '--target', '--body', '--github-token', '--github-metadata-file', '--changelog'];
+    const assetArgs = [];
 
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
+        if (arg === '--asset') {
+            if (!args[i + 1] || args[i + 1].startsWith('-')) {
+                console.log(red('错误：--asset 需要提供文件路径'));
+                process.exit(1);
+            }
+            assetArgs.push(args[i + 1]);
+            i++;
+            continue;
+        }
+        if (arg.startsWith('--asset=')) {
+            assetArgs.push(arg.slice('--asset='.length));
+            continue;
+        }
         if (valueFlags.includes(arg)) {
             i++;
             continue;
@@ -1108,7 +1122,7 @@ async function handleReleaseNotesCommand(args = []) {
     const changelogPath = getOptionValue('--changelog') || 'CHANGELOG.md';
     const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
 
-    const validFormats = ['markdown', 'json', 'github-release-json'];
+    const validFormats = ['markdown', 'json', 'github-release-json', 'github-release-manifest-json'];
     if (!validFormats.includes(format)) {
         console.log(red('无效格式: ' + format));
         console.log(dim('有效格式: ' + validFormats.join(', ')));
@@ -1116,7 +1130,7 @@ async function handleReleaseNotesCommand(args = []) {
     }
 
     try {
-        const tagName = getOptionValue('--tag') || (format === 'github-release-json' ? title : null);
+        const tagName = getOptionValue('--tag') || (format === 'github-release-json' || format === 'github-release-manifest-json' ? title : null);
         const targetCommitish = getOptionValue('--target');
         const isDraft = args.includes('--draft');
         const isPrerelease = args.includes('--prerelease');
@@ -1145,6 +1159,17 @@ async function handleReleaseNotesCommand(args = []) {
             githubMetadata
         });
 
+        let collectedAssets = { success: false, assets: [] };
+        if (assetArgs.length > 0) {
+            collectedAssets = data.collectAssetMetadataBatch(assetArgs);
+            if (!collectedAssets.success) {
+                const assetErrorText = (collectedAssets.errors || [])
+                    .map(item => `${item.filePath}: ${item.error}`)
+                    .join('; ');
+                throw new Error(assetErrorText || collectedAssets.error || '资产文件收集失败');
+            }
+        }
+
         if (syncChangelog) {
             const syncResult = data.syncReleaseNotesToChangelog(result.markdown, {
                 changelogPath: changelogPath,
@@ -1170,6 +1195,12 @@ async function handleReleaseNotesCommand(args = []) {
         let output;
         if (format === 'github-release-json') {
             output = JSON.stringify(result.githubRelease, null, 2);
+        } else if (format === 'github-release-manifest-json') {
+            const manifest = data.buildGitHubReleaseManifest(
+                result.githubRelease,
+                collectedAssets.success ? collectedAssets.assets : []
+            );
+            output = JSON.stringify(manifest, null, 2);
         } else if (format === 'json') {
             output = JSON.stringify(result.data, null, 2);
         } else {
@@ -1190,12 +1221,15 @@ async function handleReleaseNotesCommand(args = []) {
             if (enrichGitHub || githubMetadata) {
                 console.log(dim('  GitHub Enrichment: enabled'));
             }
+            if (collectedAssets.success && collectedAssets.assets.length > 0) {
+                console.log(dim('  Assets: ' + collectedAssets.assets.length + ' file(s)'));
+            }
             console.log(green('✓ Release Notes 已写入: ' + outputPath));
             console.log(dim('  Commit 数量: ' + result.commits.length));
             return;
         }
 
-        if (format === 'json' || format === 'github-release-json') {
+        if (format === 'json' || format === 'github-release-json' || format === 'github-release-manifest-json') {
             process.stdout.write(output);
         } else {
             console.log(cyan('正在生成 Release Notes...'));
@@ -1208,6 +1242,9 @@ async function handleReleaseNotesCommand(args = []) {
             }
             if (enrichGitHub || githubMetadata) {
                 console.log(dim('  GitHub Enrichment: enabled'));
+            }
+            if (collectedAssets.success && collectedAssets.assets.length > 0) {
+                console.log(dim('  Assets: ' + collectedAssets.assets.length + ' file(s)'));
             }
             console.log('');
             process.stdout.write(output);

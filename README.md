@@ -103,6 +103,7 @@ git-sao-hua plugin remove <name>             # 删除插件
 git-sao-hua batch --file <json>              # 批量生成骚话 (v1.37.0)
 git-sao-hua release-notes [<range>]          # 基于 git log 生成 Release Notes
 git-sao-hua release-notes [<range>] --format github-release-json # 输出 GitHub Release API payload (v1.38.0)
+git-sao-hua release-notes [<range>] --format github-release-manifest-json --asset ./dist/app.zip # 输出 GitHub Release payload + asset manifest (v1.40.0)
 ```
 
 ### 批量生成（v1.37.0）
@@ -185,6 +186,9 @@ git-sao-hua batch --file ./items.json --format json
  # 将 GitHub Release payload 写入文件，供 CI / GitHub API 直接 POST
   git-sao-hua release-notes v1.34.0..HEAD --format github-release-json --output ./github-release.json
 
+ # 输出 GitHub Release manifest，附带本地构建产物的 name/path/size/sha256/contentType
+  git-sao-hua release-notes v1.39.0..HEAD --format github-release-manifest-json --tag v1.40.0 --asset ./dist/app.zip --asset ./dist/checksums.txt --output ./github-release-manifest.json
+
  # 直接把本次 Release Notes 同步进 CHANGELOG
   git-sao-hua release-notes HEAD~10..HEAD --title "v1.40.0" --sync-changelog
 
@@ -224,6 +228,40 @@ git-sao-hua batch --file ./items.json --format json
 - `--enrich-github`: 基于 `--repo` 和 commit subject 中的 PR 编号拉取 GitHub PR 元数据
 - `--github-token <token>`: 为 GitHub API 请求提供 token，也可用环境变量 `GIT_SAO_HUA_GITHUB_TOKEN`
 - `--github-metadata-file <file>`: 从本地 JSON 文件注入 GitHub metadata，适合离线流程、缓存或测试
+
+#### GitHub Release Manifest JSON 输出
+
+`--format github-release-manifest-json` 会在 `github-release-json` 的基础上，继续收集本地发布资产元数据，适合作为 CI/CD 上传 GitHub Release assets 的中间产物：
+
+```json
+{
+  "success": true,
+  "githubRelease": {
+    "tag_name": "v1.40.0",
+    "name": "v1.40.0",
+    "body": "### Features\n- **cli:** ...",
+    "draft": false,
+    "prerelease": false,
+    "target_commitish": "main"
+  },
+  "assets": [
+    {
+      "name": "app.zip",
+      "path": "/workspace/dist/app.zip",
+      "size": 102400,
+      "sha256": "...",
+      "contentType": "application/zip"
+    }
+  ]
+}
+```
+
+可配合这些参数使用：
+- `--asset <path>`: 可重复传入多个本地构建产物，自动收集 `name/path/size/sha256/contentType`
+- `--output <file>`: 将 manifest 写入文件，供后续发布脚本直接消费
+- `--tag <tag>` / `--target <ref>` / `--draft` / `--prerelease` / `--body <text>`: 与 `github-release-json` 保持一致
+
+如果任一 `--asset` 文件不存在，CLI 会直接报错退出，避免生成不完整的发布清单。
 
 #### JSON 输出格式
 
