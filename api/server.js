@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { WebSocketServer, WebSocket } from 'ws';
 import swaggerUi from 'swagger-ui-express';
 
 import saoHuaCore from '../lib/index.js';
@@ -87,6 +88,138 @@ function parseAllowedHosts(value) {
     return hosts.length > 0 ? hosts : undefined;
 }
 
+function parseStreamParams(input = {}) {
+    const { type, style, lang, count, intervalMs } = input;
+    return {
+        language: lang || 'zh-CN',
+        msgType: type || undefined,
+        msgStyle: style || undefined,
+        requestCount: Math.min(Math.max(parseInt(count) || 10, 1), MAX_STREAM_COUNT),
+        interval: Math.min(
+            Math.max(parseInt(intervalMs) || DEFAULT_STREAM_INTERVAL_MS, MIN_INTERVAL_MS),
+            MAX_INTERVAL_MS
+        )
+    };
+}
+
+function validateStreamParams({ language, msgType, msgStyle }) {
+    const validTypes = saoHuaCore.getAllTypes(language);
+    if (msgType && !validTypes.includes(msgType)) {
+        return `无效的类型: ${msgType}`;
+    }
+
+    const validStyles = saoHuaCore.getAllStyles(language);
+    if (msgStyle && !validStyles.includes(msgStyle)) {
+        return `无效的风格: ${msgStyle}`;
+    }
+
+    return null;
+}
+
+function createStreamGenerator({ language, msgType, msgStyle, requestCount, interval, sendEvent, closeConnection }) {
+    let currentIndex = 0;
+    let closed = false;
+    let timer = null;
+
+    const stop = () => {
+        closed = true;
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+    };
+
+    const scheduleNext = () => {
+        timer = setTimeout(generateNext, interval);
+    };
+
+    const generateNext = () => {
+        if (closed || currentIndex >= requestCount) {
+            sendEvent('done', { total: currentIndex });
+            stop();
+            closeConnection?.();
+            return;
+        }
+
+        try {
+            let result;
+            if (msgType && msgStyle) {
+                result = saoHuaCore.generateByType(msgType, msgStyle, language);
+            } else if (msgType) {
+                result = saoHuaCore.generateByType(msgType, undefined, language);
+            } else if (msgStyle) {
+                const types = saoHuaCore.getAllTypes(language);
+                const randomType = types[Math.floor(Math.random() * types.length)];
+                result = saoHuaCore.generateByType(randomType, msgStyle, language);
+            } else {
+                result = saoHuaCore.generateRandom(language);
+            }
+
+            sendEvent('item', { ...result, index: currentIndex + 1 });
+            currentIndex++;
+            scheduleNext();
+        } catch (error) {
+            sendEvent('error', { message: error.message, index: currentIndex + 1 });
+            stop();
+            closeConnection?.();
+        }
+    };
+
+    return {
+        start() {
+            sendEvent('meta', { count: requestCount, interval, language, type: msgType, style: msgStyle });
+            generateNext();
+        },
+        stop
+    };
+}
+
+export function attachSaohuaWebSocket(server) {
+    if (!server || server.__saohuaWebSocketAttached) {
+        return server?.__saohuaWebSocketServer;
+    }
+
+    const wss = new WebSocketServer({ server, path: '/api/saohua/ws' });
+    server.__saohuaWebSocketAttached = true;
+    server.__saohuaWebSocketServer = wss;
+
+    wss.on('connection', (ws, req) => {
+        const url = new URL(req.url, 'http://localhost');
+        const params = parseStreamParams(Object.fromEntries(url.searchParams.entries()));
+        const validationError = validateStreamParams(params);
+
+        const sendEvent = (eventName, data) => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ event: eventName, data }));
+            }
+        };
+
+        if (validationError) {
+            sendEvent('error', { message: validationError, index: 0 });
+            ws.close(1008, validationError);
+            return;
+        }
+
+        const stream = createStreamGenerator({
+            ...params,
+            sendEvent,
+            closeConnection: () => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close(1000, 'done');
+                }
+            }
+        });
+
+        ws.on('close', () => {
+            stream.stop();
+        });
+
+        stream.start();
+    });
+
+    return wss;
+}
+
 app.get('/api/health', (req, res) => {
     const mem = process.memoryUsage();
     const cpu = process.cpuUsage();
@@ -164,26 +297,11 @@ app.get('/api/saohua', (req, res) => {
 });
 
 app.get('/api/saohua/stream', (req, res) => {
-    const { type, style, lang, count, intervalMs } = req.query;
+    const streamParams = parseStreamParams(req.query);
+    const validationError = validateStreamParams(streamParams);
 
-    const language = lang || 'zh-CN';
-    const msgType = type || undefined;
-    const msgStyle = style || undefined;
-    const requestCount = Math.min(Math.max(parseInt(count) || 10, 1), MAX_STREAM_COUNT);
-    const interval = Math.min(
-        Math.max(parseInt(intervalMs) || DEFAULT_STREAM_INTERVAL_MS, MIN_INTERVAL_MS),
-        MAX_INTERVAL_MS
-    );
-
-    const validTypes = saoHuaCore.getAllTypes(language);
-    if (msgType && !validTypes.includes(msgType)) {
-        res.status(400).json(errorResponse(`无效的类型: ${msgType}`));
-        return;
-    }
-
-    const validStyles = saoHuaCore.getAllStyles(language);
-    if (msgStyle && !validStyles.includes(msgStyle)) {
-        res.status(400).json(errorResponse(`无效的风格: ${msgStyle}`));
+    if (validationError) {
+        res.status(400).json(errorResponse(validationError));
         return;
     }
 
@@ -192,52 +310,21 @@ app.get('/api/saohua/stream', (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    res.write(`event: meta\ndata: ${JSON.stringify({ count: requestCount, interval, language, type: msgType, style: msgStyle })}\n\n`);
-
-    let currentIndex = 0;
-    let closed = false;
-
     const sendEvent = (eventName, data) => {
-        if (closed) return;
         res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
-    const generateNext = () => {
-        if (closed || currentIndex >= requestCount) {
-            sendEvent('done', { total: currentIndex });
-            res.end();
-            return;
-        }
-
-        try {
-            let result;
-            if (msgType && msgStyle) {
-                result = saoHuaCore.generateByType(msgType, msgStyle, language);
-            } else if (msgType) {
-                result = saoHuaCore.generateByType(msgType, undefined, language);
-            } else if (msgStyle) {
-                const types = saoHuaCore.getAllTypes(language);
-                const randomType = types[Math.floor(Math.random() * types.length)];
-                result = saoHuaCore.generateByType(randomType, msgStyle, language);
-            } else {
-                result = saoHuaCore.generateRandom(language);
-            }
-
-            sendEvent('item', { ...result, index: currentIndex + 1 });
-            currentIndex++;
-
-            setTimeout(generateNext, interval);
-        } catch (error) {
-            sendEvent('error', { message: error.message, index: currentIndex + 1 });
-            res.end();
-        }
-    };
-
-    req.on('close', () => {
-        closed = true;
+    const stream = createStreamGenerator({
+        ...streamParams,
+        sendEvent,
+        closeConnection: () => res.end()
     });
 
-    generateNext();
+    req.on('close', () => {
+        stream.stop();
+    });
+
+    stream.start();
 });
 
 app.get('/api/saohua/:type', (req, res) => {
@@ -648,11 +735,14 @@ app.use((err, req, res, next) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`🚀 骚话 API 服务启动成功!`);
         console.log(`📍 访问地址: http://localhost:${PORT}`);
         console.log(`❤️  健康检查: http://localhost:${PORT}/api/health`);
     });
+
+    attachSaohuaWebSocket(server);
+    console.log(`🔌 WebSocket 端点: ws://localhost:${PORT}/api/saohua/ws`);
 }
 
 export default app;

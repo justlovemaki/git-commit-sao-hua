@@ -723,6 +723,18 @@ const stream = client.streamSaohua(
 
 // 需要时可手动中止
 // stream.abort();
+
+const wsStream = client.streamSaohuaWs(
+  { type: 'fix', count: 3, intervalMs: 100 },
+  {
+    onItem(item) {
+      console.log('ws candidate', item.fullMessage);
+    },
+  },
+);
+
+// 需要时可手动关闭
+// wsStream.close();
 ```
 
 REST API 自然语言端点：
@@ -738,6 +750,9 @@ curl -X POST http://localhost:3000/api/saohua/natural/generate \
 
 # SSE 流式生成 3 条 fix 候选
 curl -N 'http://localhost:3000/api/saohua/stream?type=fix&count=3&intervalMs=100'
+
+# WebSocket 流式生成（可配合 wscat 等客户端）
+# wscat -c 'ws://localhost:3000/api/saohua/ws?type=fix&count=3&intervalMs=100'
 ```
 
 更多说明见：

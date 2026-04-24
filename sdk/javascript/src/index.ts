@@ -209,6 +209,23 @@ export type StreamEvent =
   | { type: 'done'; data: StreamSaohuaDone }
   | { type: 'error'; data: StreamSaohuaError };
 
+export interface WsStreamEvent {
+  event: 'meta' | 'item' | 'done' | 'error';
+  data: StreamSaohuaMeta | StreamSaohuaItem | StreamSaohuaDone | StreamSaohuaError;
+}
+
+export interface WebSocketLike {
+  onopen: ((event?: any) => void) | null;
+  onmessage: ((event: { data: any }) => void) | null;
+  onerror: ((event?: any) => void) | null;
+  onclose: ((event?: any) => void) | null;
+  close: () => void;
+}
+
+export interface WebSocketConstructorLike {
+  new (url: string): any;
+}
+
 function parseSseChunks(buffer: string): { events: StreamEvent[]; remainder: string } {
   const blocks = buffer.split('\n\n');
   const remainder = blocks.pop() ?? '';
@@ -250,6 +267,7 @@ export interface ClientOptions {
   timeout?: number;
   headers?: Record<string, string>;
   fetch?: typeof fetch;
+  WebSocket?: WebSocketConstructorLike;
 }
 
 export class SaohuaApiError extends Error {
@@ -283,6 +301,7 @@ export class SaohuaClient {
   private readonly timeout: number;
   private readonly fetchImpl: typeof fetch;
   private readonly defaultHeaders: Record<string, string>;
+  private readonly WebSocketImpl?: WebSocketConstructorLike;
 
   constructor(options: ClientOptions = {}) {
     const globalFetch = options.fetch ?? globalThis.fetch;
@@ -293,6 +312,7 @@ export class SaohuaClient {
     this.baseUrl = (options.baseUrl ?? 'http://localhost:3000').replace(/\/$/, '');
     this.timeout = options.timeout ?? 10000;
     this.fetchImpl = globalFetch;
+    this.WebSocketImpl = options.WebSocket;
     this.defaultHeaders = {
       Accept: 'application/json',
       ...(options.headers ?? {}),
@@ -419,6 +439,76 @@ export class SaohuaClient {
 
     return {
       abort: () => controller.abort(),
+    };
+  }
+
+  streamSaohuaWs(
+    options: StreamSaohuaOptions = {},
+    callbacks: {
+      onMeta?: (meta: StreamSaohuaMeta) => void;
+      onItem?: (item: StreamSaohuaItem) => void;
+      onDone?: (done: StreamSaohuaDone) => void;
+      onError?: (error: StreamSaohuaError) => void;
+    } = {},
+  ): { close: () => void } {
+    const WebSocketImpl = this.WebSocketImpl ?? globalThis.WebSocket;
+    if (!WebSocketImpl) {
+      setTimeout(() => {
+        callbacks.onError?.({ message: '当前环境不支持 WebSocket，请传入 options.WebSocket', index: 0 });
+      }, 0);
+      return { close: () => {} };
+    }
+
+    const { type, style, lang, count, intervalMs } = options;
+    const query = new URLSearchParams();
+    if (type) query.set('type', type);
+    if (style) query.set('style', style);
+    if (lang) query.set('lang', lang);
+    if (count) query.set('count', String(count));
+    if (intervalMs) query.set('intervalMs', String(intervalMs));
+
+    const protocol = this.baseUrl.startsWith('https') ? 'wss' : 'ws';
+    const wsUrl = `${protocol}://${this.baseUrl.replace(/^https?:\/\//, '')}/api/saohua/ws?${query.toString()}`;
+
+    let ws: any;
+    try {
+      ws = new WebSocketImpl(wsUrl);
+    } catch {
+      setTimeout(() => {
+        callbacks.onError?.({ message: 'WebSocket 不可用', index: 0 });
+      }, 0);
+      return { close: () => {} };
+    }
+
+    ws.onmessage = (event: any) => {
+      try {
+        const raw = typeof event.data === 'string' ? event.data : String(event.data);
+        const msg = JSON.parse(raw) as WsStreamEvent;
+        switch (msg.event) {
+          case 'meta':
+            callbacks.onMeta?.(msg.data as StreamSaohuaMeta);
+            break;
+          case 'item':
+            callbacks.onItem?.(msg.data as StreamSaohuaItem);
+            break;
+          case 'done':
+            callbacks.onDone?.(msg.data as StreamSaohuaDone);
+            break;
+          case 'error':
+            callbacks.onError?.(msg.data as StreamSaohuaError);
+            break;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    ws.onerror = () => {
+      callbacks.onError?.({ message: 'WebSocket 连接错误', index: 0 });
+    };
+
+    return {
+      close: () => ws.close(),
     };
   }
 

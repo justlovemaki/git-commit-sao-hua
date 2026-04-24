@@ -1393,6 +1393,79 @@ const options = {
                     }
                 }
             },
+            '/api/saohua/ws': {
+                get: {
+                    tags: ['Saohua'],
+                    summary: '流式骚话生成 (WebSocket)',
+                    description: '通过 WebSocket 流式推送多条骚话候选，支持指定 type/style/lang/count/intervalMs 参数。消息为 JSON 格式，结构 `{ event, data }`，事件类型与 SSE 保持一致: meta -> item -> done / error。',
+                    operationId: 'streamSaohuaWs',
+                    parameters: [
+                        {
+                            name: 'type',
+                            in: 'query',
+                            description: 'Commit 类型 (可选)',
+                            schema: {
+                                type: 'string',
+                                enum: ['fix', 'feat', 'chore', 'docs', 'refactor', 'style', 'test', 'perf', 'ci', 'build', 'revert', 'hotfix']
+                            },
+                            example: 'fix'
+                        },
+                        {
+                            name: 'style',
+                            in: 'query',
+                            description: '风格类型 (可选)',
+                            schema: {
+                                type: 'string',
+                                enum: ['love', 'sao', 'zha', 'chu', 'fo']
+                            },
+                            example: 'love'
+                        },
+                        {
+                            name: 'lang',
+                            in: 'query',
+                            description: '语言代码',
+                            schema: {
+                                type: 'string',
+                                enum: ['zh-CN', 'en'],
+                                default: 'zh-CN'
+                            },
+                            example: 'zh-CN'
+                        },
+                        {
+                            name: 'count',
+                            in: 'query',
+                            description: '生成条数 (1-100, 默认 10)',
+                            schema: {
+                                type: 'integer',
+                                minimum: 1,
+                                maximum: 100,
+                                default: 10
+                            },
+                            example: 10
+                        },
+                        {
+                            name: 'intervalMs',
+                            in: 'query',
+                            description: '每条消息间隔毫秒数 (100-10000, 默认 100)',
+                            schema: {
+                                type: 'integer',
+                                minimum: 100,
+                                maximum: 10000,
+                                default: 100
+                            },
+                            example: 100
+                        }
+                    ],
+                    responses: {
+                        '101': {
+                            description: 'WebSocket 升级成功，后续消息体为 `{ event, data }` JSON。'
+                        },
+                        '400': {
+                            description: '参数错误（连接建立后会先发送 error 事件再关闭）'
+                        }
+                    }
+                }
+            },
             '/api/types': {
                 get: {
                     tags: ['Types'],

@@ -372,6 +372,36 @@ event: done
 data: {"total":3}
 ```
 
+### 流式生成（WebSocket）
+
+```
+GET /api/saohua/ws
+```
+
+通过 WebSocket 持续推送骚话候选，适合机器人、终端 UI、前端实时预览等需要双工连接或更稳定连接管理的场景。查询参数与 SSE 版本保持一致：
+
+- `type` - 可选 commit 类型
+- `style` - 可选风格
+- `lang` - 可选语言，默认 `zh-CN`
+- `count` - 可选生成条数，范围 `1-100`，默认 `10`
+- `intervalMs` - 可选推送间隔毫秒数，范围 `100-10000`，默认 `100`
+
+连接示例:
+
+```text
+ws://localhost:3000/api/saohua/ws?type=fix&count=3&intervalMs=100
+```
+
+消息格式:
+
+```json
+{"event":"meta","data":{"count":3,"interval":100,"language":"zh-CN","type":"fix"}}
+{"event":"item","data":{"type":"fix","style":"sao","message":"修 bug 和撩你，我都在行","fullMessage":"fix: 修 bug 和撩你，我都在行","language":"zh-CN","index":1}}
+{"event":"done","data":{"total":3}}
+```
+
+若参数非法，服务端会先发送 `error` 事件，再以 WebSocket close code `1008` 主动关闭连接。
+
 ### 获取类型列表
 
 ```

@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import http from 'http';
+import WebSocket from 'ws';
 import saoHuaCore from '../lib/index.js';
 import versionModule from '../lib/version.js';
 
@@ -50,6 +51,28 @@ async function getRaw(path) {
             'content-type': response.headers.get('content-type')
         }
     };
+}
+
+async function openWebSocket(path) {
+    const url = (process.env.TEST_URL || BASE_URL).replace(/^http/, 'ws') + path;
+    return await new Promise((resolve, reject) => {
+        const ws = new WebSocket(url);
+        const messages = [];
+
+        ws.on('message', payload => {
+            try {
+                messages.push(JSON.parse(payload.toString()));
+            } catch (error) {
+                reject(error);
+            }
+        });
+
+        ws.on('close', (code, reason) => {
+            resolve({ code, reason: reason.toString(), messages });
+        });
+
+        ws.on('error', reject);
+    });
 }
 
 function parseSseEvents(payload) {
@@ -438,6 +461,27 @@ async testBatchGenerationInvalidMode() {
         const done = JSON.parse(events.find(item => item.event === 'done').data);
         assert(meta.count === 100, 'Count should be capped to 100');
         assert(done.total === 100, 'Done total should match capped count');
+    },
+
+    async testWebSocketSaohuaEndpoint() {
+        const res = await openWebSocket('/api/saohua/ws?count=3&intervalMs=50');
+        assert(res.code === 1000, `WebSocket should close normally, got ${res.code}`);
+        assert(res.messages[0]?.event === 'meta', 'First ws event should be meta');
+        assert(res.messages.filter(item => item.event === 'item').length === 3, 'Should stream 3 ws item events');
+        assert(res.messages.at(-1)?.event === 'done', 'Last ws event should be done');
+    },
+
+    async testWebSocketSaohuaWithType() {
+        const res = await openWebSocket('/api/saohua/ws?type=fix&count=2&intervalMs=50');
+        const items = res.messages.filter(item => item.event === 'item').map(item => item.data);
+        assert(items.length === 2, 'Should stream 2 ws item events');
+        assert(items.every(item => item.type === 'fix'), 'All ws items should be fix type');
+    },
+
+    async testWebSocketSaohuaWithInvalidType() {
+        const res = await openWebSocket('/api/saohua/ws?type=invalid_type');
+        assert(res.code === 1008, `Invalid type should close with policy violation, got ${res.code}`);
+        assert(res.messages[0]?.event === 'error', 'Should emit error event before close');
     },
 
     async testTypesEndpoint() {
@@ -1218,6 +1262,7 @@ async function startTestServer() {
     const app = await import('./server.js');
     const server = await new Promise((resolve) => {
         const s = http.createServer(app.default);
+        app.attachSaohuaWebSocket(s);
         s.listen(0, () => resolve(s));
     });
     

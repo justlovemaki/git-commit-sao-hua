@@ -65,6 +65,7 @@ const client = new SaohuaClient({
 - `aiSaohua(diff, { lang?, style?, type? })`
 - `batchSaohua(items[])`
 - `streamSaohua({ type?, style?, lang?, count?, intervalMs? }, callbacks)`
+- `streamSaohuaWs({ type?, style?, lang?, count?, intervalMs? }, callbacks)`
 - `listTypes(lang?)`
 - `listStyles(lang?)`
 - `stats(lang?)`
@@ -115,6 +116,41 @@ const stream = client.streamSaohua(
 );
 
 // stream.abort();
+```
+
+### WebSocket 流式生成示例
+
+```ts
+const wsStream = client.streamSaohuaWs(
+  { type: 'fix', count: 3, intervalMs: 100 },
+  {
+    onMeta(meta) {
+      console.log('ws meta:', meta);
+    },
+    onItem(item) {
+      console.log('ws candidate:', item.fullMessage);
+    },
+    onDone(done) {
+      console.log('ws done:', done.total);
+    },
+    onError(error) {
+      console.error('ws error:', error.message);
+    },
+  },
+);
+
+// wsStream.close();
+```
+
+如果当前运行环境没有全局 `WebSocket`（例如部分 Node.js 运行时），可以在创建客户端时显式注入：
+
+```ts
+import WebSocket from 'ws';
+
+const client = new SaohuaClient({
+  baseUrl: 'http://localhost:3000',
+  WebSocket,
+});
 ```
 
 ## 开发

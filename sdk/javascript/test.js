@@ -38,6 +38,35 @@ function sseResponse(events) {
   });
 }
 
+class FakeWebSocket {
+  static instances = [];
+
+  constructor(url) {
+    this.url = url;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    FakeWebSocket.instances.push(this);
+  }
+
+  emitMessage(data) {
+    this.onmessage?.({ data: JSON.stringify(data) });
+  }
+
+  emitError(error = new Error('ws error')) {
+    this.onerror?.(error);
+  }
+
+  emitClose() {
+    this.onclose?.();
+  }
+
+  close() {
+    this.closed = true;
+  }
+}
+
 test('health() returns parsed server status', async () => {
   const client = new SaohuaClient({
     baseUrl: 'http://test.local',
@@ -321,6 +350,74 @@ test('streamSaohua() consumes SSE meta/item/done events', async () => {
     ['item', 2, 'fix'],
     ['done', 2],
   ]);
+});
+
+test('streamSaohuaWs() consumes WebSocket meta/item/done events', async () => {
+  FakeWebSocket.instances = [];
+  const seen = [];
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    WebSocket: FakeWebSocket,
+    fetch: createFetch(() => jsonResponse({ success: true, data: {} })),
+  });
+
+  const handle = client.streamSaohuaWs(
+    { type: 'fix', count: 2 },
+    {
+      onMeta(meta) {
+        seen.push(['meta', meta.count]);
+      },
+      onItem(item) {
+        seen.push(['item', item.index, item.type]);
+      },
+      onDone(done) {
+        seen.push(['done', done.total]);
+      },
+      onError(error) {
+        throw new Error(error.message);
+      },
+    },
+  );
+
+  const ws = FakeWebSocket.instances[0];
+  assert.equal(ws.url, 'ws://test.local/api/saohua/ws?type=fix&count=2');
+
+  ws.emitMessage({ event: 'meta', data: { count: 2, interval: 100, language: 'zh-CN', type: 'fix' } });
+  ws.emitMessage({ event: 'item', data: { type: 'fix', style: 'sao', message: 'm1', fullMessage: 'fix: m1', language: 'zh-CN', index: 1 } });
+  ws.emitMessage({ event: 'item', data: { type: 'fix', style: 'love', message: 'm2', fullMessage: 'fix: m2', language: 'zh-CN', index: 2 } });
+  ws.emitMessage({ event: 'done', data: { total: 2 } });
+  handle.close();
+
+  assert.equal(ws.closed, true);
+  assert.deepEqual(seen, [
+    ['meta', 2],
+    ['item', 1, 'fix'],
+    ['item', 2, 'fix'],
+    ['done', 2],
+  ]);
+});
+
+test('streamSaohuaWs() reports missing WebSocket support', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    WebSocket: undefined,
+    fetch: createFetch(() => jsonResponse({ success: true, data: {} })),
+  });
+
+  const originalWebSocket = globalThis.WebSocket;
+  // @ts-ignore
+  delete globalThis.WebSocket;
+
+  const error = await new Promise((resolve) => {
+    client.streamSaohuaWs({}, {
+      onError(err) {
+        resolve(err.message);
+      },
+    });
+  });
+
+  globalThis.WebSocket = originalWebSocket;
+  assert.match(error, /WebSocket/);
 });
 
 test('analyzeNaturalLanguage() posts text and returns detection fields', async () => {
