@@ -1,11 +1,16 @@
 package tests
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/justlovemaki/git-saohua-go/git_saohua"
+	"github.com/gorilla/websocket"
 )
 
 func getTestBaseURL() string {
@@ -290,6 +295,100 @@ func TestPluginLifecycle(t *testing.T) {
 		t.Fatalf("RemovePlugin failed: %v", err)
 	}
 	t.Logf("Remove: %s", removeResult.Message)
+}
+
+func TestStreamSaohua(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/saohua/stream" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("type") != "fix" {
+			t.Fatalf("expected type=fix, got %s", r.URL.Query().Get("type"))
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "event: meta\n")
+		fmt.Fprint(w, "data: {\"count\":2,\"interval\":100,\"language\":\"zh-CN\"}\n\n")
+		fmt.Fprint(w, "event: item\n")
+		fmt.Fprint(w, "data: {\"type\":\"fix\",\"style\":\"sao\",\"message\":\"修好了\",\"fullMessage\":\"fix: 修好了\",\"language\":\"zh-CN\",\"index\":1}\n\n")
+		fmt.Fprint(w, "event: done\n")
+		fmt.Fprint(w, "data: {\"total\":1}\n\n")
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	seen := []string{}
+	err := client.StreamSaohua(git_saohua.StreamOptions{Type: "fix", Count: 2, IntervalMs: 100}, func(event git_saohua.StreamEvent) error {
+		seen = append(seen, event.Type)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamSaohua failed: %v", err)
+	}
+	if strings.Join(seen, ",") != "meta,item,done" {
+		t.Fatalf("unexpected event order: %v", seen)
+	}
+}
+
+func TestStreamSaohuaChan(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		fmt.Fprint(w, "event: meta\n")
+		fmt.Fprint(w, "data: {\"count\":1,\"interval\":50,\"language\":\"zh-CN\"}\n\n")
+		fmt.Fprint(w, "event: done\n")
+		fmt.Fprint(w, "data: {\"total\":0}\n\n")
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	events, errs := client.StreamSaohuaChan(git_saohua.StreamOptions{})
+	seen := []string{}
+	for event := range events {
+		seen = append(seen, event.Type)
+	}
+	if err := <-errs; err != nil {
+		t.Fatalf("StreamSaohuaChan failed: %v", err)
+	}
+	if strings.Join(seen, ",") != "meta,done" {
+		t.Fatalf("unexpected channel events: %v", seen)
+	}
+}
+
+func TestStreamSaohuaWs(t *testing.T) {
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/saohua/ws" {
+			http.NotFound(w, r)
+			return
+		}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Fatalf("upgrade failed: %v", err)
+		}
+		defer conn.Close()
+		_ = conn.WriteJSON(map[string]interface{}{"event": "meta", "data": map[string]interface{}{"count": 2, "interval": 100, "language": "zh-CN"}})
+		_ = conn.WriteJSON(map[string]interface{}{"event": "item", "data": map[string]interface{}{"type": "fix", "style": "sao", "message": "修复完成", "fullMessage": "fix: 修复完成", "language": "zh-CN", "index": 1}})
+		_ = conn.WriteJSON(map[string]interface{}{"event": "done", "data": map[string]interface{}{"total": 1}})
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	seen := []string{}
+	err := client.StreamSaohuaWs(git_saohua.StreamOptions{Type: "fix", Count: 2}, func(event git_saohua.StreamEvent) error {
+		seen = append(seen, event.Type)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("StreamSaohuaWs failed: %v", err)
+	}
+	if strings.Join(seen, ",") != "meta,item,done" {
+		t.Fatalf("unexpected websocket events: %v", seen)
+	}
 }
 
 func TestCreatePluginTemplate(t *testing.T) {

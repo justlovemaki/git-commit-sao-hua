@@ -52,6 +52,15 @@ func main() {
 | `SaohuaByTypeAndStyle(type, style, lang?)` | 按类型 + 风格生成 |
 | `AiSaohua(diff, lang?, style?, commitType?)` | AI 智能生成（基于 git diff） |
 
+### 实时流式生成
+
+| 方法 | 说明 |
+|------|------|
+| `StreamSaohua(options, handler)` | 通过 SSE 回调消费 `meta/item/done/error` 事件 |
+| `StreamSaohuaChan(options)` | 通过 channel 消费 SSE 事件 |
+| `StreamSaohuaWs(options, handler)` | 通过 WebSocket 回调消费事件 |
+| `StreamSaohuaWsChan(options)` | 通过 channel 消费 WebSocket 事件 |
+
 ### 类型与风格
 
 | 方法 | 说明 |
@@ -91,6 +100,32 @@ if err != nil {
     panic(err)
 }
 fmt.Println(saohua.FullMessage)
+```
+
+## 实时流式生成
+
+```go
+streamOptions := git_saohua.StreamOptions{Type: "fix", Count: 3, IntervalMs: 100}
+
+err := client.StreamSaohua(streamOptions, func(event git_saohua.StreamEvent) error {
+    if event.Item != nil {
+        fmt.Println("SSE", event.Item.FullMessage)
+    }
+    return nil
+})
+if err != nil {
+    panic(err)
+}
+
+events, errs := client.StreamSaohuaWsChan(git_saohua.StreamOptions{Type: "feat", Count: 2})
+for event := range events {
+    if event.Item != nil {
+        fmt.Println("WS", event.Item.FullMessage)
+    }
+}
+if err := <-errs; err != nil {
+    panic(err)
+}
 ```
 
 ## 插件管理
@@ -151,6 +186,8 @@ if err != nil {
 - `StatsData` — 统计数据
 - `PluginsData` / `PluginInfo` — 插件列表
 - `PluginResult` — 插件操作结果
+- `StreamOptions` / `StreamEvent` — 实时流请求与统一事件封装
+- `StreamSaohuaMeta` / `StreamSaohuaItem` / `StreamSaohuaDone` / `StreamSaohuaError` — 实时流事件数据
 
 ## 运行测试
 
@@ -187,6 +224,7 @@ git push origin sdk/go/v1.0.0
 
 - Go >= 1.21
 - resty v2.11.0+
+- gorilla/websocket v1.5+
 
 ## License
 

@@ -31,6 +31,11 @@ from .models import (
     BatchSaohuaResult,
     NaturalLanguageAnalysisData,
     NaturalLanguageGenerateData,
+    StreamSaohuaMeta,
+    StreamSaohuaItem,
+    StreamSaohuaDone,
+    StreamSaohuaError,
+    StreamEvent,
 )
 
 __all__ = [
@@ -54,4 +59,9 @@ __all__ = [
     "BatchSaohuaResult",
     "NaturalLanguageAnalysisData",
     "NaturalLanguageGenerateData",
+    "StreamSaohuaMeta",
+    "StreamSaohuaItem",
+    "StreamSaohuaDone",
+    "StreamSaohuaError",
+    "StreamEvent",
 ]

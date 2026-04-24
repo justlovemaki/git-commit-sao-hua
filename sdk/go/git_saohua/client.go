@@ -1,12 +1,17 @@
 package git_saohua
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/gorilla/websocket"
 )
 
 // Client Git Saohua API 客户端
@@ -15,6 +20,7 @@ type Client struct {
 	baseURL    string
 	apiKey     string
 	bearerToken string
+	headers     http.Header
 }
 
 // ClientOption 客户端配置选项
@@ -46,6 +52,7 @@ func NewClient(baseURL string, options ...ClientOption) *Client {
 	client := &Client{
 		baseURL:    baseURL,
 		httpClient: resty.New(),
+		headers:     http.Header{},
 	}
 
 	// 应用配置选项
@@ -56,13 +63,16 @@ func NewClient(baseURL string, options ...ClientOption) *Client {
 	// 设置基础配置
 	client.httpClient.SetBaseURL(baseURL)
 	client.httpClient.SetHeader("Content-Type", "application/json")
+	client.headers.Set("Content-Type", "application/json")
 
 	// 设置认证
 	if client.apiKey != "" {
 		client.httpClient.SetHeader("X-API-Key", client.apiKey)
+		client.headers.Set("X-API-Key", client.apiKey)
 	}
 	if client.bearerToken != "" {
 		client.httpClient.SetHeader("Authorization", "Bearer "+client.bearerToken)
+		client.headers.Set("Authorization", "Bearer "+client.bearerToken)
 	}
 
 	return client
@@ -72,12 +82,14 @@ func NewClient(baseURL string, options ...ClientOption) *Client {
 func (c *Client) SetAPIKey(apiKey string) {
 	c.apiKey = apiKey
 	c.httpClient.SetHeader("X-API-Key", apiKey)
+	c.headers.Set("X-API-Key", apiKey)
 }
 
 // SetBearerToken 设置 Bearer Token
 func (c *Client) SetBearerToken(token string) {
 	c.bearerToken = token
 	c.httpClient.SetHeader("Authorization", "Bearer "+token)
+	c.headers.Set("Authorization", "Bearer "+token)
 }
 
 // SetTimeout 设置超时时间
@@ -88,6 +100,72 @@ func (c *Client) SetTimeout(timeout time.Duration) {
 // Close 关闭客户端（清理资源）
 func (c *Client) Close() {
 	c.httpClient.SetCloseClient(true)
+}
+
+func (c *Client) streamQuery(options StreamOptions) string {
+	values := url.Values{}
+	if options.Type != "" {
+		values.Set("type", options.Type)
+	}
+	if options.Style != "" {
+		values.Set("style", options.Style)
+	}
+	if options.Lang != "" {
+		values.Set("lang", options.Lang)
+	}
+	if options.Count > 0 {
+		values.Set("count", fmt.Sprintf("%d", options.Count))
+	}
+	if options.IntervalMs > 0 {
+		values.Set("intervalMs", fmt.Sprintf("%d", options.IntervalMs))
+	}
+	return values.Encode()
+}
+
+func (c *Client) wsURL(path string, options StreamOptions) (string, error) {
+	parsed, err := url.Parse(c.baseURL)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Scheme == "https" {
+		parsed.Scheme = "wss"
+	} else {
+		parsed.Scheme = "ws"
+	}
+	parsed.Path = path
+	parsed.RawQuery = c.streamQuery(options)
+	return parsed.String(), nil
+}
+
+func parseStreamEvent(eventType string, payload []byte) (*StreamEvent, error) {
+	switch eventType {
+	case "meta":
+		var meta StreamSaohuaMeta
+		if err := json.Unmarshal(payload, &meta); err != nil {
+			return nil, err
+		}
+		return &StreamEvent{Type: "meta", Meta: &meta}, nil
+	case "item":
+		var item StreamSaohuaItem
+		if err := json.Unmarshal(payload, &item); err != nil {
+			return nil, err
+		}
+		return &StreamEvent{Type: "item", Item: &item}, nil
+	case "done":
+		var done StreamSaohuaDone
+		if err := json.Unmarshal(payload, &done); err != nil {
+			return nil, err
+		}
+		return &StreamEvent{Type: "done", Done: &done}, nil
+	case "error":
+		var streamErr StreamSaohuaError
+		if err := json.Unmarshal(payload, &streamErr); err != nil {
+			return nil, err
+		}
+		return &StreamEvent{Type: "error", Error: &streamErr}, nil
+	default:
+		return nil, nil
+	}
 }
 
 // 通用响应结构
@@ -266,6 +344,156 @@ func (c *Client) BatchSaohua(items []BatchSaohuaItem) (*BatchSaohuaResult, error
 		return nil, err
 	}
 	return &result, nil
+}
+
+// StreamSaohua 通过 SSE 流式消费骚话事件
+func (c *Client) StreamSaohua(options StreamOptions, handler func(StreamEvent) error) error {
+	path := "/api/saohua/stream"
+	if query := c.streamQuery(options); query != "" {
+		path += "?" + query
+	}
+
+	resp, err := c.httpClient.R().
+		SetDoNotParseResponse(true).
+		SetHeader("Accept", "text/event-stream").
+		Get(path)
+	if err != nil {
+		return &NetworkError{Message: fmt.Sprintf("SSE 请求失败：%v", err), Err: err}
+	}
+	defer resp.RawBody().Close()
+
+	if resp.StatusCode() >= 400 {
+		return &APIError{StatusCode: resp.StatusCode(), Message: fmt.Sprintf("HTTP %d: %s", resp.StatusCode(), resp.String())}
+	}
+
+	scanner := bufio.NewScanner(resp.RawBody())
+	var eventType string
+	var dataLines []string
+
+	dispatch := func() error {
+		if eventType == "" || len(dataLines) == 0 {
+			return nil
+		}
+		event, err := parseStreamEvent(eventType, []byte(strings.Join(dataLines, "\n")))
+		if err != nil {
+			return err
+		}
+		if event != nil {
+			if err := handler(*event); err != nil {
+				return err
+			}
+		}
+		eventType = ""
+		dataLines = nil
+		return nil
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			if err := dispatch(); err != nil {
+				return err
+			}
+			continue
+		}
+		if strings.HasPrefix(line, "event:") {
+			eventType = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+		} else if strings.HasPrefix(line, "data:") {
+			dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return dispatch()
+}
+
+// StreamSaohuaChan 通过 channel 返回 SSE 流式事件
+func (c *Client) StreamSaohuaChan(options StreamOptions) (<-chan StreamEvent, <-chan error) {
+	events := make(chan StreamEvent)
+	errs := make(chan error, 1)
+	go func() {
+		defer close(events)
+		defer close(errs)
+		err := c.StreamSaohua(options, func(event StreamEvent) error {
+			events <- event
+			return nil
+		})
+		if err != nil {
+			errs <- err
+		}
+	}()
+	return events, errs
+}
+
+// StreamSaohuaWs 通过 WebSocket 流式消费骚话事件
+func (c *Client) StreamSaohuaWs(options StreamOptions, handler func(StreamEvent) error) error {
+	wsURL, err := c.wsURL("/api/saohua/ws", options)
+	if err != nil {
+		return err
+	}
+	headers := http.Header{}
+	for key, values := range c.headers {
+		for _, value := range values {
+			headers.Add(key, value)
+		}
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, headers)
+	if err != nil {
+		return &NetworkError{Message: fmt.Sprintf("WebSocket 连接失败：%v", err), Err: err}
+	}
+	defer conn.Close()
+
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				return nil
+			}
+			return &NetworkError{Message: fmt.Sprintf("WebSocket 读取失败：%v", err), Err: err}
+		}
+
+		var packet struct {
+			Event string          `json:"event"`
+			Data  json.RawMessage `json:"data"`
+		}
+		if err := json.Unmarshal(message, &packet); err != nil {
+			return err
+		}
+
+		event, err := parseStreamEvent(packet.Event, packet.Data)
+		if err != nil {
+			return err
+		}
+		if event == nil {
+			continue
+		}
+		if err := handler(*event); err != nil {
+			return err
+		}
+		if event.Type == "done" {
+			return nil
+		}
+	}
+}
+
+// StreamSaohuaWsChan 通过 channel 返回 WebSocket 流式事件
+func (c *Client) StreamSaohuaWsChan(options StreamOptions) (<-chan StreamEvent, <-chan error) {
+	events := make(chan StreamEvent)
+	errs := make(chan error, 1)
+	go func() {
+		defer close(events)
+		defer close(errs)
+		err := c.StreamSaohuaWs(options, func(event StreamEvent) error {
+			events <- event
+			return nil
+		})
+		if err != nil {
+			errs <- err
+		}
+	}()
+	return events, errs
 }
 
 // AnalyzeNaturalLanguage 分析自然语言提交描述

@@ -737,6 +737,46 @@ const wsStream = client.streamSaohuaWs(
 // wsStream.close();
 ```
 
+Python SDK 流式生成示例：
+
+```python
+from git_saohua import SaohuaClient
+
+with SaohuaClient("http://localhost:3000") as client:
+    for event in client.iter_stream_saohua(commit_type="fix", count=3, interval_ms=100):
+        if event.type == "item":
+            print(event.data.full_message)
+
+    client.stream_saohua_ws(
+        commit_type="feat",
+        count=2,
+        on_item=lambda item: print(item.full_message),
+    )
+```
+
+Go SDK 流式生成示例：
+
+```go
+streamOptions := git_saohua.StreamOptions{Type: "fix", Count: 3, IntervalMs: 100}
+
+_ = client.StreamSaohua(streamOptions, func(event git_saohua.StreamEvent) error {
+  if event.Item != nil {
+    fmt.Println(event.Item.FullMessage)
+  }
+  return nil
+})
+
+events, errs := client.StreamSaohuaWsChan(git_saohua.StreamOptions{Type: "feat", Count: 2})
+for event := range events {
+  if event.Item != nil {
+    fmt.Println(event.Item.FullMessage)
+  }
+}
+if err := <-errs; err != nil {
+  panic(err)
+}
+```
+
 REST API 自然语言端点：
 
 ```bash

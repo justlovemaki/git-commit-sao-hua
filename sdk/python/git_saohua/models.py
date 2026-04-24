@@ -306,3 +306,77 @@ class NaturalLanguageGenerateData(NaturalLanguageAnalysisData):
             message=data.get("message", ""),
             full_message=data.get("fullMessage", ""),
         )
+
+
+@dataclass
+class StreamSaohuaMeta:
+    """流式骚话 meta 事件。"""
+
+    count: int = 0
+    interval: int = 0
+    language: str = ""
+    type: str = ""
+    style: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "StreamSaohuaMeta":
+        return cls(
+            count=data.get("count", 0),
+            interval=data.get("interval", 0),
+            language=data.get("language", ""),
+            type=data.get("type", "") or "",
+            style=data.get("style", "") or "",
+        )
+
+
+@dataclass
+class StreamSaohuaItem(SaohuaData):
+    """流式骚话 item 事件。"""
+
+    index: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "StreamSaohuaItem":
+        base = SaohuaData.from_dict(data)
+        return cls(
+            type=base.type,
+            style=base.style,
+            message=base.message,
+            full_message=base.full_message,
+            language=base.language,
+            index=data.get("index", 0),
+        )
+
+
+@dataclass
+class StreamSaohuaDone:
+    """流式骚话 done 事件。"""
+
+    total: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "StreamSaohuaDone":
+        return cls(total=data.get("total", 0))
+
+
+@dataclass
+class StreamSaohuaError:
+    """流式骚话 error 事件。"""
+
+    message: str = ""
+    index: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "StreamSaohuaError":
+        return cls(
+            message=data.get("message", ""),
+            index=data.get("index", 0),
+        )
+
+
+@dataclass
+class StreamEvent:
+    """统一流式事件。"""
+
+    type: Literal["meta", "item", "done", "error"]
+    data: Any

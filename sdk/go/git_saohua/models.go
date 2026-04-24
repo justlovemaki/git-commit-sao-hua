@@ -181,3 +181,47 @@ type NaturalLanguageGenerateData struct {
 	Message     string `json:"message"`
 	FullMessage string `json:"fullMessage"`
 }
+
+// StreamOptions 流式骚话请求参数
+type StreamOptions struct {
+	Type       string
+	Style      string
+	Lang       string
+	Count      int
+	IntervalMs int
+}
+
+// StreamSaohuaMeta SSE/WS meta 事件
+type StreamSaohuaMeta struct {
+	Count    int    `json:"count"`
+	Interval int    `json:"interval"`
+	Language string `json:"language"`
+	Type     string `json:"type,omitempty"`
+	Style    string `json:"style,omitempty"`
+}
+
+// StreamSaohuaItem SSE/WS item 事件
+type StreamSaohuaItem struct {
+	SaohuaData
+	Index int `json:"index"`
+}
+
+// StreamSaohuaDone SSE/WS done 事件
+type StreamSaohuaDone struct {
+	Total int `json:"total"`
+}
+
+// StreamSaohuaError SSE/WS error 事件
+type StreamSaohuaError struct {
+	Message string `json:"message"`
+	Index   int    `json:"index"`
+}
+
+// StreamEvent 统一流式事件
+type StreamEvent struct {
+	Type  string
+	Meta  *StreamSaohuaMeta
+	Item  *StreamSaohuaItem
+	Done  *StreamSaohuaDone
+	Error *StreamSaohuaError
+}

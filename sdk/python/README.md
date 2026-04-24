@@ -55,6 +55,15 @@ with SaohuaClient("http://localhost:3000") as client:
 | `saohua_by_type_and_style(type, style, lang?)` | 按类型 + 风格生成 |
 | `ai_saohua(diff, lang?, style?, commit_type?)` | AI 智能生成（基于 git diff） |
 
+### 实时流式生成
+
+| 方法 | 说明 |
+|------|------|
+| `iter_stream_saohua(type?, style?, lang?, count?, interval_ms?)` | 通过 SSE 迭代消费 `meta/item/done/error` 事件 |
+| `stream_saohua(..., on_meta=?, on_item=?, on_done=?, on_error=?)` | 通过 SSE 回调消费事件 |
+| `iter_stream_saohua_ws(type?, style?, lang?, count?, interval_ms?)` | 通过 WebSocket 迭代消费事件 |
+| `stream_saohua_ws(..., on_meta=?, on_item=?, on_done=?, on_error=?)` | 通过 WebSocket 回调消费事件 |
+
 ### 类型与风格
 
 | 方法 | 说明 |
@@ -90,6 +99,26 @@ with SaohuaClient("http://localhost:3000") as client:
     """
     saohua = client.ai_saohua(diff)
     print(saohua.full_message)
+```
+
+## 实时流式生成
+
+```python
+from git_saohua import SaohuaClient
+
+with SaohuaClient("http://localhost:3000") as client:
+    for event in client.iter_stream_saohua(commit_type="fix", count=3, interval_ms=100):
+        if event.type == "item":
+            print("SSE", event.data.full_message)
+
+    client.stream_saohua_ws(
+        commit_type="feat",
+        count=2,
+        on_meta=lambda meta: print("ws meta", meta.count),
+        on_item=lambda item: print("WS", item.full_message),
+        on_done=lambda done: print("ws done", done.total),
+        on_error=lambda error: print("ws error", error.message),
+    )
 ```
 
 ## 插件管理
@@ -138,6 +167,8 @@ except NetworkError:
 - `StatsData` — 统计数据
 - `PluginsData` / `PluginInfo` — 插件列表
 - `PluginResult` — 插件操作结果
+- `StreamSaohuaMeta` / `StreamSaohuaItem` / `StreamSaohuaDone` / `StreamSaohuaError` — 实时流事件数据
+- `StreamEvent` — 统一流式事件封装
 
 ## 运行测试
 
@@ -176,6 +207,7 @@ Python SDK 使用 GitHub Actions 自动测试和发布：
 
 - Python >= 3.8
 - requests >= 2.25.0
+- websocket-client >= 1.8.0
 
 ## License
 

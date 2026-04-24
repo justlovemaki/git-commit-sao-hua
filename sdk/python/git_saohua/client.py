@@ -1,6 +1,8 @@
 """Git Saohua Python SDK — 骚话 API 客户端。"""
 
-from typing import Optional, Dict, Any, List
+import json
+from typing import Optional, Dict, Any, List, Iterator, Callable
+from urllib.parse import urlencode
 
 import requests
 
@@ -17,6 +19,11 @@ from .models import (
     BatchSaohuaResult,
     NaturalLanguageAnalysisData,
     NaturalLanguageGenerateData,
+    StreamSaohuaMeta,
+    StreamSaohuaItem,
+    StreamSaohuaDone,
+    StreamSaohuaError,
+    StreamEvent,
 )
 
 __all__ = ["SaohuaClient"]
@@ -134,6 +141,69 @@ class SaohuaClient:
             params["style"] = style
         return params
 
+    def _stream_params(
+        self,
+        commit_type: Optional[str] = None,
+        style: Optional[str] = None,
+        lang: Optional[str] = None,
+        count: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+    ) -> Dict[str, str]:
+        params: Dict[str, str] = {}
+        if commit_type:
+            params["type"] = commit_type
+        if style:
+            params["style"] = style
+        if lang:
+            params["lang"] = lang
+        if count is not None:
+            params["count"] = str(count)
+        if interval_ms is not None:
+            params["intervalMs"] = str(interval_ms)
+        return params
+
+    @staticmethod
+    def _parse_stream_event(event_type: str, payload: Dict[str, Any]) -> Optional[StreamEvent]:
+        if event_type == "meta":
+            return StreamEvent(type="meta", data=StreamSaohuaMeta.from_dict(payload))
+        if event_type == "item":
+            return StreamEvent(type="item", data=StreamSaohuaItem.from_dict(payload))
+        if event_type == "done":
+            return StreamEvent(type="done", data=StreamSaohuaDone.from_dict(payload))
+        if event_type == "error":
+            return StreamEvent(type="error", data=StreamSaohuaError.from_dict(payload))
+        return None
+
+    @staticmethod
+    def _dispatch_stream_event(
+        event: StreamEvent,
+        on_meta: Optional[Callable[[StreamSaohuaMeta], None]] = None,
+        on_item: Optional[Callable[[StreamSaohuaItem], None]] = None,
+        on_done: Optional[Callable[[StreamSaohuaDone], None]] = None,
+        on_error: Optional[Callable[[StreamSaohuaError], None]] = None,
+    ) -> None:
+        if event.type == "meta" and on_meta:
+            on_meta(event.data)
+        elif event.type == "item" and on_item:
+            on_item(event.data)
+        elif event.type == "done" and on_done:
+            on_done(event.data)
+        elif event.type == "error" and on_error:
+            on_error(event.data)
+
+    def _build_ws_url(self, path: str, params: Optional[Dict[str, str]] = None) -> str:
+        base = self.base_url
+        if base.startswith("https://"):
+            ws_base = "wss://" + base[len("https://"):]
+        elif base.startswith("http://"):
+            ws_base = "ws://" + base[len("http://"):]
+        else:
+            ws_base = base
+        url = f"{ws_base}{path}"
+        if params:
+            url += f"?{urlencode(params)}"
+        return url
+
     # ── 健康检查 ─────────────────────────────────────────
 
     def health(self) -> HealthData:
@@ -229,6 +299,166 @@ class SaohuaClient:
         body: Dict[str, Any] = {"items": [item.to_dict() for item in items]}
         data = self._post("/api/saohua/batch", json_body=body)
         return BatchSaohuaResult.from_dict(data)
+
+    def iter_stream_saohua(
+        self,
+        commit_type: Optional[str] = None,
+        style: Optional[str] = None,
+        lang: Optional[str] = None,
+        count: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+    ) -> Iterator[StreamEvent]:
+        """通过 SSE 迭代消费流式骚话事件。"""
+        params = self._stream_params(commit_type, style, lang, count, interval_ms)
+        headers = {"Accept": "text/event-stream", **self._session.headers}
+
+        try:
+            resp = self._session.request(
+                "GET",
+                self._url("/api/saohua/stream"),
+                params=params,
+                headers=headers,
+                timeout=self.timeout,
+                stream=True,
+            )
+        except requests.exceptions.Timeout:
+            raise TimeoutError(f"SSE 请求超时 ({self.timeout}s): GET /api/saohua/stream")
+        except requests.exceptions.ConnectionError as exc:
+            raise NetworkError(f"SSE 网络连接失败: {exc}")
+        except requests.exceptions.RequestException as exc:
+            raise NetworkError(f"SSE 请求异常: {exc}")
+
+        if resp.status_code >= 400:
+            raise APIError(
+                f"SSE 连接失败: HTTP {resp.status_code}",
+                status_code=resp.status_code,
+                response_data={"raw": getattr(resp, "text", "")},
+            )
+
+        event_type: Optional[str] = None
+        data_lines: List[str] = []
+
+        try:
+            for raw_line in resp.iter_lines(decode_unicode=True):
+                line = raw_line or ""
+                if line == "":
+                    if event_type and data_lines:
+                        payload = json.loads("\n".join(data_lines))
+                        event = self._parse_stream_event(event_type, payload)
+                        if event:
+                            yield event
+                    event_type = None
+                    data_lines = []
+                    continue
+
+                if line.startswith("event:"):
+                    event_type = line[6:].strip()
+                elif line.startswith("data:"):
+                    data_lines.append(line[5:].strip())
+
+            if event_type and data_lines:
+                payload = json.loads("\n".join(data_lines))
+                event = self._parse_stream_event(event_type, payload)
+                if event:
+                    yield event
+        finally:
+            resp.close()
+
+    def stream_saohua(
+        self,
+        commit_type: Optional[str] = None,
+        style: Optional[str] = None,
+        lang: Optional[str] = None,
+        count: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+        on_meta: Optional[Callable[[StreamSaohuaMeta], None]] = None,
+        on_item: Optional[Callable[[StreamSaohuaItem], None]] = None,
+        on_done: Optional[Callable[[StreamSaohuaDone], None]] = None,
+        on_error: Optional[Callable[[StreamSaohuaError], None]] = None,
+    ) -> None:
+        """通过 SSE 消费流式骚话事件，并分发到回调。"""
+        for event in self.iter_stream_saohua(
+            commit_type=commit_type,
+            style=style,
+            lang=lang,
+            count=count,
+            interval_ms=interval_ms,
+        ):
+            self._dispatch_stream_event(event, on_meta, on_item, on_done, on_error)
+
+    def iter_stream_saohua_ws(
+        self,
+        commit_type: Optional[str] = None,
+        style: Optional[str] = None,
+        lang: Optional[str] = None,
+        count: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+    ) -> Iterator[StreamEvent]:
+        """通过 WebSocket 迭代消费流式骚话事件。"""
+        try:
+            import websocket
+        except ImportError as exc:
+            raise NetworkError("缺少 websocket-client 依赖，请先安装 websocket-client>=1.8.0") from exc
+
+        params = self._stream_params(commit_type, style, lang, count, interval_ms)
+        headers = []
+        for key, value in self._session.headers.items():
+            if value:
+                headers.append(f"{key}: {value}")
+
+        try:
+            ws = websocket.create_connection(
+                self._build_ws_url("/api/saohua/ws", params),
+                timeout=self.timeout,
+                header=headers,
+            )
+        except websocket.WebSocketTimeoutException:
+            raise TimeoutError(f"WebSocket 请求超时 ({self.timeout}s): GET /api/saohua/ws")
+        except Exception as exc:
+            raise NetworkError(f"WebSocket 连接失败: {exc}")
+
+        try:
+            while True:
+                try:
+                    raw_message = ws.recv()
+                except websocket.WebSocketTimeoutException:
+                    raise TimeoutError(f"WebSocket 读取超时 ({self.timeout}s)")
+                except websocket.WebSocketConnectionClosedException:
+                    break
+
+                if not raw_message:
+                    continue
+
+                packet = json.loads(raw_message)
+                event = self._parse_stream_event(packet.get("event", ""), packet.get("data", {}))
+                if event:
+                    yield event
+                    if event.type == "done":
+                        break
+        finally:
+            ws.close()
+
+    def stream_saohua_ws(
+        self,
+        commit_type: Optional[str] = None,
+        style: Optional[str] = None,
+        lang: Optional[str] = None,
+        count: Optional[int] = None,
+        interval_ms: Optional[int] = None,
+        on_meta: Optional[Callable[[StreamSaohuaMeta], None]] = None,
+        on_item: Optional[Callable[[StreamSaohuaItem], None]] = None,
+        on_done: Optional[Callable[[StreamSaohuaDone], None]] = None,
+        on_error: Optional[Callable[[StreamSaohuaError], None]] = None,
+    ) -> None:
+        """通过 WebSocket 消费流式骚话事件，并分发到回调。"""
+        for event in self.iter_stream_saohua_ws(
+            commit_type=commit_type,
+            style=style,
+            lang=lang,
+            count=count,
+            interval_ms=interval_ms,
+        ):
+            self._dispatch_stream_event(event, on_meta, on_item, on_done, on_error)
 
     def analyze_natural_language(
         self,

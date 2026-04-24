@@ -2,6 +2,8 @@
 
 import unittest
 from unittest.mock import patch, MagicMock
+import json
+import types
 
 from git_saohua import SaohuaClient, APIError, TimeoutError, NetworkError
 from git_saohua.models import SaohuaData, HealthData, TypesData, StylesData, StatsData, PluginsData, PluginResult
@@ -168,6 +170,98 @@ class TestSaohuaClient(unittest.TestCase):
         self.assertIsInstance(result, NaturalLanguageGenerateData)
         self.assertEqual(result.style, "love")
         self.assertEqual(result.full_message, "feat: 新功能也想和你贴贴")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_iter_stream_saohua(self, mock_req):
+        response = _mock_response({})
+        response.iter_lines.return_value = iter([
+            'event: meta',
+            'data: {"count":2,"interval":100,"language":"zh-CN","type":"fix"}',
+            '',
+            'event: item',
+            'data: {"type":"fix","style":"sao","message":"修好了","fullMessage":"fix: 修好了","language":"zh-CN","index":1}',
+            '',
+            'event: done',
+            'data: {"total":1}',
+            '',
+        ])
+        mock_req.return_value = response
+
+        events = list(self.client.iter_stream_saohua(commit_type="fix", count=2, interval_ms=100))
+        self.assertEqual([event.type for event in events], ["meta", "item", "done"])
+        self.assertEqual(events[0].data.count, 2)
+        self.assertEqual(events[1].data.full_message, "fix: 修好了")
+        self.assertEqual(events[2].data.total, 1)
+
+        call_args = mock_req.call_args
+        self.assertTrue(call_args.kwargs.get("stream"))
+        self.assertEqual(call_args.kwargs.get("params", {}).get("type"), "fix")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_stream_saohua_callbacks(self, mock_req):
+        response = _mock_response({})
+        response.iter_lines.return_value = iter([
+            'event: meta',
+            'data: {"count":1,"interval":50,"language":"zh-CN"}',
+            '',
+            'event: item',
+            'data: {"type":"feat","style":"love","message":"新功能","fullMessage":"feat: 新功能","language":"zh-CN","index":1}',
+            '',
+            'event: done',
+            'data: {"total":1}',
+            '',
+        ])
+        mock_req.return_value = response
+
+        seen = []
+        self.client.stream_saohua(
+            on_meta=lambda data: seen.append(("meta", data.count)),
+            on_item=lambda data: seen.append(("item", data.index)),
+            on_done=lambda data: seen.append(("done", data.total)),
+        )
+        self.assertEqual(seen, [("meta", 1), ("item", 1), ("done", 1)])
+
+    def test_iter_stream_saohua_ws(self):
+        ws = MagicMock()
+        ws.recv.side_effect = [
+            json.dumps({"event": "meta", "data": {"count": 2, "interval": 100, "language": "zh-CN"}}),
+            json.dumps({"event": "item", "data": {"type": "fix", "style": "sao", "message": "修复完成", "fullMessage": "fix: 修复完成", "language": "zh-CN", "index": 1}}),
+            json.dumps({"event": "done", "data": {"total": 1}}),
+        ]
+        fake_module = types.SimpleNamespace(
+            create_connection=MagicMock(return_value=ws),
+            WebSocketTimeoutException=type("WebSocketTimeoutException", (Exception,), {}),
+            WebSocketConnectionClosedException=type("WebSocketConnectionClosedException", (Exception,), {}),
+        )
+
+        with patch.dict("sys.modules", {"websocket": fake_module}):
+            events = list(self.client.iter_stream_saohua_ws(commit_type="fix", count=2))
+
+        self.assertEqual([event.type for event in events], ["meta", "item", "done"])
+        self.assertEqual(events[1].data.message, "修复完成")
+        self.assertEqual(fake_module.create_connection.call_args.args[0], "ws://test:3000/api/saohua/ws?type=fix&count=2")
+
+    def test_stream_saohua_ws_callbacks(self):
+        ws = MagicMock()
+        ws.recv.side_effect = [
+            json.dumps({"event": "meta", "data": {"count": 1, "interval": 50, "language": "zh-CN"}}),
+            json.dumps({"event": "error", "data": {"message": "bad", "index": 0}}),
+            json.dumps({"event": "done", "data": {"total": 0}}),
+        ]
+        fake_module = types.SimpleNamespace(
+            create_connection=MagicMock(return_value=ws),
+            WebSocketTimeoutException=type("WebSocketTimeoutException", (Exception,), {}),
+            WebSocketConnectionClosedException=type("WebSocketConnectionClosedException", (Exception,), {}),
+        )
+
+        seen = []
+        with patch.dict("sys.modules", {"websocket": fake_module}):
+            self.client.stream_saohua_ws(
+                on_meta=lambda data: seen.append(("meta", data.count)),
+                on_error=lambda data: seen.append(("error", data.message)),
+                on_done=lambda data: seen.append(("done", data.total)),
+            )
+        self.assertEqual(seen, [("meta", 1), ("error", "bad"), ("done", 0)])
 
     # ── list_types ───────────────────────────────────
 
