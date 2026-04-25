@@ -294,6 +294,7 @@ function showHelp() {
     console.log('  git-sao-hua init');
     console.log('  git-sao-hua plugin <list|inspect|create|install|remove>');
     console.log('  git-sao-hua release-notes [<range>] [--from <ref>] [--to <ref>] [--repo <owner/repo>] [--format markdown|json|github-release-json|github-release-manifest-json] [--enrich-github] [--sync-changelog] [--changelog <path>] [--asset <path>]');
+    console.log('  git-sao-hua github-release [<range>] --repo <owner/repo> [--tag <tag>] [--title <title>] [--github-token <token>] [--draft] [--prerelease] [--dry-run] [--update] [--asset <path>] [--sync-changelog]');
     console.log('');
     console.log(bold('选项:'));
     console.log('  ' + green('-t, --type <type>') + '      指定 commit 类型');
@@ -430,6 +431,12 @@ function showHelp() {
     console.log('  git-sao-hua batch --file items.json');
     console.log(dim('\n  # 批量生成并输出 JSON 格式'));
     console.log('  git-sao-hua batch --file items.json --format json');
+    console.log(dim('\n  # 创建 GitHub Release (dry-run)'));
+    console.log('  git-sao-hua github-release v1.0.0..HEAD --repo owner/repo --tag v1.0.0 --dry-run');
+    console.log(dim('\n  # 创建 GitHub Release 并上传资产'));
+    console.log('  git-sao-hua github-release --repo owner/repo --tag v1.0.0 --asset ./dist/app.zip');
+    console.log(dim('\n  # 更新已存在的 Release'));
+    console.log('  git-sao-hua github-release --repo owner/repo --tag v1.0.0 --update');
 }
 
 function showList() {
@@ -1210,56 +1217,195 @@ async function handleReleaseNotesCommand(args = []) {
         if (outputFile) {
             const outputPath = path.resolve(process.cwd(), outputFile);
             fs.writeFileSync(outputPath, output, 'utf8');
-            console.log(cyan('正在生成 Release Notes...'));
-            console.log(dim('  Git Range: ' + range));
-            console.log(dim('  Output Format: ' + format));
-            if (result.repo) {
-                console.log(dim('  Repository: ' + result.repo));
-            } else if (repo) {
-                console.log(dim('  Repository: ' + repo));
-            }
-            if (enrichGitHub || githubMetadata) {
-                console.log(dim('  GitHub Enrichment: enabled'));
-            }
-            if (collectedAssets.success && collectedAssets.assets.length > 0) {
-                console.log(dim('  Assets: ' + collectedAssets.assets.length + ' file(s)'));
-            }
             console.log(green('✓ Release Notes 已写入: ' + outputPath));
-            console.log(dim('  Commit 数量: ' + result.commits.length));
-            return;
-        }
-
-        if (format === 'json' || format === 'github-release-json' || format === 'github-release-manifest-json') {
-            process.stdout.write(output);
         } else {
-            console.log(cyan('正在生成 Release Notes...'));
-            console.log(dim('  Git Range: ' + range));
-            console.log(dim('  Output Format: ' + format));
-            if (result.repo) {
-                console.log(dim('  Repository: ' + result.repo));
-            } else if (repo) {
-                console.log(dim('  Repository: ' + repo));
+            if (format === 'markdown' && (enrichGitHub || githubMetadata)) {
+                process.stdout.write('> GitHub Enrichment: enabled\n');
             }
-            if (enrichGitHub || githubMetadata) {
-                console.log(dim('  GitHub Enrichment: enabled'));
+            if (format === 'markdown' && assetArgs.length > 0) {
+                process.stdout.write(`> Assets: ${collectedAssets.assets.length} file(s)\n`);
             }
-            if (collectedAssets.success && collectedAssets.assets.length > 0) {
-                console.log(dim('  Assets: ' + collectedAssets.assets.length + ' file(s)'));
-            }
-            console.log('');
-            process.stdout.write(output);
+            process.stdout.write(output + '\n');
         }
     } catch (e) {
-        console.log(red('✗ 生成失败: ' + e.message));
+        console.log(red('✗ Release Notes 生成失败: ' + e.message));
         process.exit(1);
     }
 }
 
-/**
- * 处理 plugin 子命令
- * @param {string} action - list/inspect/create/install/remove/search
- * @param {string[]} args - 额外参数
- */
+async function handleGitHubReleaseCommand(args = []) {
+    const getOptionValue = (flag) => {
+        const exactIndex = args.indexOf(flag);
+        if (exactIndex !== -1) {
+            return args[exactIndex + 1] || null;
+        }
+        const prefixed = args.find(arg => arg.startsWith(flag + '='));
+        return prefixed ? prefixed.slice(flag.length + 1) : null;
+    };
+
+    const positional = [];
+    const valueFlags = ['--from', '--to', '--title', '--repo', '--tag', '--target', '--body', '--github-token', '--changelog'];
+    const assetArgs = [];
+
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === '--asset') {
+            if (!args[i + 1] || args[i + 1].startsWith('-')) {
+                console.log(red('错误：--asset 需要提供文件路径'));
+                process.exit(1);
+            }
+            assetArgs.push(args[i + 1]);
+            i++;
+            continue;
+        }
+        if (arg.startsWith('--asset=')) {
+            assetArgs.push(arg.slice('--asset='.length));
+            continue;
+        }
+        if (valueFlags.includes(arg)) {
+            i++;
+            continue;
+        }
+        if (valueFlags.some(flag => arg.startsWith(flag + '='))) {
+            continue;
+        }
+        if (!arg.startsWith('-')) {
+            positional.push(arg);
+        }
+    }
+
+    const repo = getOptionValue('--repo');
+    const githubToken = getOptionValue('--github-token') || process.env.GITHUB_TOKEN || process.env.GIT_SAO_HUA_GITHUB_TOKEN || null;
+    const dryRun = args.includes('--dry-run');
+    const update = args.includes('--update');
+    const syncChangelog = args.includes('--sync-changelog');
+    const fromRef = getOptionValue('--from');
+    const toRef = getOptionValue('--to');
+    const title = getOptionValue('--title') || 'Release Notes';
+    const changelogPath = getOptionValue('--changelog') || 'CHANGELOG.md';
+    const range = positional[0] || (fromRef && toRef ? `${fromRef}..${toRef}` : null) || 'HEAD';
+
+    if (!repo) {
+        console.log(red('错误：需要指定 --repo <owner/repo>'));
+        console.log(dim('用法: git-sao-hua github-release [<range>] --repo <owner/repo> [--tag <tag>] [--title <title>] [--github-token <token>] [--draft] [--prerelease] [--dry-run] [--update] [--asset <path>] [--sync-changelog]'));
+        process.exit(1);
+    }
+
+    try {
+        const tagName = getOptionValue('--tag') || title;
+        const targetCommitish = getOptionValue('--target');
+        const result = await data.generateReleaseNotes(range, {
+            title,
+            tagName,
+            body: getOptionValue('--body') || '',
+            targetCommitish,
+            draft: args.includes('--draft'),
+            prerelease: args.includes('--prerelease'),
+            repoPath: process.cwd(),
+            repo
+        });
+
+        let collectedAssets = { success: true, assets: [] };
+        if (assetArgs.length > 0) {
+            collectedAssets = data.collectAssetMetadataBatch(assetArgs);
+            if (!collectedAssets.success) {
+                const assetErrorText = (collectedAssets.errors || [])
+                    .map(item => `${item.filePath}: ${item.error}`)
+                    .join('; ');
+                throw new Error(assetErrorText || collectedAssets.error || '资产文件收集失败');
+            }
+        }
+
+        const releasePayload = result.githubRelease;
+        const effectiveDryRun = dryRun || !githubToken;
+        const releaseResult = await data.createGitHubRelease(repo, releasePayload, {
+            token: githubToken,
+            fetchImpl: globalThis.fetch,
+            dryRun: effectiveDryRun,
+            update
+        });
+
+        if (!releaseResult.success) {
+            console.log(red('✗ Release 操作失败: ' + releaseResult.error));
+            if (releaseResult.existingRelease) {
+                console.log(dim('  现有 Release: ' + releaseResult.existingRelease.id));
+            }
+            process.exit(1);
+        }
+
+        console.log(cyan('正在生成 Release Notes...'));
+        console.log(dim('  Git Range: ' + range));
+        console.log(dim('  Repository: ' + repo));
+        console.log(dim('  Tag: ' + releasePayload.tag_name));
+        if (assetArgs.length > 0) {
+            console.log(dim('  Assets: ' + collectedAssets.assets.length + ' file(s)'));
+        }
+
+        if (releaseResult.dryRun) {
+            console.log('');
+            if (!githubToken && !dryRun) {
+                console.log(yellow('⚠ 未提供 GitHub Token，已自动切换为 dry-run 模式'));
+                console.log(dim('设置 GITHUB_TOKEN 环境变量或使用 --github-token <token>'));
+            } else {
+                console.log(yellow('💡 Dry-run 模式，未实际创建 Release'));
+            }
+            console.log('');
+            console.log(bold('====== Release Payload (dry-run) ======'));
+            console.log('');
+            process.stdout.write(JSON.stringify(releasePayload, null, 2) + '\n');
+            if (assetArgs.length > 0) {
+                console.log('');
+                console.log(bold('====== Assets (dry-run) ======'));
+                console.log('');
+                process.stdout.write(JSON.stringify(collectedAssets.assets, null, 2) + '\n');
+            }
+            return;
+        }
+
+        console.log(green('✓ Release ' + (update ? '更新' : '创建') + '成功'));
+        console.log(dim('  URL: ' + releaseResult.release.htmlUrl));
+
+        for (const asset of collectedAssets.assets) {
+            const uploadResult = await data.uploadReleaseAsset(releaseResult.release, asset, {
+                token: githubToken,
+                fetchImpl: globalThis.fetch
+            });
+
+            if (!uploadResult.success) {
+                console.log(red('✗ 上传资产失败: ' + asset.name + ' - ' + uploadResult.error));
+                process.exit(1);
+            }
+
+            console.log(green('  ✓ 上传资产: ' + asset.name));
+        }
+
+        if (syncChangelog) {
+            const syncResult = data.syncReleaseNotesToChangelog(result.markdown, {
+                changelogPath,
+                versionTitle: title,
+                repoPath: process.cwd()
+            });
+            if (!syncResult.success) {
+                console.log(red('✗ 同步 CHANGELOG 失败: ' + syncResult.error));
+                process.exit(1);
+            }
+            console.log(cyan('✓ CHANGELOG 已同步: ' + syncResult.path));
+        }
+
+        console.log('');
+        console.log(bold('====== Release 摘要 ======'));
+        console.log('');
+        console.log('  GitHub: ' + green(releaseResult.release.htmlUrl));
+        console.log('  Tag: ' + releaseResult.release.tagName);
+        console.log('  Draft: ' + (releaseResult.release.draft ? yellow('是') : green('否')));
+        console.log('  Pre-release: ' + (releaseResult.release.prerelease ? yellow('是') : green('否')));
+        console.log('');
+    } catch (e) {
+        console.log(red('✗ 操作失败: ' + e.message));
+        process.exit(1);
+    }
+}
+
 async function handlePluginCommand(action, args = []) {
     switch (action) {
         case 'list': {
@@ -1829,6 +1975,10 @@ async function main() {
     }
     if (args[0] === 'batch') {
         await handleBatchCommand(args.slice(1));
+        return;
+    }
+    if (args[0] === 'github-release') {
+        await handleGitHubReleaseCommand(args.slice(1));
         return;
     }
 

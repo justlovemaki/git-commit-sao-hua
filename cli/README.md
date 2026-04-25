@@ -169,6 +169,53 @@ git-sao-hua batch --file items.json
 git-sao-hua batch --file items.json --format json
 ```
 
+## GitHub Release 发布
+
+CLI 已支持基于 release-notes 直接发布 GitHub Release：
+
+```bash
+# Dry-run 模式预览 Release Payload（无需 Token）
+git-sao-hua github-release v1.0.0..HEAD --repo owner/repo --tag v1.0.0 --dry-run
+
+# 创建 Release 并自动生成 Release Notes
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --title "Release 1.0.0"
+
+# 创建 Release 并上传资产文件
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --asset ./dist/app.zip
+
+# 上传多个资产文件
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --asset ./dist/app.zip --asset ./dist/data.tar.gz
+
+# 更新已存在的 Release（幂等支持）
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --update
+
+# 创建 Pre-release 或 Draft
+git-sao-hua github-release --repo owner/repo --tag v1.0.0-beta --prerelease
+git-sao-hua github-release --repo owner/repo --tag v1.0.0-draft --draft
+
+# 创建 Release 并同步更新 CHANGELOG
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --sync-changelog
+
+# 指定 Git Token（也可通过 GITHUB_TOKEN 环境变量）
+git-sao-hua github-release --repo owner/repo --tag v1.0.0 --github-token $GITHUB_TOKEN
+```
+
+参数说明：
+
+| 参数 | 说明 |
+|------|------|
+| `<range>` | Git 范围，如 `v1.0.0..HEAD`，默认为 `HEAD` |
+| `--repo` | 必须，GitHub 仓库，如 `owner/repo` |
+| `--tag` | Release tag，默认为 title 值 |
+| `--title` | Release 标题 |
+| `--github-token` | GitHub Personal Access Token（可选，环境变量 `GITHUB_TOKEN`） |
+| `--draft` | 创建 Draft Release |
+| `--prerelease` | 创建 Pre-release |
+| `--dry-run` | Dry-run 模式，只生成 Payload 不实际请求 API |
+| `--update` | 更新已存在的 Release（覆盖同名资产） |
+| `--asset <path>` | 上传资产文件，可多次指定 |
+| `--sync-changelog` | 创建 Release 后同步更新 CHANGELOG.md |
+
 JSON 文件格式：
 
 ```json
