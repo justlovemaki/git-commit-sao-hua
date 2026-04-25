@@ -1,0 +1,29 @@
+{
+  "name": "git-sao-hua-mcp",
+  "version": "1.40.0",
+  "description": "MCP server for git-sao-hua, exposing saohua generation tools to AI agents",
+  "main": "server.js",
+  "bin": {
+    "git-sao-hua-mcp": "./server.js"
+  },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "git",
+    "commit",
+    "sao-hua",
+    "mcp",
+    "model-context-protocol",
+    "ai-agent"
+  ],
+  "author": "coding-expert",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justlovemaki/git-commit-sao-hua"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

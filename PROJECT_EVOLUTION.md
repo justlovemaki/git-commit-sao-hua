@@ -47,6 +47,7 @@
 - ✅ **SSE 实时流式骚话推送** 已完成，REST API 新增 `GET /api/saohua/stream`，支持 `type/style/lang/count/intervalMs` 参数并以 `meta/item/done/error` 事件持续输出候选；JavaScript / TypeScript SDK 同步新增 `streamSaohua()` 消费入口，平台从“单次请求式返回结果”继续前进到“可被终端、机器人、前端实时消费的流式集成能力”
 - ✅ **WebSocket 实时流式骚话推送** 已完成，REST API 新增 `ws://.../api/saohua/ws`，消息结构与 SSE 对齐为 `{ event, data }`，支持 `meta/item/done/error` 事件；JavaScript / TypeScript SDK 同步新增 `streamSaohuaWs()`，平台从“仅能单向 SSE 推送”继续前进到“可被机器人、终端 UI、浏览器长连接更稳定消费的双协议实时集成能力”
 - ✅ **插件发布交付包 / Submission Kit** 已完成，CLI 新增 `plugin release-kit`，核心库可一次性生成 `metadata.json`、`index-entry.json` 与 `submission.md`，插件生态从“作者能本地校验和打包”继续前进到“作者可直接产出上架交付物、降低提交官方/自建索引的操作摩擦”
+- ✅ **MCP Server / Agent 集成入口** 已完成，新增 `mcp-server/` 轻量子系统，通过 stdio + JSON-RPC 暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 等工具，平台从“人和 SDK 调用 API/CLI”继续前进到“AI Agent 可通过 Model Context Protocol 直接把骚话能力接进工作流”
 
 ---
 
@@ -85,7 +86,8 @@
 | **JavaScript / TypeScript SDK** | ✅ 完成 | 原生 TS 客户端，覆盖主要 REST API 端点，支持 API Key / Bearer Token / timeout / 自定义 headers，并补齐 `batchSaohua(items[])` 与自然语言分析/生成方法 |
 | **JavaScript / TypeScript SDK 流式消费** | ✅ 完成 | 新增 `streamSaohua()`，可直接消费 API SSE 流并通过回调接收 `meta/item/done/error` 事件 |
 | **SDK 发布流水线** | ✅ 完成 | Python SDK 多版本 CI + PyPI/TestPyPI 发布骨架，Go SDK 多版本 CI + tag 驱动 Draft Release，JS SDK Node 多版本 CI + npm 发布骨架 |
-| **自动化测试** | ✅ 完善 | lib/ 140+ 用例 + API 自然语言端点覆盖 + Python / JS SDK 自然语言客户端测试 + CLI 测试，工作流已覆盖全端 |
+| **MCP Server / Agent 工具入口** | ✅ 完成 | 新增 `mcp-server/server.js`，通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，让 Claude Desktop / Cursor / OpenAI Agents 等 MCP 客户端可直接调用骚话生成、批量生成、自然语言生成与类型/风格查询 |
+| **自动化测试** | ✅ 完善 | lib/ 140+ 用例 + API 自然语言端点覆盖 + Python / JS SDK 自然语言客户端测试 + CLI 测试 + MCP server 端到端协议测试，工作流已覆盖全端 |
 | **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 + SDK 发布流程 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
 | **API 认证机制** | ✅ 完成 | 支持 API Key + Bearer Token 双认证，保护插件管理写入端点 |
@@ -160,6 +162,7 @@
 10. **插件发布仍缺少真正自动上架** — 当前已补齐插件作者本地校验、摘要、签名、索引元数据与 submission kit 生成，但尚未覆盖官方索引自动提交、Release 资产自动上传与公钥托管治理
 11. **Release 资产外部索引联动仍缺失** — 当前已支持 GitHub PR labels/author 富化、GitHub Release payload、CHANGELOG 自动回写、release asset manifest，以及直接执行 GitHub Release 创建/更新与本地资产上传，但尚未打通 release asset / changelog / 外部索引的全链路联动，也缺少自动覆盖同名资产的发布策略治理
 12. **多语言 SDK 长连接能力刚完成对齐，仍缺生产级验收** — 当前 Python / Go SDK 已补齐 SSE 与 WebSocket 实时流式消费接口，但仍需在真实部署环境中验证断线重连、代理/负载均衡、超时配置与发布链路表现
+13. **MCP Server 仍是最小可用形态** — 当前已支持 stdio + JSON-RPC 的工具调用，但尚未覆盖 MCP resources/prompts、OAuth/API 认证透传、SSE transport 与更细粒度的工具输出 schema
 
 ---
 
@@ -191,6 +194,7 @@
 - ✅ **SSE 实时流式骚话推送** — 已补齐 `GET /api/saohua/stream`，支持按类型/风格/语言/数量/间隔流式输出骚话候选，并在 JavaScript / TypeScript SDK 中同步开放 `streamSaohua()`，让前端、终端和机器人可直接消费实时候选流
 - ✅ **WebSocket 实时流式骚话推送** — 已补齐 `ws://.../api/saohua/ws`，输出与 SSE 对齐的 `meta/item/done/error` JSON 消息，并在 JavaScript / TypeScript SDK 中同步开放 `streamSaohuaWs()`，让机器人、终端 UI 与浏览器长连接场景可用统一实时协议消费骚话候选
 - ✅ **插件发布交付包 / Submission Kit** — 已补齐 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性输出 `*.metadata.json`、`*.index-entry.json` 与 `*.submission.md`，并内置校验和、签名字段、索引条目与提交清单，插件生态从“作者只能手工拼装上架材料”继续前进到“作者可直接产出标准交付包、显著降低上架索引的摩擦”
+- ✅ **MCP Server / Agent 集成入口** — 已补齐 `mcp-server/server.js` 与 `mcp-server/test.js`，通过 stdio + JSON-RPC 暴露骚话生成、批量生成、自然语言生成与类型/风格查询工具，让支持 MCP 的 AI Agent 可直接把 git-sao-hua 接进自动化工作流
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -213,9 +217,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-25 🔧 中迭代 | GitHub Release 直连发布 — 在 `lib/release-notes.js` 新增 `createGitHubRelease()` / `uploadReleaseAsset()` / `deleteExistingAsset()`，并在 `lib/index.js` 对外导出；CLI 新增 `git-sao-hua github-release` 子命令，支持 dry-run、创建或更新 GitHub Release、上传本地资产，以及可选同步 `CHANGELOG`；同步补齐 lib/cli 测试与 `cli/README.md`。项目从“只能产出 release payload / asset manifest 交给外部流水线处理”继续前进到“工具本身可直接执行 GitHub Release 发布”的发布治理状态 | Stage 5 不变（发布治理执行能力增强） |
-| -1 | 2026-04-24 🔧 中迭代 | Python / Go SDK 实时流式对齐 — 为 Python SDK 新增 SSE / WebSocket 流式事件模型与 `iter_/callback` 双消费接口，为 Go SDK 新增 `handler + channel` 两套 SSE / WebSocket 消费接口，并补齐对应测试与多语言 README 示例；项目从“API 已有实时能力、但多语言接入不均衡”继续前进到“Python / Go / JS 三语言生态都能直接消费实时骚话流” | Stage 5 不变（多语言生态能力对齐） |
-| -2 | 2026-04-24 🚀 大演进 | WebSocket 实时流式骚话推送 — 在 `api/server.js` 新增 `attachSaohuaWebSocket()` 与 `ws://.../api/saohua/ws`，复用与 SSE 对齐的流式生成核心，支持 `type/style/lang/count/intervalMs` 查询参数，并在连接建立后持续输出 `{ event, data }` 结构的 `meta/item/done/error` 消息；同步补齐 `api/test.js` WebSocket 测试、Swagger/API 文档、根 README，以及 JavaScript / TypeScript SDK `streamSaohuaWs()` 与测试。项目从“只有 SSE 单向实时推送”继续前进到“具备 SSE + WebSocket 双协议实时集成能力，可更好服务机器人、终端 UI 与长连接消费场景” | Stage 5 不变（平台实时协议能力增强） |
-| -3 | 2026-04-23 🔧 中迭代 | GitHub Release Asset Manifest — 在 `lib/release-notes.js` 新增本地发布资产元数据采集、`sha256` 计算、`contentType` 推断与 `buildGitHubReleaseManifest()`；CLI `release-notes` 新增 `--format github-release-manifest-json` 与可重复 `--asset <path>`，可直接输出 `githubRelease + assets(name/path/size/sha256/contentType)` 清单，并在资产缺失时显式报错；同步补齐 lib/cli 测试与 README，项目从“能产出 release notes / GitHub Release payload / CHANGELOG”继续前进到“能把本地构建产物稳定接入发布流水线”的发布治理状态 | Stage 5 不变（发布治理与交付链路能力增强） |
-| -4 | 2026-04-23 🔧 中迭代 | CHANGELOG 自动回写联动 — 在 `lib/release-notes.js` 新增 `syncReleaseNotesToChangelog()`，统一把 Release Notes 规范化为 changelog 章节；CLI `release-notes` 新增 `--sync-changelog` 与 `--changelog <path>`，可在生成发布说明后直接创建或更新 `CHANGELOG.md/HISTORY.md`，遇到已存在版本章节时执行替换去重；同步补齐 lib/cli 测试与 README，项目从“能产出 release notes / GitHub Release payload”继续前进到“能把发布叙事稳定沉淀回 changelog 资产”的发布治理状态 | Stage 5 不变（发布治理与版本资产沉淀能力增强） |
-| -5 | 2026-04-22 🔧 中迭代 | Release Notes GitHub 元数据富化 — 在 `lib/release-notes.js` 新增 `fetchGitHubMetadata()`、`generateReleaseNotesWithGitHub()` 与 commit 级 GitHub 信息映射，CLI `release-notes` 新增 `--enrich-github`、`--github-token`、`--github-metadata-file`，让 Markdown / JSON / GitHub Release payload 都能补充 PR labels、作者与顶部汇总信息；同步补齐 lib/cli 测试与 README，项目从“静态 git log 摘要”继续前进到“带 GitHub PR 语义上下文的发布说明生成” | Stage 5 不变（发布运营能力增强） |
+| 最新 | 2026-04-25 🚀 大演进 | MCP Server / Agent 集成入口 — 新增 `mcp-server/server.js` 与 `mcp-server/package.json`，不依赖第三方 MCP SDK，直接通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，并暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 工具；同步补齐 `mcp-server/test.js` 端到端协议测试与根 README 文档。项目从“人类用户或 SDK 通过 CLI/API 接入”继续前进到“AI Agent 可通过 MCP 原生接入骚话能力”的新生态状态 | Stage 5 不变（平台生态入口扩展） |
+| -1 | 2026-04-25 🔧 中迭代 | GitHub Release 直连发布 — 在 `lib/release-notes.js` 新增 `createGitHubRelease()` / `uploadReleaseAsset()` / `deleteExistingAsset()`，并在 `lib/index.js` 对外导出；CLI 新增 `git-sao-hua github-release` 子命令，支持 dry-run、创建或更新 GitHub Release、上传本地资产，以及可选同步 `CHANGELOG`；同步补齐 lib/cli 测试与 `cli/README.md`。项目从“只能产出 release payload / asset manifest 交给外部流水线处理”继续前进到“工具本身可直接执行 GitHub Release 发布”的发布治理状态 | Stage 5 不变（发布治理执行能力增强） |
+| -2 | 2026-04-24 🔧 中迭代 | Python / Go SDK 实时流式对齐 — 为 Python SDK 新增 SSE / WebSocket 流式事件模型与 `iter_/callback` 双消费接口，为 Go SDK 新增 `handler + channel` 两套 SSE / WebSocket 消费接口，并补齐对应测试与多语言 README 示例；项目从“API 已有实时能力、但多语言接入不均衡”继续前进到“Python / Go / JS 三语言生态都能直接消费实时骚话流” | Stage 5 不变（多语言生态能力对齐） |
+| -3 | 2026-04-24 🚀 大演进 | WebSocket 实时流式骚话推送 — 在 `api/server.js` 新增 `attachSaohuaWebSocket()` 与 `ws://.../api/saohua/ws`，复用与 SSE 对齐的流式生成核心，支持 `type/style/lang/count/intervalMs` 查询参数，并在连接建立后持续输出 `{ event, data }` 结构的 `meta/item/done/error` 消息；同步补齐 `api/test.js` WebSocket 测试、Swagger/API 文档、根 README，以及 JavaScript / TypeScript SDK `streamSaohuaWs()` 与测试。项目从“只有 SSE 单向实时推送”继续前进到“具备 SSE + WebSocket 双协议实时集成能力，可更好服务机器人、终端 UI 与长连接消费场景” | Stage 5 不变（平台实时协议能力增强） |
+| -4 | 2026-04-23 🔧 中迭代 | GitHub Release Asset Manifest — 在 `lib/release-notes.js` 新增本地发布资产元数据采集、`sha256` 计算、`contentType` 推断与 `buildGitHubReleaseManifest()`；CLI `release-notes` 新增 `--format github-release-manifest-json` 与可重复 `--asset <path>`，可直接输出 `githubRelease + assets(name/path/size/sha256/contentType)` 清单，并在资产缺失时显式报错；同步补齐 lib/cli 测试与 README，项目从“能产出 release notes / GitHub Release payload / CHANGELOG”继续前进到“能把本地构建产物稳定接入发布流水线”的发布治理状态 | Stage 5 不变（发布治理与交付链路能力增强） |
+| -5 | 2026-04-23 🔧 中迭代 | CHANGELOG 自动回写联动 — 在 `lib/release-notes.js` 新增 `syncReleaseNotesToChangelog()`，统一把 Release Notes 规范化为 changelog 章节；CLI `release-notes` 新增 `--sync-changelog` 与 `--changelog <path>`，可在生成发布说明后直接创建或更新 `CHANGELOG.md/HISTORY.md`，遇到已存在版本章节时执行替换去重；同步补齐 lib/cli 测试与 README，项目从“能产出 release notes / GitHub Release payload”继续前进到“能把发布叙事稳定沉淀回 changelog 资产”的发布治理状态 | Stage 5 不变（发布治理与版本资产沉淀能力增强） |

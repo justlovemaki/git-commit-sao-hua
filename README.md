@@ -801,6 +801,48 @@ curl -N 'http://localhost:3000/api/saohua/stream?type=fix&count=3&intervalMs=100
 - `sdk/python/README.md`
 - `sdk/go/README.md`
 
+## 🤖 MCP Server（v1.40.0 新增 🚀）
+
+项目现已新增轻量 MCP Server，可让 Claude Desktop、Cursor、Cherry Studio、OpenAI Agents 等支持 Model Context Protocol 的 AI Agent 直接调用骚话生成能力。
+
+### 启动方式
+
+```bash
+cd mcp-server
+node server.js
+```
+
+或通过包脚本测试：
+
+```bash
+cd mcp-server
+npm test
+```
+
+### 已开放工具
+
+- `generate_saohua` - 生成单条骚话提交信息，支持 `type/style/language/description`
+- `batch_generate_saohua` - 批量生成骚话，复用核心库批量能力
+- `generate_from_natural_language` - 根据自然语言描述直接生成 commit message
+- `list_taxonomy` - 列出支持的 commit types 与 styles
+
+### Claude Desktop 配置示例
+
+```json
+{
+  "mcpServers": {
+    "git-sao-hua": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/git-commit-sao-hua/mcp-server/server.js"
+      ]
+    }
+  }
+}
+```
+
+这个 MCP Server 不依赖额外第三方 MCP SDK，直接通过 stdio + JSON-RPC 处理 `initialize`、`tools/list`、`tools/call`，方便在受限环境里集成。
+
 ## 🌐 部署
 
 ### GitHub Pages
