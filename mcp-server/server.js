@@ -76,6 +76,54 @@ const TOOL_DEFS = [
     }
 ];
 
+const RESOURCE_DEFS = [
+    {
+        uri: 'git-sao-hua://info/server',
+        name: 'Server Info',
+        description: 'Basic metadata and capability summary for the git-sao-hua MCP server',
+        mimeType: 'application/json'
+    },
+    {
+        uri: 'git-sao-hua://taxonomy/commits',
+        name: 'Commit Taxonomy',
+        description: 'List of supported commit types (feat, fix, chore, docs, etc.) with descriptions',
+        mimeType: 'application/json'
+    },
+    {
+        uri: 'git-sao-hua://taxonomy/styles',
+        name: 'Style Taxonomy',
+        description: 'List of supported saohua styles (love, sao, zha, chu, fo) with descriptions',
+        mimeType: 'application/json'
+    },
+    {
+        uri: 'git-sao-hua://info/usage',
+        name: 'Server Usage Guide',
+        description: 'Usage guide for git-sao-hua MCP server including available tools, resources, and prompts',
+        mimeType: 'text/markdown'
+    }
+];
+
+const PROMPT_DEFS = [
+    {
+        name: 'generate_from_natural_language',
+        description: 'Generate a git commit message from natural language description',
+        arguments: [
+            { name: 'text', description: 'Natural language description of the change', required: true },
+            { name: 'language', description: 'Language (zh-CN or en)', required: false },
+            { name: 'type', description: 'Optional forced commit type', required: false },
+            { name: 'style', description: 'Optional forced saohua style', required: false }
+        ]
+    },
+    {
+        name: 'generate_from_diff',
+        description: 'Generate candidate commit messages by analyzing a git diff',
+        arguments: [
+            { name: 'diff', description: 'Git diff content', required: true },
+            { name: 'language', description: 'Language (zh-CN or en)', required: false }
+        ]
+    }
+];
+
 class McpServer {
     constructor({ input = process.stdin, output = process.stdout, error = process.stderr } = {}) {
         this.input = input;
@@ -166,7 +214,9 @@ class McpServer {
                 return {
                     protocolVersion: '2024-11-05',
                     capabilities: {
-                        tools: {}
+                        tools: {},
+                        resources: {},
+                        prompts: {}
                     },
                     serverInfo: SERVER_INFO
                 };
@@ -180,6 +230,18 @@ class McpServer {
             case 'tools/call':
                 this.assertInitialized();
                 return await this.callTool(params);
+            case 'resources/list':
+                this.assertInitialized();
+                return { resources: RESOURCE_DEFS };
+            case 'resources/read':
+                this.assertInitialized();
+                return await this.readResource(params);
+            case 'prompts/list':
+                this.assertInitialized();
+                return { prompts: PROMPT_DEFS };
+            case 'prompts/get':
+                this.assertInitialized();
+                return await this.getPrompt(params);
             default:
                 throw this.createError(-32601, `Method not found: ${method}`);
         }
@@ -302,6 +364,186 @@ class McpServer {
         };
     }
 
+    async readResource(params = {}) {
+        const uri = params && params.uri;
+        if (!uri) {
+            throw this.createError(-32602, 'uri is required');
+        }
+
+        let content;
+        let mimeType = 'text/plain';
+
+        if (uri === 'git-sao-hua://info/server') {
+            content = JSON.stringify({
+                serverInfo: SERVER_INFO,
+                protocolVersion: '2024-11-05',
+                capabilities: {
+                    tools: TOOL_DEFS.map(tool => tool.name),
+                    resources: RESOURCE_DEFS.map(resource => resource.uri),
+                    prompts: PROMPT_DEFS.map(prompt => prompt.name)
+                },
+                supportedLanguages: core.getSupportedLanguages ? core.getSupportedLanguages() : [core.defaultLanguage]
+            }, null, 2);
+            mimeType = 'application/json';
+        } else if (uri === 'git-sao-hua://taxonomy/commits') {
+            const zhTypes = core.getAllTypes('zh-CN').map(type => ({
+                value: type,
+                ...core.getTypeInfo(type, 'zh-CN')
+            }));
+            const enTypes = core.getAllTypes('en').map(type => ({
+                value: type,
+                ...core.getTypeInfo(type, 'en')
+            }));
+            content = JSON.stringify({ 'zh-CN': zhTypes, en: enTypes }, null, 2);
+            mimeType = 'application/json';
+        } else if (uri === 'git-sao-hua://taxonomy/styles') {
+            const zhStyles = core.getAllStyles('zh-CN').map(style => ({
+                value: style,
+                ...core.getStyleInfo(style, 'zh-CN')
+            }));
+            const enStyles = core.getAllStyles('en').map(style => ({
+                value: style,
+                ...core.getStyleInfo(style, 'en')
+            }));
+            content = JSON.stringify({ 'zh-CN': zhStyles, en: enStyles }, null, 2);
+            mimeType = 'application/json';
+        } else if (uri === 'git-sao-hua://info/usage') {
+            content = `# Git Saohua MCP Server
+
+## Available Tools
+
+- \`generate_saohua\` - Generate a single commit saohua message
+- \`batch_generate_saohua\` - Batch generate saohua messages
+- \`generate_from_natural_language\` - Generate from natural language
+- \`list_taxonomy\` - List commit types and styles
+
+## Available Resources
+
+- \`git-sao-hua://info/server\` - Server metadata and capabilities
+- \`git-sao-hua://taxonomy/commits\` - Commit type taxonomy
+- \`git-sao-hua://taxonomy/styles\` - Style taxonomy  
+- \`git-sao-hua://info/usage\` - This usage guide
+
+## Available Prompts
+
+- \`generate_from_natural_language\` - Generate commit from description
+- \`generate_from_diff\` - Generate commit from git diff
+
+## Language Support
+
+Supported languages: zh-CN, en
+`;
+            mimeType = 'text/markdown';
+        } else {
+            throw this.createError(-32602, `Unknown resource: ${uri}`);
+        }
+
+        return {
+            contents: [{
+                uri,
+                mimeType,
+                text: content
+            }]
+        };
+    }
+
+    async getPrompt(params = {}) {
+        const name = params && params.name;
+        const arguments_ = (params && params.arguments) || {};
+
+        if (!name) {
+            throw this.createError(-32602, 'prompt name is required');
+        }
+
+        let prompt;
+        if (name === 'generate_from_natural_language') {
+            const text = arguments_.text;
+            if (!text) {
+                throw this.createError(-32602, 'text argument is required');
+            }
+            const language = this.normalizeLanguage(arguments_.language);
+            const result = core.generateCommitFromNaturalLanguage(text, {
+                language,
+                type: arguments_.type,
+                style: arguments_.style
+            });
+            prompt = {
+                description: 'Turn a natural-language change summary into a ready-to-use commit message.',
+                messages: [
+                    {
+                        role: 'user',
+                        content: {
+                            type: 'text',
+                            text: [
+                                'Please write one git commit message for the following change summary.',
+                                `Language: ${language}`,
+                                arguments_.type ? `Preferred type: ${arguments_.type}` : 'Preferred type: auto-detect',
+                                arguments_.style ? `Preferred style: ${arguments_.style}` : 'Preferred style: auto-detect',
+                                '',
+                                'Change summary:',
+                                text
+                            ].join('\n')
+                        }
+                    },
+                    {
+                        role: 'assistant',
+                        content: {
+                            type: 'text',
+                            text: [
+                                `Suggested commit: ${result.fullMessage}`,
+                                `Detected type: ${result.type}`,
+                                `Detected style: ${result.style}`
+                            ].join('\n')
+                        }
+                    }
+                ]
+            };
+        } else if (name === 'generate_from_diff') {
+            const diff = arguments_.diff;
+            if (!diff) {
+                throw this.createError(-32602, 'diff argument is required');
+            }
+            const language = this.normalizeLanguage(arguments_.language);
+            const analysis = core.analyzeDiff(diff);
+            const result = core.generateFallback(diff, analysis, language, arguments_.style || 'sao');
+            prompt = {
+                description: 'Summarize a git diff and propose a commit message candidate.',
+                messages: [
+                    {
+                        role: 'user',
+                        content: {
+                            type: 'text',
+                            text: [
+                                'Analyze this git diff and write one concise commit message.',
+                                `Language: ${language}`,
+                                `Preferred style: ${arguments_.style || 'sao'}`,
+                                '',
+                                'Diff:',
+                                diff
+                            ].join('\n')
+                        }
+                    },
+                    {
+                        role: 'assistant',
+                        content: {
+                            type: 'text',
+                            text: [
+                                `Suggested commit: ${result.message}`,
+                                `Detected type: ${result.type}`,
+                                `Changed files: ${(analysis.changedFiles || []).join(', ') || 'unknown'}`,
+                                `Detected features: ${(analysis.detectedFeatures || []).join(', ') || 'none'}`
+                            ].join('\n')
+                        }
+                    }
+                ]
+            };
+        } else {
+            throw this.createError(-32602, `Unknown prompt: ${name}`);
+        }
+
+        return { prompt };
+    }
+
     sendResponse(id, result) {
         this.write({ jsonrpc: '2.0', id, result });
     }
@@ -342,5 +584,7 @@ if (require.main === module) {
 module.exports = {
     McpServer,
     TOOL_DEFS,
+    RESOURCE_DEFS,
+    PROMPT_DEFS,
     SERVER_INFO
 };

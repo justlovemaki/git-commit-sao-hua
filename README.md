@@ -826,6 +826,18 @@ npm test
 - `generate_from_natural_language` - 根据自然语言描述直接生成 commit message
 - `list_taxonomy` - 列出支持的 commit types 与 styles
 
+### 已开放资源（Resources）
+
+- `git-sao-hua://info/server` - 返回 MCP Server 元信息、能力清单与支持语言
+- `git-sao-hua://taxonomy/commits` - 返回中英双语 commit type taxonomy
+- `git-sao-hua://taxonomy/styles` - 返回中英双语骚话风格 taxonomy
+- `git-sao-hua://info/usage` - 返回 MCP 使用说明，方便 Agent 在会话内自助发现能力
+
+### 已开放提示模板（Prompts）
+
+- `generate_from_natural_language` - 把自然语言需求整理成一条可直接使用的 commit message 建议
+- `generate_from_diff` - 根据 git diff 生成 commit message 候选，并附带变更分析摘要
+
 ### Claude Desktop 配置示例
 
 ```json
@@ -841,7 +853,7 @@ npm test
 }
 ```
 
-这个 MCP Server 不依赖额外第三方 MCP SDK，直接通过 stdio + JSON-RPC 处理 `initialize`、`tools/list`、`tools/call`，方便在受限环境里集成。
+这个 MCP Server 不依赖额外第三方 MCP SDK，直接通过 stdio + JSON-RPC 处理 `initialize`、`tools/list`、`tools/call`、`resources/list`、`resources/read`、`prompts/list`、`prompts/get`，方便在受限环境里集成。
 
 ## 🌐 部署
 

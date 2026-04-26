@@ -76,6 +76,9 @@ function createClient() {
         });
         assert.ok(init.result, 'initialize should return result');
         assert.strictEqual(init.result.serverInfo.name, 'git-sao-hua-mcp');
+        assert.ok(init.result.capabilities.tools, 'initialize should declare tools capability');
+        assert.ok(init.result.capabilities.resources, 'initialize should declare resources capability');
+        assert.ok(init.result.capabilities.prompts, 'initialize should declare prompts capability');
         client.notify('notifications/initialized', {});
 
         const toolList = await client.request('tools/list', {});
@@ -129,6 +132,70 @@ function createClient() {
         });
         assert.ok(unknown.error, 'unknown tool should return error');
         assert.strictEqual(unknown.error.code, -32602);
+
+        const resources = await client.request('resources/list', {});
+        assert.ok(Array.isArray(resources.result.resources), 'resources/list should return resources array');
+        assert.ok(resources.result.resources.some(r => r.uri === 'git-sao-hua://info/server'));
+        assert.ok(resources.result.resources.some(r => r.uri === 'git-sao-hua://taxonomy/commits'));
+        assert.ok(resources.result.resources.some(r => r.uri === 'git-sao-hua://info/usage'));
+
+        const serverInfo = await client.request('resources/read', {
+            uri: 'git-sao-hua://info/server'
+        });
+        const serverPayload = JSON.parse(serverInfo.result.contents[0].text);
+        assert.strictEqual(serverPayload.serverInfo.name, 'git-sao-hua-mcp');
+        assert.ok(serverPayload.capabilities.prompts.includes('generate_from_diff'));
+
+        const commitTaxonomy = await client.request('resources/read', {
+            uri: 'git-sao-hua://taxonomy/commits'
+        });
+        assert.ok(commitTaxonomy.result.contents, 'resources/read should return contents');
+        const commitData = JSON.parse(commitTaxonomy.result.contents[0].text);
+        assert.ok(Array.isArray(commitData['zh-CN']), 'commit taxonomy should have zh-CN types');
+
+        const usageGuide = await client.request('resources/read', {
+            uri: 'git-sao-hua://info/usage'
+        });
+        assert.ok(usageGuide.result.contents[0].text.includes('Git Saohua MCP Server'));
+
+        const styleTaxonomy = await client.request('resources/read', {
+            uri: 'git-sao-hua://taxonomy/styles'
+        });
+        const styleData = JSON.parse(styleTaxonomy.result.contents[0].text);
+        assert.ok(Array.isArray(styleData['zh-CN']), 'style taxonomy should have zh-CN styles');
+
+        const invalidResource = await client.request('resources/read', {
+            uri: 'git-sao-hua://not/exist'
+        });
+        assert.ok(invalidResource.error, 'invalid resource should return error');
+
+        const prompts = await client.request('prompts/list', {});
+        assert.ok(Array.isArray(prompts.result.prompts), 'prompts/list should return prompts array');
+        assert.ok(prompts.result.prompts.some(p => p.name === 'generate_from_natural_language'));
+        assert.ok(prompts.result.prompts.some(p => p.name === 'generate_from_diff'));
+
+        const promptNl = await client.request('prompts/get', {
+            name: 'generate_from_natural_language',
+            arguments: { text: 'add login feature', language: 'en' }
+        });
+        assert.ok(promptNl.result.prompt, 'prompts/get should return prompt');
+        assert.ok(Array.isArray(promptNl.result.prompt.messages));
+        assert.ok(promptNl.result.prompt.description.includes('natural-language'));
+        assert.ok(promptNl.result.prompt.messages[1].content.text.includes('Suggested commit:'));
+
+        const promptDiff = await client.request('prompts/get', {
+            name: 'generate_from_diff',
+            arguments: { diff: 'diff --git a/a.js b/a.js\n+console.log("hello")', language: 'zh-CN' }
+        });
+        assert.ok(promptDiff.result.prompt, 'generate_from_diff prompt should return result');
+        assert.ok(promptDiff.result.prompt.description.includes('git diff'));
+        assert.ok(promptDiff.result.prompt.messages[1].content.text.includes('Suggested commit:'));
+
+        const invalidPrompt = await client.request('prompts/get', {
+            name: 'not_exists',
+            arguments: {}
+        });
+        assert.ok(invalidPrompt.error, 'invalid prompt should return error');
 
         console.log('✅ MCP server tests passed');
     } finally {
