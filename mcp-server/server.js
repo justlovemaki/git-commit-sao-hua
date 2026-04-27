@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const http = require('http');
 const core = require('../lib/index.js');
 
 const SERVER_INFO = {
@@ -188,23 +189,34 @@ class McpServer {
             return;
         }
 
+        const response = await this.handleJsonRpcMessage(message);
+        if (response) {
+            this.write(response);
+        }
+    }
+
+    async handleJsonRpcMessage(message) {
         if (!message || message.jsonrpc !== '2.0' || typeof message.method !== 'string') {
-            this.sendError(message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : null, -32600, 'Invalid JSON-RPC request');
-            return;
+            return this.buildError(
+                message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : null,
+                -32600,
+                'Invalid JSON-RPC request'
+            );
         }
 
         try {
             const result = await this.dispatch(message.method, message.params || {});
             if (Object.prototype.hasOwnProperty.call(message, 'id')) {
-                this.sendResponse(message.id, result);
+                return this.buildResponse(message.id, result);
             }
         } catch (error) {
             if (Object.prototype.hasOwnProperty.call(message, 'id')) {
-                this.sendError(message.id, error.code || -32000, error.message || 'Internal error', error.data);
-            } else {
-                this.logError(error);
+                return this.buildError(message.id, error.code || -32000, error.message || 'Internal error', error.data);
             }
+            this.logError(error);
         }
+
+        return null;
     }
 
     async dispatch(method, params) {
@@ -545,10 +557,18 @@ Supported languages: zh-CN, en
     }
 
     sendResponse(id, result) {
-        this.write({ jsonrpc: '2.0', id, result });
+        this.write(this.buildResponse(id, result));
     }
 
     sendError(id, code, message, data) {
+        this.write(this.buildError(id, code, message, data));
+    }
+
+    buildResponse(id, result) {
+        return { jsonrpc: '2.0', id, result };
+    }
+
+    buildError(id, code, message, data) {
         const payload = {
             jsonrpc: '2.0',
             id,
@@ -557,7 +577,7 @@ Supported languages: zh-CN, en
         if (data !== undefined) {
             payload.error.data = data;
         }
-        this.write(payload);
+        return payload;
     }
 
     write(payload) {
@@ -577,8 +597,109 @@ Supported languages: zh-CN, en
     }
 }
 
+function createHttpServer({
+    host = process.env.MCP_HTTP_HOST || '127.0.0.1',
+    port = Number(process.env.MCP_HTTP_PORT || 3100),
+    authToken = process.env.MCP_AUTH_TOKEN || process.env.MCP_HTTP_AUTH_TOKEN || ''
+} = {}) {
+    const mcpServer = new McpServer({
+        input: { on() {} },
+        output: { write() {} }
+    });
+
+    function sendJson(res, statusCode, payload, extraHeaders = {}) {
+        const body = JSON.stringify(payload);
+        res.writeHead(statusCode, {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+            ...extraHeaders
+        });
+        res.end(body);
+    }
+
+    function checkAuth(req) {
+        if (!authToken) return true;
+        const header = req.headers.authorization || '';
+        return header === `Bearer ${authToken}`;
+    }
+
+    const server = http.createServer(async (req, res) => {
+        const url = new URL(req.url, `http://${req.headers.host || `${host}:${port}`}`);
+
+        if (url.pathname === '/health') {
+            sendJson(res, 200, {
+                ok: true,
+                transport: 'http',
+                endpoint: '/mcp',
+                authRequired: Boolean(authToken),
+                serverInfo: SERVER_INFO
+            });
+            return;
+        }
+
+        if (url.pathname !== '/mcp') {
+            sendJson(res, 404, { error: { code: -32601, message: 'Not found' } });
+            return;
+        }
+
+        if (req.method !== 'POST') {
+            sendJson(res, 405, { error: { code: -32600, message: 'Method not allowed' } });
+            return;
+        }
+
+        if (!checkAuth(req)) {
+            sendJson(
+                res,
+                401,
+                { error: { code: -32001, message: 'Unauthorized' } },
+                { 'WWW-Authenticate': 'Bearer realm="git-sao-hua-mcp"' }
+            );
+            return;
+        }
+
+        let body = '';
+        req.setEncoding('utf8');
+        for await (const chunk of req) {
+            body += chunk;
+        }
+
+        let message;
+        try {
+            message = JSON.parse(body);
+        } catch (error) {
+            sendJson(res, 400, mcpServer.buildError(null, -32700, 'Invalid JSON payload'));
+            return;
+        }
+
+        const response = await mcpServer.handleJsonRpcMessage(message);
+        if (!response) {
+            res.writeHead(202);
+            res.end();
+            return;
+        }
+
+        sendJson(res, 200, response);
+    });
+
+    server.mcpHost = host;
+    server.mcpPort = port;
+    server.mcpAuthRequired = Boolean(authToken);
+    return server;
+}
+
+const HTTP_PORT = Number(process.env.MCP_HTTP_PORT || 3100);
+const HTTP_MODE = process.env.MCP_HTTP_MODE === '1' || process.env.MCP_HTTP_MODE === 'true';
+
 if (require.main === module) {
-    new McpServer().start();
+    if (HTTP_MODE) {
+        const httpServer = createHttpServer({ port: HTTP_PORT });
+        httpServer.listen(HTTP_PORT, process.env.MCP_HTTP_HOST || '127.0.0.1', () => {
+            const address = httpServer.address();
+            console.error(`[git-sao-hua-mcp] HTTP server listening on http://${address.address}:${address.port}/mcp`);
+        });
+    } else {
+        new McpServer().start();
+    }
 }
 
 module.exports = {
@@ -586,5 +707,6 @@ module.exports = {
     TOOL_DEFS,
     RESOURCE_DEFS,
     PROMPT_DEFS,
-    SERVER_INFO
+    SERVER_INFO,
+    createHttpServer
 };

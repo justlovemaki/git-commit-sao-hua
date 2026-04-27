@@ -48,6 +48,7 @@
 - ✅ **WebSocket 实时流式骚话推送** 已完成，REST API 新增 `ws://.../api/saohua/ws`，消息结构与 SSE 对齐为 `{ event, data }`，支持 `meta/item/done/error` 事件；JavaScript / TypeScript SDK 同步新增 `streamSaohuaWs()`，平台从“仅能单向 SSE 推送”继续前进到“可被机器人、终端 UI、浏览器长连接更稳定消费的双协议实时集成能力”
 - ✅ **插件发布交付包 / Submission Kit** 已完成，CLI 新增 `plugin release-kit`，核心库可一次性生成 `metadata.json`、`index-entry.json` 与 `submission.md`，插件生态从“作者能本地校验和打包”继续前进到“作者可直接产出上架交付物、降低提交官方/自建索引的操作摩擦”
 - ✅ **MCP Server / Agent 集成入口** 已完成，新增 `mcp-server/` 轻量子系统，通过 stdio + JSON-RPC 暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 等工具，并补齐 MCP `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，平台从“人和 SDK 调用 API/CLI”继续前进到“AI Agent 可通过 Model Context Protocol 直接把骚话能力接进工作流，并可自助发现知识与提示模板”
+- ✅ **MCP HTTP 远程传输** 已完成，在保留 stdio MCP 入口的基础上，新增基于 Node 内置 `http` 的远程 JSON-RPC 入口、`GET /health` 健康检查，以及 Bearer Token 保护能力，平台从“只能本地进程内接入 MCP”继续前进到“可被远程 Agent 网关、安全代理和自建服务稳定接入”的网络化集成阶段
 
 ---
 
@@ -87,7 +88,8 @@
 | **JavaScript / TypeScript SDK 流式消费** | ✅ 完成 | 新增 `streamSaohua()`，可直接消费 API SSE 流并通过回调接收 `meta/item/done/error` 事件 |
 | **SDK 发布流水线** | ✅ 完成 | Python SDK 多版本 CI + PyPI/TestPyPI 发布骨架，Go SDK 多版本 CI + tag 驱动 Draft Release，JS SDK Node 多版本 CI + npm 发布骨架 |
 | **MCP Server / Agent 工具入口** | ✅ 完成 | 新增 `mcp-server/server.js`，通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，并补齐 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，让 Claude Desktop / Cursor / OpenAI Agents 等 MCP 客户端不仅能调用骚话生成、批量生成、自然语言生成与类型/风格查询，也能读取 taxonomy / usage 资源并复用 prompt 模板 |
-| **自动化测试** | ✅ 完善 | lib/ 140+ 用例 + API 自然语言端点覆盖 + Python / JS SDK 自然语言客户端测试 + CLI 测试 + MCP server 端到端协议测试，工作流已覆盖全端 |
+| **MCP HTTP 远程传输** | ✅ 完成 | 新增 `GET /health` 与 `POST /mcp` 远程入口，支持 Bearer Token 鉴权（`MCP_AUTH_TOKEN`），适合自建 Agent 网关、远程代理和服务化部署 |
+| **自动化测试** | ✅ 完善 | lib/ 140+ 用例 + API 自然语言端点覆盖 + Python / JS SDK 自然语言客户端测试 + CLI 测试 + MCP server stdio/HTTP 端到端协议测试，工作流已覆盖全端 |
 | **CI/CD** | ✅ 完成 | 多工作流覆盖全端自动测试 + Docker 构建 + SDK 发布流程 |
 | **国际化** | ✅ 完成 | 多语言支持（中/英/日） |
 | **API 认证机制** | ✅ 完成 | 支持 API Key + Bearer Token 双认证，保护插件管理写入端点 |
@@ -162,7 +164,7 @@
 10. **插件发布仍缺少真正自动上架** — 当前已补齐插件作者本地校验、摘要、签名、索引元数据与 submission kit 生成，但尚未覆盖官方索引自动提交、Release 资产自动上传与公钥托管治理
 11. **Release 资产外部索引联动仍缺失** — 当前已支持 GitHub PR labels/author 富化、GitHub Release payload、CHANGELOG 自动回写、release asset manifest，以及直接执行 GitHub Release 创建/更新与本地资产上传，但尚未打通 release asset / changelog / 外部索引的全链路联动，也缺少自动覆盖同名资产的发布策略治理
 12. **多语言 SDK 长连接能力刚完成对齐，仍缺生产级验收** — 当前 Python / Go SDK 已补齐 SSE 与 WebSocket 实时流式消费接口，但仍需在真实部署环境中验证断线重连、代理/负载均衡、超时配置与发布链路表现
-13. **MCP Server 的协议覆盖仍未完全产品化** — 当前已支持 stdio + JSON-RPC 的 tools/resources/prompts，但尚未覆盖 OAuth/API 认证透传、SSE transport、resources 订阅能力与更细粒度的工具输出 schema
+13. **MCP Server 的协议覆盖仍未完全产品化** — 当前已支持 stdio + JSON-RPC 的 tools/resources/prompts，以及 HTTP JSON-RPC 远程入口、健康检查与 Bearer Token 保护，但尚未覆盖 OAuth/API 认证透传、SSE transport、resources 订阅能力与更细粒度的工具输出 schema
 
 ---
 
@@ -195,6 +197,7 @@
 - ✅ **WebSocket 实时流式骚话推送** — 已补齐 `ws://.../api/saohua/ws`，输出与 SSE 对齐的 `meta/item/done/error` JSON 消息，并在 JavaScript / TypeScript SDK 中同步开放 `streamSaohuaWs()`，让机器人、终端 UI 与浏览器长连接场景可用统一实时协议消费骚话候选
 - ✅ **插件发布交付包 / Submission Kit** — 已补齐 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性输出 `*.metadata.json`、`*.index-entry.json` 与 `*.submission.md`，并内置校验和、签名字段、索引条目与提交清单，插件生态从“作者只能手工拼装上架材料”继续前进到“作者可直接产出标准交付包、显著降低上架索引的摩擦”
 - ✅ **MCP Server prompts/resources 能力补齐** — 已补齐 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，新增 server info、commit/style taxonomy、usage guide 资源与自然语言 / diff 两类 prompt 模板，并同步补齐端到端测试与 README 文档，让 MCP 接入从“只会调工具”前进到“Agent 能自助发现能力、读取知识、复用提示模板”
+- ✅ **MCP HTTP 远程传输入口** — 已补齐 `MCP_HTTP_MODE=1` 下的 `GET /health` 与 `POST /mcp`，支持远程 JSON-RPC 调用 `initialize`、`tools/*`、`resources/*`、`prompts/*`，并可通过 `MCP_AUTH_TOKEN` 启用 Bearer Token 保护；项目从“只能通过 stdio 本地挂载 MCP”继续前进到“可被远程 Agent 网关、安全代理和服务化部署接入”的网络化集成状态
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -217,8 +220,9 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-26 🚀 大演进 | MCP prompts/resources 能力补齐 — 在 `mcp-server/server.js` 中为 `initialize` 补齐 `resources` / `prompts` capabilities，新增 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，提供 `git-sao-hua://info/server`、commit/style taxonomy、usage guide 资源，以及自然语言 / diff 两类 prompt 模板；同步补齐 `mcp-server/test.js` 端到端测试与根 README 文档。项目从“Agent 只能调用工具”继续前进到“Agent 可自助发现能力、读取知识、复用提示模板”的更完整 MCP 平台接入状态 | Stage 5 不变（平台生态协议能力增强） |
-| -1 | 2026-04-25 🚀 大演进 | MCP Server / Agent 集成入口 — 新增 `mcp-server/server.js` 与 `mcp-server/package.json`，不依赖第三方 MCP SDK，直接通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，并暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 工具；同步补齐 `mcp-server/test.js` 端到端协议测试与根 README 文档。项目从“人类用户或 SDK 通过 CLI/API 接入”继续前进到“AI Agent 可通过 MCP 原生接入骚话能力”的新生态状态 | Stage 5 不变（平台生态入口扩展） |
+| 最新 | 2026-04-26 🚀 大演进 | MCP HTTP 远程入口 — 在 `mcp-server/server.js` 新增 `createHttpServer()`，基于 Node 内置 `http` 模块提供最小依赖 HTTP 服务，新增 `GET /health` 健康检查与 `POST /mcp` JSON-RPC 入口，支持 Bearer Token 鉴权（`MCP_AUTH_TOKEN`）与可配置端口（`MCP_HTTP_PORT`）；同步补齐 `test.js` HTTP 测试、README 文档。项目从“仅 stdio 模式”继续前进到“可远程 HTTP 调用、适合 Agent 跨进程集成”的 MCP 远程入口状态 | Stage 5 不变（MCP 平台远程协议能力增强） |
+| -1 | 2026-04-26 🚀 大演进 | MCP prompts/resources 能力补齐 — 在 `mcp-server/server.js` 中为 `initialize` 补齐 `resources` / `prompts` capabilities，新增 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，提供 `git-sao-hua://info/server`、commit/style taxonomy、usage guide 资源，以及自然语言 / diff 两类 prompt 模板；同步补齐 `mcp-server/test.js` 端到端测试与根 README 文档。项目从“Agent 只能调用工具”继续前进到“Agent 可自助发现能力、读取知识、复用提示模板”的更完整 MCP 平台接入状态 | Stage 5 不变（平台生态协议能力增强） |
+| -2 | 2026-04-25 🚀 大演进 | MCP Server / Agent 集成入口 — 新增 `mcp-server/server.js` 与 `mcp-server/package.json`，不依赖第三方 MCP SDK，直接通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，并暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 工具；同步补齐 `mcp-server/test.js` 端到端协议测试与根 README 文档。项目从“人类用户或 SDK 通过 CLI/API 接入”继续前进到“AI Agent 可通过 MCP 原生接入骚话能力”的新生态状态 | Stage 5 不变（平台生态入口扩展） |
 | -2 | 2026-04-25 🔧 中迭代 | GitHub Release 直连发布 — 在 `lib/release-notes.js` 新增 `createGitHubRelease()` / `uploadReleaseAsset()` / `deleteExistingAsset()`，并在 `lib/index.js` 对外导出；CLI 新增 `git-sao-hua github-release` 子命令，支持 dry-run、创建或更新 GitHub Release、上传本地资产，以及可选同步 `CHANGELOG`；同步补齐 lib/cli 测试与 `cli/README.md`。项目从“只能产出 release payload / asset manifest 交给外部流水线处理”继续前进到“工具本身可直接执行 GitHub Release 发布”的发布治理状态 | Stage 5 不变（发布治理执行能力增强） |
 | -3 | 2026-04-24 🔧 中迭代 | Python / Go SDK 实时流式对齐 — 为 Python SDK 新增 SSE / WebSocket 流式事件模型与 `iter_/callback` 双消费接口，为 Go SDK 新增 `handler + channel` 两套 SSE / WebSocket 消费接口，并补齐对应测试与多语言 README 示例；项目从“API 已有实时能力、但多语言接入不均衡”继续前进到“Python / Go / JS 三语言生态都能直接消费实时骚话流” | Stage 5 不变（多语言生态能力对齐） |
 | -4 | 2026-04-24 🚀 大演进 | WebSocket 实时流式骚话推送 — 在 `api/server.js` 新增 `attachSaohuaWebSocket()` 与 `ws://.../api/saohua/ws`，复用与 SSE 对齐的流式生成核心，支持 `type/style/lang/count/intervalMs` 查询参数，并在连接建立后持续输出 `{ event, data }` 结构的 `meta/item/done/error` 消息；同步补齐 `api/test.js` WebSocket 测试、Swagger/API 文档、根 README，以及 JavaScript / TypeScript SDK `streamSaohuaWs()` 与测试。项目从“只有 SSE 单向实时推送”继续前进到“具备 SSE + WebSocket 双协议实时集成能力，可更好服务机器人、终端 UI 与长连接消费场景” | Stage 5 不变（平台实时协议能力增强） |

@@ -807,9 +807,25 @@ curl -N 'http://localhost:3000/api/saohua/stream?type=fix&count=3&intervalMs=100
 
 ### 启动方式
 
+默认是 stdio 传输，适合 Claude Desktop、Cursor 等本地 MCP 客户端：
+
 ```bash
 cd mcp-server
 node server.js
+```
+
+如需远程 HTTP 传输，可开启 `MCP_HTTP_MODE`：
+
+```bash
+cd mcp-server
+MCP_HTTP_MODE=1 MCP_HTTP_PORT=3100 node server.js
+```
+
+如果需要保护远程入口，可额外设置 Bearer Token：
+
+```bash
+cd mcp-server
+MCP_HTTP_MODE=1 MCP_HTTP_PORT=3100 MCP_AUTH_TOKEN=your-secret node server.js
 ```
 
 或通过包脚本测试：
@@ -853,7 +869,57 @@ npm test
 }
 ```
 
-这个 MCP Server 不依赖额外第三方 MCP SDK，直接通过 stdio + JSON-RPC 处理 `initialize`、`tools/list`、`tools/call`、`resources/list`、`resources/read`、`prompts/list`、`prompts/get`，方便在受限环境里集成。
+这个 MCP Server 不依赖额外第三方 MCP SDK，默认通过 stdio + JSON-RPC 处理 `initialize`、`tools/list`、`tools/call`、`resources/list`、`resources/read`、`prompts/list`、`prompts/get`，方便在受限环境里集成。
+
+### HTTP 远程 MCP 入口（v1.40.0 新增增强）
+
+除了 stdio 模式，现还支持 HTTP 远程调用，适合无法建立 stdio 管道的场景：
+
+```bash
+# 启动 HTTP 模式（默认端口 3100）
+MCP_HTTP_MODE=1 node mcp-server/server.js
+
+# 自定义端口
+MCP_HTTP_PORT=8080 MCP_HTTP_MODE=1 node mcp-server/server.js
+
+# 启用 Bearer Token 鉴权（推荐统一使用 MCP_AUTH_TOKEN，兼容旧变量 MCP_HTTP_AUTH_TOKEN）
+MCP_AUTH_TOKEN=your-secret MCP_HTTP_MODE=1 node mcp-server/server.js
+```
+
+#### 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/health` | GET | 健康检查，返回 `{ ok, transport, serverInfo }` |
+| `/mcp` | POST | MCP JSON-RPC 入口，支持 initialize/tools/resources/prompts 调用 |
+
+#### HTTP 请求示例
+
+```bash
+# 健康检查
+curl http://localhost:3100/health
+
+# 初始化
+curl -X POST http://localhost:3100/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","clientInfo":{"name":"test","version":"1.0"},"capabilities":{}}}'
+
+# 调用工具（带鉴权）
+curl -X POST http://localhost:3100/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer your-secret' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"generate_saohua","arguments":{"type":"fix","style":"love","language":"zh-CN"}}}'
+```
+
+#### 测试
+
+```bash
+# stdio 测试
+node mcp-server/test.js
+
+# HTTP 测试
+MCP_HTTP_MODE=1 node mcp-server/test.js --http
+```
 
 ## 🌐 部署
 
