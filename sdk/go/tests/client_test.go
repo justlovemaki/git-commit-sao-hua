@@ -239,6 +239,48 @@ func TestGenerateFromNaturalLanguage(t *testing.T) {
 	t.Logf("Natural generated: %s", result.FullMessage)
 }
 
+func TestGenerateReleaseNotes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/release-notes/generate" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"markdown":"# v1.1.0","data":{"title":"v1.1.0"},"repo":"justlovemaki/git-commit-sao-hua","githubRelease":{"tag_name":"v1.1.0"},"totalCommits":2}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.GenerateReleaseNotes("v1.0.0..HEAD", "v1.1.0", "justlovemaki/git-commit-sao-hua", "v1.1.0")
+	if err != nil {
+		t.Fatalf("GenerateReleaseNotes failed: %v", err)
+	}
+	if result.TotalCommits != 2 {
+		t.Fatalf("expected total commits 2, got %d", result.TotalCommits)
+	}
+}
+
+func TestGenerateReleaseManifest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/release-notes/manifest" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"success":true,"githubRelease":{"tag_name":"v1.1.0"},"assets":[{"name":"README.md","path":"/tmp/README.md","size":1,"sha256":"abc","contentType":"text/markdown"}]}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.GenerateReleaseManifest([]string{"README.md"}, "", "v1.1.0", "", "v1.1.0")
+	if err != nil {
+		t.Fatalf("GenerateReleaseManifest failed: %v", err)
+	}
+	if len(result.Assets) != 1 || result.Assets[0].Name != "README.md" {
+		t.Fatalf("unexpected assets: %+v", result.Assets)
+	}
+}
+
 func TestListPlugins(t *testing.T) {
 	client := git_saohua.NewClient(getTestBaseURL())
 	defer client.Close()

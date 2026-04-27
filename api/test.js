@@ -386,6 +386,38 @@ const tests = {
         assert(res.status === 400, 'No items should return 400');
     },
 
+    async testGenerateReleaseNotes() {
+        const res = await post('/api/release-notes/generate', {
+            range: 'HEAD~2..HEAD',
+            tagName: 'v-test',
+            title: 'v-test'
+        });
+        assert(res.status === 200, 'Release notes should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(typeof res.data.data.markdown === 'string', 'Should have markdown');
+        assert(typeof res.data.data.totalCommits === 'number', 'Should have totalCommits');
+        assert(res.data.data.githubRelease.tag_name === 'v-test', 'Should include github release payload');
+    },
+
+    async testGenerateReleaseManifest() {
+        const res = await post('/api/release-notes/manifest', {
+            tagName: 'v-test',
+            title: 'v-test',
+            assetPaths: ['README.md']
+        });
+        assert(res.status === 200, 'Release manifest should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.success === true, 'Manifest success should be true');
+        assert(Array.isArray(res.data.data.assets), 'Should include assets');
+        assert(res.data.data.assets[0].name === 'README.md', 'Should resolve README asset');
+    },
+
+    async testGenerateReleaseManifestValidation() {
+        const res = await post('/api/release-notes/manifest', {});
+        assert(res.status === 400, 'Missing assetPaths should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
     async testBatchGenerationTooManyItems() {
         const items = Array.from({ length: 51 }, (_, i) => ({ mode: 'random' }));
         const res = await post('/api/saohua/batch', { items });

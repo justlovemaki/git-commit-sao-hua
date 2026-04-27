@@ -8,6 +8,7 @@ import types
 from git_saohua import SaohuaClient, APIError, TimeoutError, NetworkError
 from git_saohua.models import SaohuaData, HealthData, TypesData, StylesData, StatsData, PluginsData, PluginResult
 from git_saohua.models import NaturalLanguageAnalysisData, NaturalLanguageGenerateData
+from git_saohua.models import ReleaseNotesResult, ReleaseManifestResult
 
 
 def _mock_response(json_data, status_code=200):
@@ -170,6 +171,36 @@ class TestSaohuaClient(unittest.TestCase):
         self.assertIsInstance(result, NaturalLanguageGenerateData)
         self.assertEqual(result.style, "love")
         self.assertEqual(result.full_message, "feat: 新功能也想和你贴贴")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_release_notes(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "markdown": "# v1.1.0",
+            "data": {"title": "v1.1.0", "totalCommits": 2},
+            "repo": "justlovemaki/git-commit-sao-hua",
+            "githubRelease": {"tag_name": "v1.1.0"},
+            "totalCommits": 2
+        }))
+        result = self.client.generate_release_notes(range="v1.0.0..HEAD", tag_name="v1.1.0")
+        self.assertIsInstance(result, ReleaseNotesResult)
+        self.assertEqual(result.total_commits, 2)
+        call_args = mock_req.call_args
+        self.assertEqual(call_args.kwargs.get("json", {}).get("tagName"), "v1.1.0")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_release_manifest(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "success": True,
+            "githubRelease": {"tag_name": "v1.1.0"},
+            "assets": [
+                {"name": "README.md", "path": "/tmp/README.md", "size": 1, "sha256": "abc", "contentType": "text/markdown"}
+            ]
+        }))
+        result = self.client.generate_release_manifest(["README.md"], tag_name="v1.1.0")
+        self.assertIsInstance(result, ReleaseManifestResult)
+        self.assertEqual(result.assets[0].name, "README.md")
+        call_args = mock_req.call_args
+        self.assertEqual(call_args.kwargs.get("json", {}).get("assetPaths"), ["README.md"])
 
     @patch("git_saohua.client.requests.Session.request")
     def test_iter_stream_saohua(self, mock_req):

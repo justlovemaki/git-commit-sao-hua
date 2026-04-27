@@ -182,6 +182,31 @@ type NaturalLanguageGenerateData struct {
 	FullMessage string `json:"fullMessage"`
 }
 
+// ReleaseNotesResult release notes 生成结果
+type ReleaseNotesResult struct {
+	Markdown      string                 `json:"markdown"`
+	Data          map[string]interface{} `json:"data"`
+	Repo          string                 `json:"repo"`
+	GitHubRelease map[string]interface{} `json:"githubRelease"`
+	TotalCommits  int                    `json:"totalCommits"`
+}
+
+// ReleaseAsset release 资产元数据
+type ReleaseAsset struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Size        int64  `json:"size"`
+	SHA256      string `json:"sha256"`
+	ContentType string `json:"contentType"`
+}
+
+// ReleaseManifestResult GitHub release manifest 结果
+type ReleaseManifestResult struct {
+	Success       bool                   `json:"success"`
+	GitHubRelease map[string]interface{} `json:"githubRelease"`
+	Assets        []ReleaseAsset         `json:"assets"`
+}
+
 // StreamOptions 流式骚话请求参数
 type StreamOptions struct {
 	Type       string

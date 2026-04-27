@@ -183,6 +183,54 @@ test('installFromIndex() sends request body', async () => {
   assert.equal(result.name, 'romantic-pack');
 });
 
+test('generateReleaseNotes() posts release options', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.range, 'v1.0.0..HEAD');
+      assert.equal(body.tagName, 'v1.1.0');
+      return jsonResponse({
+        success: true,
+        data: {
+          markdown: '# v1.1.0',
+          data: { title: 'v1.1.0', totalCommits: 2 },
+          repo: 'justlovemaki/git-commit-sao-hua',
+          githubRelease: { tag_name: 'v1.1.0' },
+          totalCommits: 2,
+        },
+      });
+    }),
+  });
+
+  const result = await client.generateReleaseNotes({ range: 'v1.0.0..HEAD', tagName: 'v1.1.0' });
+  assert.equal(result.totalCommits, 2);
+  assert.equal(result.githubRelease.tag_name, 'v1.1.0');
+});
+
+test('generateReleaseManifest() sends asset paths', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.deepEqual(body.assetPaths, ['README.md']);
+      return jsonResponse({
+        success: true,
+        data: {
+          success: true,
+          githubRelease: { tag_name: 'v1.1.0' },
+          assets: [
+            { name: 'README.md', path: '/tmp/README.md', size: 1, sha256: 'abc', contentType: 'text/markdown' },
+          ],
+        },
+      });
+    }),
+  });
+
+  const result = await client.generateReleaseManifest(['README.md'], { tagName: 'v1.1.0' });
+  assert.equal(result.assets[0].name, 'README.md');
+});
+
 test('API failures raise SaohuaApiError', async () => {
   const client = new SaohuaClient({
     baseUrl: 'http://test.local',

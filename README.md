@@ -673,6 +673,7 @@ console.log(result.fullMessage);
 - AI 骚话生成
 - 自然语言提交分析 / 直接生成 commit 骚话
 - 批量骚话生成（最多 50 条/请求）
+- Release Notes 生成、GitHub Release payload / manifest 生成
 - 类型 / 风格 / 统计查询
 - 插件列表、安装、删除、模板创建、重载
 - 插件索引搜索、按索引安装
@@ -702,6 +703,17 @@ const naturalCommit = await client.generateFromNaturalLanguage('新增分享海�
   style: 'love',
 });
 console.log(naturalCommit.fullMessage);
+
+const releaseNotes = await client.generateReleaseNotes({
+  range: 'v1.0.0..HEAD',
+  tagName: 'v1.1.0',
+});
+console.log(releaseNotes.githubRelease);
+
+const manifest = await client.generateReleaseManifest(['README.md'], {
+  tagName: 'v1.1.0',
+});
+console.log(manifest.assets);
 
 const stream = client.streamSaohua(
   { type: 'fix', count: 3, intervalMs: 100 },
@@ -752,6 +764,12 @@ with SaohuaClient("http://localhost:3000") as client:
         count=2,
         on_item=lambda item: print(item.full_message),
     )
+
+    notes = client.generate_release_notes(range="v1.0.0..HEAD", tag_name="v1.1.0")
+    print(notes.total_commits)
+
+    manifest = client.generate_release_manifest(["README.md"], tag_name="v1.1.0")
+    print(manifest.assets[0].name)
 ```
 
 Go SDK 流式生成示例：
@@ -775,6 +793,12 @@ for event := range events {
 if err := <-errs; err != nil {
   panic(err)
 }
+
+notes, _ := client.GenerateReleaseNotes("v1.0.0..HEAD", "v1.1.0", "justlovemaki/git-commit-sao-hua", "v1.1.0")
+fmt.Println(notes.TotalCommits)
+
+manifest, _ := client.GenerateReleaseManifest([]string{"README.md"}, "", "v1.1.0", "", "v1.1.0")
+fmt.Println(manifest.Assets[0].Name)
 ```
 
 REST API 自然语言端点：
@@ -793,6 +817,16 @@ curl -N 'http://localhost:3000/api/saohua/stream?type=fix&count=3&intervalMs=100
 
 # WebSocket 流式生成（可配合 wscat 等客户端）
 # wscat -c 'ws://localhost:3000/api/saohua/ws?type=fix&count=3&intervalMs=100'
+
+# 生成 Release Notes
+curl -X POST http://localhost:3000/api/release-notes/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"range":"v1.0.0..HEAD","tagName":"v1.1.0","title":"v1.1.0"}'
+
+# 生成 GitHub Release manifest
+curl -X POST http://localhost:3000/api/release-notes/manifest \
+  -H 'Content-Type: application/json' \
+  -d '{"tagName":"v1.1.0","assetPaths":["README.md"]}'
 ```
 
 更多说明见：

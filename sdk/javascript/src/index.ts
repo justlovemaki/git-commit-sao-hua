@@ -174,6 +174,38 @@ export interface NaturalLanguageGenerateData extends NaturalLanguageAnalysisData
   fullMessage: string;
 }
 
+export interface ReleaseNotesGenerateOptions {
+  range?: string;
+  title?: string;
+  repo?: string;
+  tagName?: string;
+  body?: string;
+  targetCommitish?: string;
+  draft?: boolean;
+  prerelease?: boolean;
+  enrichGitHub?: boolean;
+}
+
+export interface ReleaseNotesResult {
+  markdown: string;
+  data: Record<string, unknown>;
+  repo?: string;
+  githubRelease?: Record<string, unknown> | null;
+  totalCommits: number;
+}
+
+export interface ReleaseManifestResult {
+  success: boolean;
+  githubRelease: Record<string, unknown>;
+  assets: Array<{
+    name: string;
+    path: string;
+    size: number;
+    sha256: string;
+    contentType: string;
+  }>;
+}
+
 export interface StreamSaohuaOptions {
   type?: string;
   style?: string;
@@ -523,6 +555,20 @@ export class SaohuaClient {
     return this.request('POST', '/api/saohua/natural/generate', {
       text,
       ...options,
+    });
+  }
+
+  async generateReleaseNotes(options: ReleaseNotesGenerateOptions = {}): Promise<ReleaseNotesResult> {
+    return this.request('POST', '/api/release-notes/generate', options);
+  }
+
+  async generateReleaseManifest(
+    assetPaths: string[],
+    options: ReleaseNotesGenerateOptions = {},
+  ): Promise<ReleaseManifestResult> {
+    return this.request('POST', '/api/release-notes/manifest', {
+      ...options,
+      assetPaths,
     });
   }
 

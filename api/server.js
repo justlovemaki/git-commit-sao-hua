@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import swaggerUi from 'swagger-ui-express';
 
@@ -19,6 +19,7 @@ const DEFAULT_STREAM_INTERVAL_MS = 100;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +76,33 @@ function errorResponse(message, statusCode = 400) {
         meta: {
             timestamp: new Date().toISOString()
         }
+    };
+}
+
+function normalizeAssetPaths(value) {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value
+        .map(item => typeof item === 'string' ? item.trim() : '')
+        .filter(Boolean);
+}
+
+function buildReleaseNotesOptions(body = {}) {
+    return {
+        title: body.title,
+        repo: body.repo,
+        tagName: body.tagName,
+        body: body.body,
+        targetCommitish: body.targetCommitish,
+        draft: Boolean(body.draft),
+        prerelease: Boolean(body.prerelease),
+        enrich: body.enrich !== false,
+        enrichGitHub: Boolean(body.enrichGitHub),
+        githubToken: body.githubToken,
+        githubMetadata: body.githubMetadata,
+        repoPath: body.repoPath ? resolve(PROJECT_ROOT, body.repoPath) : PROJECT_ROOT
     };
 }
 
@@ -462,6 +490,55 @@ app.post('/api/saohua/batch', async (req, res) => {
         }, `批量生成完成，成功 ${result.successCount}/${result.count}~`));
     } catch (error) {
         res.status(500).json(errorResponse('批量生成失败: ' + error.message));
+    }
+});
+
+app.post('/api/release-notes/generate', async (req, res) => {
+    try {
+        const body = req.body || {};
+        const result = await saoHuaCore.generateReleaseNotesWithGitHub(body.range || '', buildReleaseNotesOptions(body));
+
+        res.json(successResponse({
+            markdown: result.markdown,
+            data: result.data,
+            repo: result.repo,
+            githubRelease: result.githubRelease,
+            totalCommits: result.commits.length
+        }, 'Release notes 生成成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('Release notes 生成失败: ' + error.message));
+    }
+});
+
+app.post('/api/release-notes/manifest', async (req, res) => {
+    try {
+        const body = req.body || {};
+        const assetPaths = normalizeAssetPaths(body.assetPaths);
+
+        if (assetPaths.length === 0) {
+            return res.status(400).json(errorResponse('请提供 assetPaths 数组~'));
+        }
+
+        const releaseNotes = await saoHuaCore.generateReleaseNotesWithGitHub(body.range || '', buildReleaseNotesOptions(body));
+        const assetBatch = saoHuaCore.collectAssetMetadataBatch(assetPaths.map(filePath => resolve(PROJECT_ROOT, filePath)));
+
+        if (!assetBatch.success) {
+            return res.status(400).json(errorResponse(assetBatch.errors?.[0]?.error || '资产元数据收集失败~'));
+        }
+
+        const githubRelease = releaseNotes.githubRelease || saoHuaCore.buildGitHubReleasePayload(releaseNotes.commits, {
+            ...buildReleaseNotesOptions(body),
+            repo: releaseNotes.repo
+        });
+
+        const manifest = saoHuaCore.buildGitHubReleaseManifest(githubRelease, assetBatch.assets);
+        if (!manifest.success) {
+            return res.status(400).json(errorResponse(manifest.error || 'Release manifest 生成失败~'));
+        }
+
+        res.json(successResponse(manifest, 'Release manifest 生成成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('Release manifest 生成失败: ' + error.message));
     }
 });
 

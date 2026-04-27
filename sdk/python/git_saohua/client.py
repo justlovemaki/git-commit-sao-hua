@@ -19,6 +19,8 @@ from .models import (
     BatchSaohuaResult,
     NaturalLanguageAnalysisData,
     NaturalLanguageGenerateData,
+    ReleaseNotesResult,
+    ReleaseManifestResult,
     StreamSaohuaMeta,
     StreamSaohuaItem,
     StreamSaohuaDone,
@@ -489,6 +491,47 @@ class SaohuaClient:
             body["type"] = commit_type
         data = self._post("/api/saohua/natural/generate", json_body=body)
         return NaturalLanguageGenerateData.from_dict(data)
+
+    def generate_release_notes(
+        self,
+        range: Optional[str] = None,
+        title: Optional[str] = None,
+        repo: Optional[str] = None,
+        tag_name: Optional[str] = None,
+    ) -> ReleaseNotesResult:
+        """生成 release notes。"""
+        body: Dict[str, Any] = {}
+        if range:
+            body["range"] = range
+        if title:
+            body["title"] = title
+        if repo:
+            body["repo"] = repo
+        if tag_name:
+            body["tagName"] = tag_name
+        data = self._post("/api/release-notes/generate", json_body=body)
+        return ReleaseNotesResult.from_dict(data)
+
+    def generate_release_manifest(
+        self,
+        asset_paths: List[str],
+        range: Optional[str] = None,
+        title: Optional[str] = None,
+        repo: Optional[str] = None,
+        tag_name: Optional[str] = None,
+    ) -> ReleaseManifestResult:
+        """生成 GitHub release manifest。"""
+        body: Dict[str, Any] = {"assetPaths": asset_paths}
+        if range:
+            body["range"] = range
+        if title:
+            body["title"] = title
+        if repo:
+            body["repo"] = repo
+        if tag_name:
+            body["tagName"] = tag_name
+        data = self._post("/api/release-notes/manifest", json_body=body)
+        return ReleaseManifestResult.from_dict(data)
 
     # ── 类型与风格 ───────────────────────────────────────
 

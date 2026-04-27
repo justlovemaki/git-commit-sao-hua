@@ -536,6 +536,56 @@ func (c *Client) GenerateFromNaturalLanguage(text, lang, style, commitType strin
 	return &result, nil
 }
 
+// GenerateReleaseNotes 生成 release notes
+func (c *Client) GenerateReleaseNotes(rangeValue, title, repo, tagName string) (*ReleaseNotesResult, error) {
+	body := map[string]interface{}{}
+	if rangeValue != "" {
+		body["range"] = rangeValue
+	}
+	if title != "" {
+		body["title"] = title
+	}
+	if repo != "" {
+		body["repo"] = repo
+	}
+	if tagName != "" {
+		body["tagName"] = tagName
+	}
+
+	var result ReleaseNotesResult
+	err := c.doRequest("POST", "/api/release-notes/generate", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GenerateReleaseManifest 生成 GitHub release manifest
+func (c *Client) GenerateReleaseManifest(assetPaths []string, rangeValue, title, repo, tagName string) (*ReleaseManifestResult, error) {
+	body := map[string]interface{}{
+		"assetPaths": assetPaths,
+	}
+	if rangeValue != "" {
+		body["range"] = rangeValue
+	}
+	if title != "" {
+		body["title"] = title
+	}
+	if repo != "" {
+		body["repo"] = repo
+	}
+	if tagName != "" {
+		body["tagName"] = tagName
+	}
+
+	var result ReleaseManifestResult
+	err := c.doRequest("POST", "/api/release-notes/manifest", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ListTypes 获取所有 commit 类型
 func (c *Client) ListTypes(lang string) (*TypesData, error) {
 	path := "/api/types"

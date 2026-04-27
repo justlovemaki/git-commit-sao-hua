@@ -30,6 +30,7 @@ const options = {
         tags: [
             { name: 'Health', description: '健康检查端点' },
             { name: 'Saohua', description: '骚话生成端点' },
+            { name: 'Release', description: 'Release Notes / GitHub Release 生成端点' },
             { name: 'Types', description: '类型管理端点' },
             { name: 'Styles', description: '风格管理端点' },
             { name: 'Stats', description: '统计数据端点' },
@@ -1289,6 +1290,145 @@ const options = {
                         },
                         '500': {
                             description: '批量生成失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/release-notes/generate': {
+                post: {
+                    tags: ['Release'],
+                    summary: '生成 Release Notes',
+                    description: '基于当前 Git 仓库历史生成 release notes，并可选附带 GitHub release payload。默认读取项目根目录仓库。',
+                    operationId: 'generateReleaseNotes',
+                    requestBody: {
+                        required: false,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        range: { type: 'string', example: 'v1.0.0..HEAD' },
+                                        title: { type: 'string', example: 'v1.36.0' },
+                                        repo: { type: 'string', example: 'justlovemaki/git-commit-sao-hua' },
+                                        tagName: { type: 'string', example: 'v1.36.0' },
+                                        enrichGitHub: { type: 'boolean', example: false },
+                                        draft: { type: 'boolean', example: false },
+                                        prerelease: { type: 'boolean', example: false }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '生成成功',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            markdown: '# v1.36.0\n\n### Features\n- add release notes api',
+                                            repo: 'justlovemaki/git-commit-sao-hua',
+                                            totalCommits: 3,
+                                            data: {
+                                                title: 'v1.36.0',
+                                                range: 'v1.35.0..HEAD',
+                                                totalCommits: 3
+                                            },
+                                            githubRelease: {
+                                                tag_name: 'v1.36.0',
+                                                name: 'v1.36.0',
+                                                body: '### Features\n- add release notes api',
+                                                draft: false,
+                                                prerelease: false,
+                                                target_commitish: null
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '生成失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/release-notes/manifest': {
+                post: {
+                    tags: ['Release'],
+                    summary: '生成 GitHub Release Manifest',
+                    description: '在 release notes 基础上收集本地资产元数据，直接生成 GitHub Release payload + assets manifest。',
+                    operationId: 'generateReleaseManifest',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    required: ['assetPaths'],
+                                    properties: {
+                                        range: { type: 'string', example: 'v1.35.0..HEAD' },
+                                        title: { type: 'string', example: 'v1.36.0' },
+                                        tagName: { type: 'string', example: 'v1.36.0' },
+                                        repo: { type: 'string', example: 'justlovemaki/git-commit-sao-hua' },
+                                        assetPaths: {
+                                            type: 'array',
+                                            items: { type: 'string' },
+                                            example: ['README.md', 'api/package.json']
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '生成成功',
+                            content: {
+                                'application/json': {
+                                    example: {
+                                        success: true,
+                                        data: {
+                                            success: true,
+                                            githubRelease: {
+                                                tag_name: 'v1.36.0',
+                                                name: 'v1.36.0'
+                                            },
+                                            assets: [
+                                                {
+                                                    name: 'README.md',
+                                                    path: '/workspace/README.md',
+                                                    size: 1024,
+                                                    sha256: 'abc123',
+                                                    contentType: 'text/markdown'
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '请求参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        '500': {
+                            description: '生成失败',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }

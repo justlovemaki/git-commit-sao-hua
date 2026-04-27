@@ -309,6 +309,65 @@ class NaturalLanguageGenerateData(NaturalLanguageAnalysisData):
 
 
 @dataclass
+class ReleaseNotesResult:
+    """Release notes 生成结果。"""
+
+    markdown: str = ""
+    data: Dict[str, Any] = field(default_factory=dict)
+    repo: str = ""
+    github_release: Optional[Dict[str, Any]] = None
+    total_commits: int = 0
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ReleaseNotesResult":
+        return cls(
+            markdown=data.get("markdown", ""),
+            data=data.get("data", {}),
+            repo=data.get("repo", "") or "",
+            github_release=data.get("githubRelease"),
+            total_commits=data.get("totalCommits", 0),
+        )
+
+
+@dataclass
+class ReleaseAsset:
+    """Release 资产元数据。"""
+
+    name: str = ""
+    path: str = ""
+    size: int = 0
+    sha256: str = ""
+    content_type: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ReleaseAsset":
+        return cls(
+            name=data.get("name", ""),
+            path=data.get("path", ""),
+            size=data.get("size", 0),
+            sha256=data.get("sha256", ""),
+            content_type=data.get("contentType", ""),
+        )
+
+
+@dataclass
+class ReleaseManifestResult:
+    """GitHub Release manifest 结果。"""
+
+    success: bool = False
+    github_release: Dict[str, Any] = field(default_factory=dict)
+    assets: List[ReleaseAsset] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ReleaseManifestResult":
+        return cls(
+            success=data.get("success", False),
+            github_release=data.get("githubRelease", {}) or {},
+            assets=[ReleaseAsset.from_dict(item) for item in data.get("assets", [])],
+        )
+
+
+@dataclass
 class StreamSaohuaMeta:
     """流式骚话 meta 事件。"""
 
