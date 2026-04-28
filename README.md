@@ -47,6 +47,7 @@
 - 🐙 **GitHub App** - 自动监听 PR/Issue 创建，智能分析并自动评论骚话（v2.0.0）
 - 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制、健康探针、请求追踪与指标快照，兼容 Prometheus 抓取协议（v1.25.0 起持续增强）
 - 💬 **自然语言提交** - 用中文/英文描述自动生成 commit message，无需指定类型和风格（v1.35.0 新增）
+- 🔗 **ChatOps Payload 集成** - 直接生成 Slack / Discord / 飞书 / GitHub Comment 可消费的结构化消息 payload，方便机器人、工作流和通知系统复用（v1.41.0 新增）
 
 ## 🔗 Git Hook 自动集成（v1.26.0 新增 🎉）
 

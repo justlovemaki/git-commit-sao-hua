@@ -284,6 +284,53 @@ test('generateReleaseManifest() sends asset paths', async () => {
   assert.equal(result.assets[0].name, 'README.md');
 });
 
+test('generateChatOpsPayload() returns slack payload', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.target, 'slack');
+      return jsonResponse({
+        success: true,
+        data: {
+          target: 'slack',
+          text: 'Git Commit 骚话',
+          payload: { text: 'feat: 新功能也想和你贴贴' },
+          meta: { source: 'saohua', type: 'feat', style: 'love', language: 'zh-CN', supportedTargets: ['plain', 'slack'] },
+        },
+      });
+    }),
+  });
+
+  const result = await client.generateChatOpsPayload({ target: 'slack', type: 'feat', style: 'love' });
+  assert.equal(result.target, 'slack');
+  assert.equal(result.payload.text, 'feat: 新功能也想和你贴贴');
+});
+
+test('generateChatOpsPayloadFromNaturalLanguage() posts text body', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.text, '修复登录异常');
+      assert.equal(body.target, 'github-comment');
+      return jsonResponse({
+        success: true,
+        data: {
+          target: 'github-comment',
+          text: 'Git Commit 骚话',
+          payload: { body: 'fix: 这次修复比夜色还丝滑' },
+          meta: { source: 'natural-language', type: 'fix', style: 'sao', language: 'zh-CN', supportedTargets: ['plain', 'github-comment'] },
+        },
+      });
+    }),
+  });
+
+  const result = await client.generateChatOpsPayloadFromNaturalLanguage('修复登录异常', { target: 'github-comment' });
+  assert.equal(result.meta.source, 'natural-language');
+  assert.match(result.payload.body, /fix:/);
+});
+
 test('API failures raise SaohuaApiError', async () => {
   const client = new SaohuaClient({
     baseUrl: 'http://test.local',

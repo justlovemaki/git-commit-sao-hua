@@ -227,6 +227,14 @@ type NaturalLanguageGenerateData struct {
 	FullMessage string `json:"fullMessage"`
 }
 
+// ChatOpsPayloadData ChatOps 集成 payload
+type ChatOpsPayloadData struct {
+	Target  string                 `json:"target"`
+	Text    string                 `json:"text"`
+	Payload map[string]interface{} `json:"payload"`
+	Meta    map[string]interface{} `json:"meta"`
+}
+
 // ReleaseNotesResult release notes 生成结果
 type ReleaseNotesResult struct {
 	Markdown      string                 `json:"markdown"`

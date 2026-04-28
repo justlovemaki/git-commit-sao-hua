@@ -22,6 +22,7 @@ from .models import (
     BatchSaohuaResult,
     NaturalLanguageAnalysisData,
     NaturalLanguageGenerateData,
+    ChatOpsPayloadData,
     ReleaseNotesResult,
     ReleaseManifestResult,
     StreamSaohuaMeta,
@@ -494,6 +495,47 @@ class SaohuaClient:
             body["type"] = commit_type
         data = self._post("/api/saohua/natural/generate", json_body=body)
         return NaturalLanguageGenerateData.from_dict(data)
+
+    def generate_chatops_payload(
+        self,
+        lang: Optional[str] = None,
+        style: Optional[str] = None,
+        commit_type: Optional[str] = None,
+        target: Optional[str] = None,
+    ) -> ChatOpsPayloadData:
+        """生成 ChatOps 集成 payload。"""
+        body: Dict[str, Any] = {}
+        if lang:
+            body["lang"] = lang
+        if style:
+            body["style"] = style
+        if commit_type:
+            body["type"] = commit_type
+        if target:
+            body["target"] = target
+        data = self._post("/api/integrations/chatops/saohua", json_body=body)
+        return ChatOpsPayloadData.from_dict(data)
+
+    def generate_chatops_payload_from_natural_language(
+        self,
+        text: str,
+        lang: Optional[str] = None,
+        style: Optional[str] = None,
+        commit_type: Optional[str] = None,
+        target: Optional[str] = None,
+    ) -> ChatOpsPayloadData:
+        """从自然语言描述生成 ChatOps 集成 payload。"""
+        body: Dict[str, Any] = {"text": text}
+        if lang:
+            body["lang"] = lang
+        if style:
+            body["style"] = style
+        if commit_type:
+            body["type"] = commit_type
+        if target:
+            body["target"] = target
+        data = self._post("/api/integrations/chatops/natural", json_body=body)
+        return ChatOpsPayloadData.from_dict(data)
 
     def generate_release_notes(
         self,

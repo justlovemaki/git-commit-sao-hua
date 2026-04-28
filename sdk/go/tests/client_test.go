@@ -239,6 +239,48 @@ func TestGenerateFromNaturalLanguage(t *testing.T) {
 	t.Logf("Natural generated: %s", result.FullMessage)
 }
 
+func TestGenerateChatOpsPayload(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/integrations/chatops/saohua" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"target":"slack","text":"Git Commit 骚话","payload":{"text":"feat: 新功能也想和你贴贴"},"meta":{"source":"saohua","type":"feat","style":"love","language":"zh-CN","supportedTargets":["plain","slack"]}}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.GenerateChatOpsPayload("zh-CN", "love", "feat", "slack")
+	if err != nil {
+		t.Fatalf("GenerateChatOpsPayload failed: %v", err)
+	}
+	if result.Target != "slack" || result.Payload["text"] != "feat: 新功能也想和你贴贴" {
+		t.Fatalf("unexpected chatops payload: %+v", result)
+	}
+}
+
+func TestGenerateChatOpsPayloadFromNaturalLanguage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/integrations/chatops/natural" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"target":"github-comment","text":"Git Commit 骚话","payload":{"body":"fix: 这次修复比夜色还丝滑"},"meta":{"source":"natural-language","type":"fix","style":"sao","language":"zh-CN","supportedTargets":["plain","github-comment"]}}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.GenerateChatOpsPayloadFromNaturalLanguage("修复登录异常", "zh-CN", "", "", "github-comment")
+	if err != nil {
+		t.Fatalf("GenerateChatOpsPayloadFromNaturalLanguage failed: %v", err)
+	}
+	if result.Meta["source"] != "natural-language" {
+		t.Fatalf("unexpected source: %+v", result.Meta)
+	}
+}
+
 func TestGenerateReleaseNotes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/release-notes/generate" {

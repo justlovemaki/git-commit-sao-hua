@@ -374,6 +374,25 @@ class NaturalLanguageGenerateData(NaturalLanguageAnalysisData):
 
 
 @dataclass
+class ChatOpsPayloadData:
+    """ChatOps 集成 payload。"""
+
+    target: str = "plain"
+    text: str = ""
+    payload: Dict[str, Any] = field(default_factory=dict)
+    meta: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatOpsPayloadData":
+        return cls(
+            target=data.get("target", "plain"),
+            text=data.get("text", ""),
+            payload=data.get("payload", {}) or {},
+            meta=data.get("meta", {}) or {},
+        )
+
+
+@dataclass
 class ReleaseNotesResult:
     """Release notes 生成结果。"""
 

@@ -173,6 +173,14 @@ function parseStreamParams(input = {}) {
     };
 }
 
+function parseChatOpsTarget(value) {
+    return saoHuaCore.normalizeChatOpsTarget(value || 'plain');
+}
+
+function buildChatOpsEnvelope(result, target) {
+    return saoHuaCore.buildChatOpsPayload(result, { target: parseChatOpsTarget(target) });
+}
+
 function validateStreamParams({ language, msgType, msgStyle }) {
     const validTypes = saoHuaCore.getAllTypes(language);
     if (msgType && !validTypes.includes(msgType)) {
@@ -506,6 +514,49 @@ app.post('/api/saohua/natural/generate', (req, res) => {
             type
         });
         res.json(successResponse(result, '自然语言骚话生成成功~'));
+    } catch (error) {
+        res.status(400).json(errorResponse(error.message));
+    }
+});
+
+app.post('/api/integrations/chatops/saohua', (req, res) => {
+    try {
+        const { lang, style, type, target } = req.body || {};
+        const language = lang || 'zh-CN';
+
+        let result;
+        if (type && style) {
+            result = saoHuaCore.generateByType(type, style, language);
+        } else if (type) {
+            result = saoHuaCore.generateByType(type, undefined, language);
+        } else if (style) {
+            result = saoHuaCore.generateByStyle(style, language);
+        } else {
+            result = saoHuaCore.generateRandom(language);
+        }
+
+        res.json(successResponse(buildChatOpsEnvelope(result, target), 'ChatOps payload 生成成功~'));
+    } catch (error) {
+        res.status(400).json(errorResponse(error.message));
+    }
+});
+
+app.post('/api/integrations/chatops/natural', (req, res) => {
+    try {
+        const { text, lang, style, type, target } = req.body || {};
+
+        if (!text) {
+            return res.status(400).json(errorResponse('请提供 text 自然语言描述~'));
+        }
+
+        const language = lang || 'zh-CN';
+        const result = saoHuaCore.generateCommitFromNaturalLanguage(text, {
+            language,
+            style,
+            type
+        });
+
+        res.json(successResponse(buildChatOpsEnvelope(result, target), '自然语言 ChatOps payload 生成成功~'));
     } catch (error) {
         res.status(400).json(errorResponse(error.message));
     }

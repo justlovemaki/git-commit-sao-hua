@@ -536,6 +536,56 @@ func (c *Client) GenerateFromNaturalLanguage(text, lang, style, commitType strin
 	return &result, nil
 }
 
+// GenerateChatOpsPayload 生成 ChatOps 集成 payload
+func (c *Client) GenerateChatOpsPayload(lang, style, commitType, target string) (*ChatOpsPayloadData, error) {
+	body := map[string]interface{}{}
+	if lang != "" {
+		body["lang"] = lang
+	}
+	if style != "" {
+		body["style"] = style
+	}
+	if commitType != "" {
+		body["type"] = commitType
+	}
+	if target != "" {
+		body["target"] = target
+	}
+
+	var result ChatOpsPayloadData
+	err := c.doRequest("POST", "/api/integrations/chatops/saohua", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GenerateChatOpsPayloadFromNaturalLanguage 从自然语言生成 ChatOps payload
+func (c *Client) GenerateChatOpsPayloadFromNaturalLanguage(text, lang, style, commitType, target string) (*ChatOpsPayloadData, error) {
+	body := map[string]interface{}{
+		"text": text,
+	}
+	if lang != "" {
+		body["lang"] = lang
+	}
+	if style != "" {
+		body["style"] = style
+	}
+	if commitType != "" {
+		body["type"] = commitType
+	}
+	if target != "" {
+		body["target"] = target
+	}
+
+	var result ChatOpsPayloadData
+	err := c.doRequest("POST", "/api/integrations/chatops/natural", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GenerateReleaseNotes 生成 release notes
 func (c *Client) GenerateReleaseNotes(rangeValue, title, repo, tagName string) (*ReleaseNotesResult, error) {
 	body := map[string]interface{}{}

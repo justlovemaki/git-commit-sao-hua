@@ -341,6 +341,38 @@ const tests = {
         assert(res.data.success === false, 'Should have success: false');
     },
 
+    async testChatOpsSaohuaPayload() {
+        const res = await post('/api/integrations/chatops/saohua', {
+            type: 'feat',
+            style: 'love',
+            target: 'slack',
+            lang: 'zh-CN'
+        });
+        assert(res.status === 200, 'ChatOps saohua should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.target === 'slack', 'Target should be slack');
+        assert(res.data.data.payload.text.startsWith('feat:'), 'Slack payload should include full message');
+    },
+
+    async testChatOpsNaturalPayload() {
+        const res = await post('/api/integrations/chatops/natural', {
+            text: '修复登录按钮点击无效',
+            target: 'github-comment',
+            lang: 'zh-CN'
+        });
+        assert(res.status === 200, 'Natural ChatOps payload should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.target === 'github-comment', 'Target should be github-comment');
+        assert(res.data.data.payload.body.includes('fix:'), 'GitHub comment payload should include commit message');
+        assert(res.data.data.meta.source === 'natural-language', 'Source should be natural-language');
+    },
+
+    async testChatOpsNaturalPayloadValidation() {
+        const res = await post('/api/integrations/chatops/natural', { target: 'plain' });
+        assert(res.status === 400, 'Missing text should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
     async testAIGenerationNoDiff() {
         const res = await post('/api/saohua/ai', {});
         assert(res.status === 400, 'No diff should return 400');

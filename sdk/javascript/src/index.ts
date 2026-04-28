@@ -219,6 +219,22 @@ export interface NaturalLanguageGenerateData extends NaturalLanguageAnalysisData
   fullMessage: string;
 }
 
+export type ChatOpsTarget = 'plain' | 'slack' | 'discord' | 'lark' | 'github-comment';
+
+export interface ChatOpsPayloadData {
+  target: ChatOpsTarget;
+  text: string;
+  payload: Record<string, any>;
+  meta: {
+    source: string;
+    type: string;
+    style: string;
+    language: string;
+    topic?: string;
+    supportedTargets: ChatOpsTarget[];
+  };
+}
+
 export interface ReleaseNotesGenerateOptions {
   range?: string;
   title?: string;
@@ -598,6 +614,22 @@ export class SaohuaClient {
     options: { lang?: string; style?: string; type?: string } = {},
   ): Promise<NaturalLanguageGenerateData> {
     return this.request('POST', '/api/saohua/natural/generate', {
+      text,
+      ...options,
+    });
+  }
+
+  async generateChatOpsPayload(
+    options: { lang?: string; style?: string; type?: string; target?: ChatOpsTarget } = {},
+  ): Promise<ChatOpsPayloadData> {
+    return this.request('POST', '/api/integrations/chatops/saohua', options);
+  }
+
+  async generateChatOpsPayloadFromNaturalLanguage(
+    text: string,
+    options: { lang?: string; style?: string; type?: string; target?: ChatOpsTarget } = {},
+  ): Promise<ChatOpsPayloadData> {
+    return this.request('POST', '/api/integrations/chatops/natural', {
       text,
       ...options,
     });

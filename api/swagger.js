@@ -30,6 +30,7 @@ const options = {
         tags: [
             { name: 'Health', description: '健康检查端点' },
             { name: 'Saohua', description: '骚话生成端点' },
+            { name: 'Integrations', description: 'ChatOps / 外部集成 payload 端点' },
             { name: 'Release', description: 'Release Notes / GitHub Release 生成端点' },
             { name: 'Types', description: '类型管理端点' },
             { name: 'Styles', description: '风格管理端点' },
@@ -213,6 +214,51 @@ const options = {
                             }
                         }
                     ]
+                },
+                ChatOpsPayloadRequest: {
+                    type: 'object',
+                    properties: {
+                        lang: { type: 'string', example: 'zh-CN' },
+                        type: { type: 'string', example: 'feat' },
+                        style: { type: 'string', example: 'love' },
+                        target: { type: 'string', enum: ['plain', 'slack', 'discord', 'lark', 'github-comment'], example: 'slack' }
+                    }
+                },
+                ChatOpsNaturalRequest: {
+                    allOf: [
+                        { $ref: '#/components/schemas/NaturalLanguageGenerateRequest' },
+                        {
+                            type: 'object',
+                            properties: {
+                                target: { type: 'string', enum: ['plain', 'slack', 'discord', 'lark', 'github-comment'], example: 'github-comment' }
+                            }
+                        }
+                    ]
+                },
+                ChatOpsPayloadData: {
+                    type: 'object',
+                    properties: {
+                        target: { type: 'string', example: 'slack' },
+                        text: { type: 'string', example: 'Git Commit 骚话\n类型：feat\n风格：love\n语言：zh-CN\n提交：feat: 新功能也想和你贴贴' },
+                        payload: {
+                            type: 'object',
+                            description: '按目标平台渲染后的 webhook / message payload'
+                        },
+                        meta: {
+                            type: 'object',
+                            properties: {
+                                source: { type: 'string', example: 'saohua' },
+                                type: { type: 'string', example: 'feat' },
+                                style: { type: 'string', example: 'love' },
+                                language: { type: 'string', example: 'zh-CN' },
+                                topic: { type: 'string', example: '分享海报下载' },
+                                supportedTargets: {
+                                    type: 'array',
+                                    items: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
                 },
                 TypesData: {
                     type: 'object',
@@ -1348,6 +1394,72 @@ const options = {
                         },
                         '500': {
                             description: '批量生成失败',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/integrations/chatops/saohua': {
+                post: {
+                    tags: ['Integrations'],
+                    summary: '生成 ChatOps 骚话 payload',
+                    requestBody: {
+                        required: false,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ChatOpsPayloadRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: '生成成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsPayloadData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/integrations/chatops/natural': {
+                post: {
+                    tags: ['Integrations'],
+                    summary: '从自然语言描述生成 ChatOps payload',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ChatOpsNaturalRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: '生成成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsPayloadData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        400: {
+                            description: '参数错误',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }

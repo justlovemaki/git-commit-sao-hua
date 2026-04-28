@@ -7,7 +7,7 @@ import types
 
 from git_saohua import SaohuaClient, APIError, TimeoutError, NetworkError
 from git_saohua.models import SaohuaData, HealthData, TypesData, StylesData, StatsData, PluginsData, PluginResult
-from git_saohua.models import NaturalLanguageAnalysisData, NaturalLanguageGenerateData
+from git_saohua.models import NaturalLanguageAnalysisData, NaturalLanguageGenerateData, ChatOpsPayloadData
 from git_saohua.models import ReleaseNotesResult, ReleaseManifestResult
 from git_saohua.models import PluginValidationResult, PluginPackResult, PluginReleaseKitResult
 
@@ -172,6 +172,32 @@ class TestSaohuaClient(unittest.TestCase):
         self.assertIsInstance(result, NaturalLanguageGenerateData)
         self.assertEqual(result.style, "love")
         self.assertEqual(result.full_message, "feat: 新功能也想和你贴贴")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_chatops_payload(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "target": "slack",
+            "text": "Git Commit 骚话",
+            "payload": {"text": "feat: 新功能也想和你贴贴"},
+            "meta": {"source": "saohua", "type": "feat", "style": "love", "language": "zh-CN", "supportedTargets": ["plain", "slack"]}
+        }))
+        result = self.client.generate_chatops_payload(style="love", commit_type="feat", target="slack")
+        self.assertIsInstance(result, ChatOpsPayloadData)
+        self.assertEqual(result.target, "slack")
+        self.assertEqual(result.payload.get("text"), "feat: 新功能也想和你贴贴")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_chatops_payload_from_natural_language(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "target": "github-comment",
+            "text": "Git Commit 骚话",
+            "payload": {"body": "fix: 这次修复比夜色还丝滑"},
+            "meta": {"source": "natural-language", "type": "fix", "style": "sao", "language": "zh-CN", "supportedTargets": ["plain", "github-comment"]}
+        }))
+        result = self.client.generate_chatops_payload_from_natural_language("修复登录异常", target="github-comment")
+        self.assertIsInstance(result, ChatOpsPayloadData)
+        self.assertEqual(result.meta.get("source"), "natural-language")
+        self.assertIn("fix:", result.payload.get("body", ""))
 
     @patch("git_saohua.client.requests.Session.request")
     def test_generate_release_notes(self, mock_req):
