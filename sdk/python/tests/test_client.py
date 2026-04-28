@@ -9,6 +9,7 @@ from git_saohua import SaohuaClient, APIError, TimeoutError, NetworkError
 from git_saohua.models import SaohuaData, HealthData, TypesData, StylesData, StatsData, PluginsData, PluginResult
 from git_saohua.models import NaturalLanguageAnalysisData, NaturalLanguageGenerateData
 from git_saohua.models import ReleaseNotesResult, ReleaseManifestResult
+from git_saohua.models import PluginValidationResult, PluginPackResult, PluginReleaseKitResult
 
 
 def _mock_response(json_data, status_code=200):
@@ -201,6 +202,55 @@ class TestSaohuaClient(unittest.TestCase):
         self.assertEqual(result.assets[0].name, "README.md")
         call_args = mock_req.call_args
         self.assertEqual(call_args.kwargs.get("json", {}).get("assetPaths"), ["README.md"])
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_validate_plugin_author_payload(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "valid": True,
+            "plugin": {"name": "romantic-pack", "version": "1.0.0"},
+            "checksum": "abc",
+            "signingChecksum": "def",
+            "fileSize": 120,
+        }))
+        result = self.client.validate_plugin_author_payload(plugin={
+            "name": "romantic-pack",
+            "version": "1.0.0",
+            "data": {"zh-CN": {"feat": {"love": ["hi"]}}},
+        })
+        self.assertIsInstance(result, PluginValidationResult)
+        self.assertTrue(result.valid)
+        self.assertEqual(result.file_size, 120)
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_pack_plugin_author_payload(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "success": True,
+            "summary": {"name": "romantic-pack"},
+            "indexEntry": {"name": "romantic-pack"},
+            "metadataPath": None,
+        }))
+        result = self.client.pack_plugin_author_payload(plugin_json='{"name":"romantic-pack","version":"1.0.0","data":{"zh-CN":{"feat":{"love":["hi"]}}}}')
+        self.assertIsInstance(result, PluginPackResult)
+        self.assertEqual(result.summary.get("name"), "romantic-pack")
+
+    @patch("git_saohua.client.requests.Session.request")
+    def test_generate_plugin_release_kit(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "success": True,
+            "plugin": {"name": "release-pack"},
+            "summary": {"name": "release-pack"},
+            "metadata": {"name": "release-pack"},
+            "indexEntry": {"name": "release-pack"},
+            "checklist": {"passed": True},
+            "submissionMarkdown": "# Plugin Submission: release-pack",
+        }))
+        result = self.client.generate_plugin_release_kit(plugin={
+            "name": "release-pack",
+            "version": "1.0.0",
+            "data": {"zh-CN": {"feat": {"love": ["hi"]}}},
+        })
+        self.assertIsInstance(result, PluginReleaseKitResult)
+        self.assertIn("release-pack", result.submission_markdown)
 
     @patch("git_saohua.client.requests.Session.request")
     def test_iter_stream_saohua(self, mock_req):

@@ -594,6 +594,64 @@ const options = {
                         indexUrl: { type: 'string', example: 'https://example.com/index.json' }
                     }
                 },
+                PluginAuthorRequest: {
+                    type: 'object',
+                    properties: {
+                        plugin: {
+                            type: 'object',
+                            description: '直接传入插件对象'
+                        },
+                        pluginJson: {
+                            type: 'string',
+                            description: '直接传入插件 JSON 字符串'
+                        },
+                        sourceUrl: { type: 'string', example: 'https://example.com/plugin.json' },
+                        github: { type: 'string', example: 'owner/repo:plugin.json@main' },
+                        homepage: { type: 'string', example: 'https://github.com/owner/repo' },
+                        signPrivateKey: { type: 'string', description: '可选，Ed25519 PEM 私钥' },
+                        publicKey: { type: 'string', description: '可选，Ed25519 PEM 公钥' },
+                        keyId: { type: 'string', example: 'release-key' },
+                        verifySignature: { type: 'boolean', example: false },
+                        requireSignature: { type: 'boolean', example: false },
+                        loadTested: { type: 'boolean', example: true },
+                        localInstallTested: { type: 'boolean', example: false },
+                        skipLocalInstallTest: { type: 'boolean', example: true }
+                    }
+                },
+                PluginValidationData: {
+                    type: 'object',
+                    properties: {
+                        valid: { type: 'boolean', example: true },
+                        plugin: { type: 'object' },
+                        checksum: { type: 'string', example: 'a1b2c3...' },
+                        signingChecksum: { type: 'string', example: 'd4e5f6...' },
+                        fileSize: { type: 'integer', example: 512 },
+                        signatureInfo: { type: 'object', nullable: true }
+                    }
+                },
+                PluginPackData: {
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', example: true },
+                        summary: { type: 'object' },
+                        indexEntry: { type: 'object' },
+                        metadataPath: { type: 'string', nullable: true },
+                        signature: { type: 'object', nullable: true }
+                    }
+                },
+                PluginReleaseKitData: {
+                    type: 'object',
+                    properties: {
+                        success: { type: 'boolean', example: true },
+                        plugin: { type: 'object' },
+                        summary: { type: 'object' },
+                        metadata: { type: 'object' },
+                        indexEntry: { type: 'object' },
+                        checklist: { type: 'object' },
+                        submissionMarkdown: { type: 'string', example: '# Plugin Submission: my-plugin' },
+                        signature: { type: 'object', nullable: true }
+                    }
+                },
                 MetricsData: {
                     type: 'object',
                     properties: {
@@ -2126,6 +2184,123 @@ const options = {
                         },
                         '500': {
                             description: '服务器内部错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugin-author/validate': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '校验插件作者载荷',
+                    description: '直接传入插件对象或插件 JSON 字符串，返回校验结果、checksum 与 signing checksum。适合 CI、远程服务和 SDK 集成场景。',
+                    operationId: 'validatePluginAuthorPayload',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginAuthorRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件载荷校验成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { properties: { data: { $ref: '#/components/schemas/PluginValidationData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '插件载荷不合法',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugin-author/pack': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '生成插件打包预览',
+                    description: '直接传入插件对象或插件 JSON 字符串，返回 metadata 摘要、索引条目与可选签名结果。默认不写服务器文件。',
+                    operationId: 'packPluginAuthorPayload',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginAuthorRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件打包预览成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { properties: { data: { $ref: '#/components/schemas/PluginPackData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '插件载荷不合法',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/plugin-author/release-kit': {
+                post: {
+                    tags: ['Plugins'],
+                    summary: '生成插件发布交付包预览',
+                    description: '直接传入插件对象或插件 JSON 字符串，返回 metadata、index entry、checklist 与 submission Markdown，适合插件上架流程自动化。',
+                    operationId: 'generatePluginReleaseKit',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/PluginAuthorRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        '200': {
+                            description: '插件发布交付包预览成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { properties: { data: { $ref: '#/components/schemas/PluginReleaseKitData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        '400': {
+                            description: '插件载荷不合法',
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }

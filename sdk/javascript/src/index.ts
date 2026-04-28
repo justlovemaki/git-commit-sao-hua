@@ -126,6 +126,51 @@ export interface CreatePluginTemplatePayload {
   description?: string;
 }
 
+export interface PluginAuthorPayload {
+  plugin?: Record<string, unknown>;
+  pluginJson?: string;
+  sourceUrl?: string;
+  github?: string;
+  homepage?: string;
+  signPrivateKey?: string;
+  publicKey?: string;
+  keyId?: string;
+  verifySignature?: boolean;
+  requireSignature?: boolean;
+  algorithm?: string;
+  loadTested?: boolean;
+  localInstallTested?: boolean;
+  skipLocalInstallTest?: boolean;
+}
+
+export interface PluginValidationResult {
+  valid: boolean;
+  plugin: Record<string, unknown>;
+  checksum: string;
+  signingChecksum: string;
+  fileSize: number;
+  signatureInfo?: Record<string, unknown> | null;
+}
+
+export interface PluginPackResult {
+  success: boolean;
+  summary: Record<string, unknown>;
+  indexEntry: Record<string, unknown>;
+  metadataPath?: string | null;
+  signature?: Record<string, unknown> | null;
+}
+
+export interface PluginReleaseKitResult {
+  success: boolean;
+  plugin: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  indexEntry: Record<string, unknown>;
+  checklist: Record<string, unknown>;
+  submissionMarkdown: string;
+  signature?: Record<string, unknown> | null;
+}
+
 export interface AiSaohuaOptions {
   lang?: string;
   style?: string;
@@ -598,6 +643,18 @@ export class SaohuaClient {
 
   async createPluginTemplate(payload: CreatePluginTemplatePayload): Promise<PluginResult> {
     return this.request('POST', '/api/plugins/create', payload);
+  }
+
+  async validatePluginAuthorPayload(payload: PluginAuthorPayload): Promise<PluginValidationResult> {
+    return this.request('POST', '/api/plugin-author/validate', payload);
+  }
+
+  async packPluginAuthorPayload(payload: PluginAuthorPayload): Promise<PluginPackResult> {
+    return this.request('POST', '/api/plugin-author/pack', payload);
+  }
+
+  async generatePluginReleaseKit(payload: PluginAuthorPayload): Promise<PluginReleaseKitResult> {
+    return this.request('POST', '/api/plugin-author/release-kit', payload);
   }
 
   async reloadPlugins(): Promise<PluginResult> {

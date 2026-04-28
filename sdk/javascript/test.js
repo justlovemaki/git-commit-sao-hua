@@ -183,6 +183,59 @@ test('installFromIndex() sends request body', async () => {
   assert.equal(result.name, 'romantic-pack');
 });
 
+test('validatePluginAuthorPayload() posts plugin JSON content', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.plugin.name, 'romantic-pack');
+      return jsonResponse({
+        success: true,
+        data: {
+          valid: true,
+          plugin: body.plugin,
+          checksum: 'abc',
+          signingChecksum: 'def',
+          fileSize: 123,
+        },
+      });
+    }),
+  });
+
+  const result = await client.validatePluginAuthorPayload({
+    plugin: { name: 'romantic-pack', version: '1.0.0', data: { 'zh-CN': { feat: { love: ['hi'] } } } },
+  });
+  assert.equal(result.valid, true);
+  assert.equal(result.fileSize, 123);
+});
+
+test('generatePluginReleaseKit() returns submission markdown', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.pluginJson.includes('release-pack'), true);
+      return jsonResponse({
+        success: true,
+        data: {
+          success: true,
+          plugin: { name: 'release-pack', version: '1.0.0' },
+          summary: { name: 'release-pack' },
+          metadata: { name: 'release-pack' },
+          indexEntry: { name: 'release-pack' },
+          checklist: { passed: true },
+          submissionMarkdown: '# Plugin Submission: release-pack',
+        },
+      });
+    }),
+  });
+
+  const result = await client.generatePluginReleaseKit({
+    pluginJson: JSON.stringify({ name: 'release-pack', version: '1.0.0', data: { 'zh-CN': { feat: { love: ['x'] } } } }),
+  });
+  assert.match(result.submissionMarkdown, /release-pack/);
+});
+
 test('generateReleaseNotes() posts release options', async () => {
   const client = new SaohuaClient({
     baseUrl: 'http://test.local',

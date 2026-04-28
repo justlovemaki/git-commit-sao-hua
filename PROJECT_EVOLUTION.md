@@ -50,6 +50,7 @@
 - ✅ **插件发布交付包 / Submission Kit** 已完成，CLI 新增 `plugin release-kit`，核心库可一次性生成 `metadata.json`、`index-entry.json` 与 `submission.md`，插件生态从“作者能本地校验和打包”继续前进到“作者可直接产出上架交付物、降低提交官方/自建索引的操作摩擦”
 - ✅ **MCP Server / Agent 集成入口** 已完成，新增 `mcp-server/` 轻量子系统，通过 stdio + JSON-RPC 暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 等工具，并补齐 MCP `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，平台从“人和 SDK 调用 API/CLI”继续前进到“AI Agent 可通过 Model Context Protocol 直接把骚话能力接进工作流，并可自助发现知识与提示模板”
 - ✅ **MCP HTTP 远程传输** 已完成，在保留 stdio MCP 入口的基础上，新增基于 Node 内置 `http` 的远程 JSON-RPC 入口、`GET /health` 健康检查，以及 Bearer Token 保护能力，平台从“只能本地进程内接入 MCP”继续前进到“可被远程 Agent 网关、安全代理和自建服务稳定接入”的网络化集成阶段
+- ✅ **插件作者能力 API / SDK 下沉** 已完成，原本主要停留在 CLI / core 的插件作者工作流（校验、打包预览、release kit 预览）已下沉到 REST API `POST /api/plugin-author/validate|pack|release-kit`，并同步开放给 JavaScript / Python / Go SDK，平台从“作者需在本地 CLI 中手工走流程”继续前进到“CI、Web 控制台、远程服务与多语言集成可直接编排插件发布准备”的生态接入阶段
 
 ---
 
@@ -75,6 +76,7 @@
 | **插件索引 / 市场入口** | ✅ 完成 | 支持从远程索引搜索插件并按名称安装，CLI/API/Swagger/README/测试已打通 |
 | **插件作者发布工具链** | ✅ 完成 | CLI 支持 `plugin validate` / `plugin pack`，核心库可生成 SHA-256、建议索引条目与 metadata JSON，降低第三方插件接入与发布成本 |
 | **插件发布交付包 / Submission Kit** | ✅ 完成 | CLI `plugin release-kit` 与核心库 `generateReleaseKit()` 可一次性生成 metadata、独立索引条目和提交模板 Markdown，覆盖插件上架前的交付物准备 |
+| **插件作者 API / 多语言 SDK** | ✅ 完成 | REST API 已开放 `POST /api/plugin-author/validate|pack|release-kit`，JavaScript / Python / Go SDK 同步支持直接提交插件对象或 JSON 字符串，返回 checksum、index entry、submission markdown 等作者侧产物 |
 | **Release Notes / 发布说明生成** | ✅ 完成 | CLI `release-notes` 可基于 git log 直接输出 Markdown/JSON 发布说明，核心库可解析 conventional commit、按章节聚合并生成结构化产物 |
 | **Release Notes GitHub 元数据富化** | ✅ 完成 | CLI `release-notes --enrich-github` 可基于 PR 编号补充 labels / author / PR 汇总信息，也支持 `--github-metadata-file` 离线注入 metadata，核心库已补齐富化能力与结构化输出 |
 | **GitHub Release 自动化 Payload** | ✅ 完成 | CLI `release-notes --format github-release-json` 与核心库 `buildGitHubReleasePayload` 可直接输出 GitHub Releases API 兼容 JSON，支持 tag/target/draft/prerelease/附加说明 |
@@ -167,6 +169,7 @@
 11. **Release 资产外部索引联动仍缺失** — 当前已支持 GitHub PR labels/author 富化、GitHub Release payload、CHANGELOG 自动回写、release asset manifest，以及直接执行 GitHub Release 创建/更新与本地资产上传，但尚未打通 release asset / changelog / 外部索引的全链路联动，也缺少自动覆盖同名资产的发布策略治理
 12. **多语言 SDK 长连接能力刚完成对齐，仍缺生产级验收** — 当前 Python / Go SDK 已补齐 SSE 与 WebSocket 实时流式消费接口，但仍需在真实部署环境中验证断线重连、代理/负载均衡、超时配置与发布链路表现
 13. **MCP Server 的协议覆盖仍未完全产品化** — 当前已支持 stdio + JSON-RPC 的 tools/resources/prompts，以及 HTTP JSON-RPC 远程入口、健康检查与 Bearer Token 保护，但尚未覆盖 OAuth/API 认证透传、SSE transport、resources 订阅能力与更细粒度的工具输出 schema
+14. **插件作者 API 当前仍偏“预览态编排”** — 现已能远程返回校验结果、metadata、index entry 与 submission markdown，但尚未直接打通“提交官方索引 PR / 上传 release 资产 / 管理发布者公钥”的闭环自动上架流程
 
 ---
 
@@ -201,6 +204,7 @@
 - ✅ **插件发布交付包 / Submission Kit** — 已补齐 `git-sao-hua plugin release-kit <path> --output-dir <dir>`，可一次性输出 `*.metadata.json`、`*.index-entry.json` 与 `*.submission.md`，并内置校验和、签名字段、索引条目与提交清单，插件生态从“作者只能手工拼装上架材料”继续前进到“作者可直接产出标准交付包、显著降低上架索引的摩擦”
 - ✅ **MCP Server prompts/resources 能力补齐** — 已补齐 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，新增 server info、commit/style taxonomy、usage guide 资源与自然语言 / diff 两类 prompt 模板，并同步补齐端到端测试与 README 文档，让 MCP 接入从“只会调工具”前进到“Agent 能自助发现能力、读取知识、复用提示模板”
 - ✅ **MCP HTTP 远程传输入口** — 已补齐 `MCP_HTTP_MODE=1` 下的 `GET /health` 与 `POST /mcp`，支持远程 JSON-RPC 调用 `initialize`、`tools/*`、`resources/*`、`prompts/*`，并可通过 `MCP_AUTH_TOKEN` 启用 Bearer Token 保护；项目从“只能通过 stdio 本地挂载 MCP”继续前进到“可被远程 Agent 网关、安全代理和服务化部署接入”的网络化集成状态
+- ✅ **插件作者能力 API / SDK 下沉** — 已补齐 `POST /api/plugin-author/validate`、`POST /api/plugin-author/pack` 与 `POST /api/plugin-author/release-kit`，核心库新增纯内存 `validatePluginInput()`、`packPluginData()` 与 `generateReleaseKitData()`，JavaScript / Python / Go SDK 同步开放作者侧方法、测试与 README 示例；本轮刻意避开继续细化 MCP / release 子系统，转而把插件生态生产力能力从 CLI 扩展到远程服务与多语言集成
 
 ### 中期（4-10 轮）
 - 骚话社区/市场 — 在线分享和下载自定义骚话包
@@ -208,6 +212,7 @@
 - 插件远程安装增强 — 支持 npm / GitHub Release / Git 仓库快捷安装与来源校验
 - Release API 继续向真正发布执行编排延伸 — 增加 changelog 回写、dry-run 发布预演、同名资产覆盖策略与外部索引联动
 - SDK 示例站点 / 多语言文档门户 — 统一 Python / Go / JS 文档、示例与认证接入说明，降低第三方接入门槛
+- 插件作者自动上架闭环 — 在现有 validate / pack / release-kit API 基础上，继续向“官方索引 PR 自动提交、Release 资产上传、公钥托管与信任根治理”延伸
 - 批量生成能力继续向 CLI / GitHub Action 渗透 — 让流水线可直接消费成批 commit 候选与 diff 列表
 - Prometheus / OpenTelemetry 导出层 — 在现有 JSON 指标快照基础上补齐标准监控协议与分布式链路观测
 

@@ -116,6 +116,49 @@ function parseAllowedHosts(value) {
     return hosts.length > 0 ? hosts : undefined;
 }
 
+function parsePluginAuthorPayload(body = {}) {
+    if (body.plugin && typeof body.plugin === 'object' && !Array.isArray(body.plugin)) {
+        return body.plugin;
+    }
+
+    if (typeof body.pluginJson === 'string' && body.pluginJson.trim()) {
+        return body.pluginJson;
+    }
+
+    if (body.name && body.version && body.data) {
+        return {
+            name: body.name,
+            version: body.version,
+            description: body.description,
+            author: body.author,
+            data: body.data,
+            styles: body.styles,
+            tags: body.tags,
+            signature: body.signature,
+            publicKey: body.publicKey,
+            keyId: body.keyId,
+            algorithm: body.algorithm
+        };
+    }
+
+    return null;
+}
+
+function buildPluginAuthorOptions(body = {}) {
+    return {
+        sourceUrl: body.sourceUrl,
+        github: body.github || body.githubSpec,
+        homepage: body.homepage,
+        signPrivateKey: body.signPrivateKey,
+        publicKey: body.publicKey,
+        keyId: body.keyId,
+        outputMetadata: body.outputMetadata,
+        loadTested: body.loadTested,
+        localInstallTested: body.localInstallTested,
+        skipLocalInstallTest: body.skipLocalInstallTest
+    };
+}
+
 function parseStreamParams(input = {}) {
     const { type, style, lang, count, intervalMs } = input;
     return {
@@ -747,6 +790,75 @@ app.post('/api/plugins/reload', requireAuth, (req, res) => {
         }, '插件数据重新加载成功~'));
     } catch (error) {
         res.status(500).json(errorResponse('插件数据重新加载失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugin-author/validate', (req, res) => {
+    try {
+        const pluginInput = parsePluginAuthorPayload(req.body || {});
+        if (!pluginInput) {
+            return res.status(400).json(errorResponse('请提供 plugin 或 pluginJson~'));
+        }
+
+        const result = saoHuaCore.validatePluginInput(pluginInput, {
+            verifySignature: Boolean(req.body?.verifySignature),
+            requireSignature: Boolean(req.body?.requireSignature),
+            signature: req.body?.signature,
+            publicKey: req.body?.publicKey,
+            keyId: req.body?.keyId,
+            algorithm: req.body?.algorithm
+        });
+
+        if (!result.valid) {
+            return res.status(400).json(errorResponse(result.error));
+        }
+
+        res.json(successResponse({
+            valid: true,
+            plugin: result.plugin,
+            checksum: result.checksum,
+            signingChecksum: result.signingChecksum,
+            fileSize: result.fileSize,
+            signatureInfo: result.signatureInfo || null
+        }, '插件校验成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件校验失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugin-author/pack', (req, res) => {
+    try {
+        const pluginInput = parsePluginAuthorPayload(req.body || {});
+        if (!pluginInput) {
+            return res.status(400).json(errorResponse('请提供 plugin 或 pluginJson~'));
+        }
+
+        const result = saoHuaCore.packPluginData(pluginInput, buildPluginAuthorOptions(req.body || {}));
+        if (!result.success) {
+            return res.status(400).json(errorResponse(result.error));
+        }
+
+        res.json(successResponse(result, '插件打包预览生成成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件打包失败: ' + error.message));
+    }
+});
+
+app.post('/api/plugin-author/release-kit', (req, res) => {
+    try {
+        const pluginInput = parsePluginAuthorPayload(req.body || {});
+        if (!pluginInput) {
+            return res.status(400).json(errorResponse('请提供 plugin 或 pluginJson~'));
+        }
+
+        const result = saoHuaCore.generateReleaseKitData(pluginInput, buildPluginAuthorOptions(req.body || {}));
+        if (!result.success) {
+            return res.status(400).json(errorResponse(result.error));
+        }
+
+        res.json(successResponse(result, '插件发布交付包预览生成成功~'));
+    } catch (error) {
+        res.status(500).json(errorResponse('插件发布交付包生成失败: ' + error.message));
     }
 });
 

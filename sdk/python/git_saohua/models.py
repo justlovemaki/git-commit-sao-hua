@@ -187,6 +187,71 @@ class PluginResult:
 
 
 @dataclass
+class PluginValidationResult:
+    valid: bool = False
+    plugin: Dict[str, Any] = field(default_factory=dict)
+    checksum: str = ""
+    signing_checksum: str = ""
+    file_size: int = 0
+    signature_info: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PluginValidationResult":
+        return cls(
+            valid=data.get("valid", False),
+            plugin=data.get("plugin", {}),
+            checksum=data.get("checksum", ""),
+            signing_checksum=data.get("signingChecksum", ""),
+            file_size=data.get("fileSize", 0),
+            signature_info=data.get("signatureInfo"),
+        )
+
+
+@dataclass
+class PluginPackResult:
+    success: bool = False
+    summary: Dict[str, Any] = field(default_factory=dict)
+    index_entry: Dict[str, Any] = field(default_factory=dict)
+    metadata_path: Optional[str] = None
+    signature: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PluginPackResult":
+        return cls(
+            success=data.get("success", False),
+            summary=data.get("summary", {}),
+            index_entry=data.get("indexEntry", {}),
+            metadata_path=data.get("metadataPath"),
+            signature=data.get("signature"),
+        )
+
+
+@dataclass
+class PluginReleaseKitResult:
+    success: bool = False
+    plugin: Dict[str, Any] = field(default_factory=dict)
+    summary: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    index_entry: Dict[str, Any] = field(default_factory=dict)
+    checklist: Dict[str, Any] = field(default_factory=dict)
+    submission_markdown: str = ""
+    signature: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PluginReleaseKitResult":
+        return cls(
+            success=data.get("success", False),
+            plugin=data.get("plugin", {}),
+            summary=data.get("summary", {}),
+            metadata=data.get("metadata", {}),
+            index_entry=data.get("indexEntry", {}),
+            checklist=data.get("checklist", {}),
+            submission_markdown=data.get("submissionMarkdown", ""),
+            signature=data.get("signature"),
+        )
+
+
+@dataclass
 class BatchSaohuaItem:
     """批量生成请求项。"""
 

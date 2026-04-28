@@ -80,6 +80,9 @@ with SaohuaClient("http://localhost:3000") as client:
 | `install_plugin(data)` | 安装插件 |
 | `remove_plugin(name)` | 删除插件 |
 | `create_plugin_template(name, ...)` | 创建插件模板 |
+| `validate_plugin_author_payload(...)` | 校验插件作者载荷 |
+| `pack_plugin_author_payload(...)` | 生成插件打包预览 |
+| `generate_plugin_release_kit(...)` | 生成插件 release kit 预览 |
 | `reload_plugins()` | 重载插件数据 |
 
 ### 其他
@@ -138,6 +141,20 @@ with SaohuaClient("http://localhost:3000") as client:
     plugins = client.list_plugins()
     for p in plugins.plugins:
         print(f"{p.name} v{p.version}")
+
+    plugin = {
+        "name": "romantic-pack",
+        "version": "1.0.0",
+        "data": {
+            "zh-CN": {
+                "feat": {"love": ["新功能也想和你贴贴"]}
+            }
+        }
+    }
+    validation = client.validate_plugin_author_payload(plugin=plugin)
+    pack_preview = client.pack_plugin_author_payload(plugin=plugin, github="owner/repo:plugin.json@main")
+    release_kit = client.generate_plugin_release_kit(plugin=plugin)
+    print(validation.checksum, pack_preview.index_entry, release_kit.submission_markdown)
 ```
 
 ## 错误处理

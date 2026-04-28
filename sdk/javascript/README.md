@@ -73,9 +73,34 @@ const client = new SaohuaClient({
 - `installPlugin(payload)`
 - `removePlugin(name)`
 - `createPluginTemplate(payload)`
+- `validatePluginAuthorPayload(payload)`
+- `packPluginAuthorPayload(payload)`
+- `generatePluginReleaseKit(payload)`
 - `reloadPlugins()`
 - `searchPluginRegistry(query?, indexUrl?)`
 - `installFromIndex(name, indexUrl?)`
+
+### 插件作者工作流示例
+
+```ts
+const plugin = {
+  name: 'romantic-pack',
+  version: '1.0.0',
+  data: {
+    'zh-CN': {
+      feat: {
+        love: ['新功能也想和你贴贴'],
+      },
+    },
+  },
+};
+
+const validation = await client.validatePluginAuthorPayload({ plugin });
+const packPreview = await client.packPluginAuthorPayload({ plugin, github: 'owner/repo:plugin.json@main' });
+const releaseKit = await client.generatePluginReleaseKit({ plugin });
+
+console.log(validation.checksum, packPreview.indexEntry, releaseKit.submissionMarkdown);
+```
 
 ### 批量生成示例
 

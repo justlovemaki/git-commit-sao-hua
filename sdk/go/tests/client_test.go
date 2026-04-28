@@ -260,6 +260,54 @@ func TestGenerateReleaseNotes(t *testing.T) {
 	}
 }
 
+func TestValidatePluginAuthorPayload(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/plugin-author/validate" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"valid":true,"plugin":{"name":"romantic-pack"},"checksum":"abc","signingChecksum":"def","fileSize":120}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.ValidatePluginAuthorPayload(&git_saohua.PluginAuthorPayload{
+		Plugin: map[string]interface{}{
+			"name":    "romantic-pack",
+			"version": "1.0.0",
+			"data": map[string]interface{}{"zh-CN": map[string]interface{}{"feat": map[string]interface{}{"love": []string{"hi"}}}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ValidatePluginAuthorPayload failed: %v", err)
+	}
+	if !result.Valid || result.FileSize != 120 {
+		t.Fatalf("unexpected validation result: %+v", result)
+	}
+}
+
+func TestGeneratePluginReleaseKit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/plugin-author/release-kit" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"success":true,"plugin":{"name":"release-pack"},"summary":{"name":"release-pack"},"metadata":{"name":"release-pack"},"indexEntry":{"name":"release-pack"},"checklist":{"passed":true},"submissionMarkdown":"# Plugin Submission: release-pack"}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.GeneratePluginReleaseKit(&git_saohua.PluginAuthorPayload{PluginJSON: `{"name":"release-pack","version":"1.0.0","data":{"zh-CN":{"feat":{"love":["x"]}}}}`})
+	if err != nil {
+		t.Fatalf("GeneratePluginReleaseKit failed: %v", err)
+	}
+	if !strings.Contains(result.SubmissionMarkdown, "release-pack") {
+		t.Fatalf("unexpected submission markdown: %s", result.SubmissionMarkdown)
+	}
+}
+
 func TestGenerateReleaseManifest(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/release-notes/manifest" {

@@ -77,6 +77,9 @@ func main() {
 | `InstallPlugin(data)` | 安装插件 |
 | `RemovePlugin(name)` | 删除插件 |
 | `CreatePluginTemplate(name, ...)` | 创建插件模板 |
+| `ValidatePluginAuthorPayload(payload)` | 校验插件作者载荷 |
+| `PackPluginAuthorPayload(payload)` | 生成插件打包预览 |
+| `GeneratePluginReleaseKit(payload)` | 生成插件 release kit 预览 |
 | `ReloadPlugins()` | 重载插件数据 |
 
 ### 其他
@@ -155,6 +158,23 @@ if err != nil {
 for _, p := range plugins.Plugins {
     fmt.Printf("%s v%s\n", p.Name, p.Version)
 }
+
+plugin := map[string]interface{}{
+    "name":    "romantic-pack",
+    "version": "1.0.0",
+    "data": map[string]interface{}{
+        "zh-CN": map[string]interface{}{
+            "feat": map[string]interface{}{
+                "love": []string{"新功能也想和你贴贴"},
+            },
+        },
+    },
+}
+
+validation, _ := client.ValidatePluginAuthorPayload(&git_saohua.PluginAuthorPayload{Plugin: plugin})
+packPreview, _ := client.PackPluginAuthorPayload(&git_saohua.PluginAuthorPayload{Plugin: plugin})
+releaseKit, _ := client.GeneratePluginReleaseKit(&git_saohua.PluginAuthorPayload{Plugin: plugin})
+fmt.Println(validation.Checksum, packPreview.IndexEntry, releaseKit.SubmissionMarkdown)
 ```
 
 ## 错误处理

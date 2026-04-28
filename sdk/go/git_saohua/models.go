@@ -83,6 +83,51 @@ type PluginResult struct {
 	Message string `json:"message"`
 }
 
+type PluginAuthorPayload struct {
+	Plugin               map[string]interface{} `json:"plugin,omitempty"`
+	PluginJSON           string                 `json:"pluginJson,omitempty"`
+	SourceURL            string                 `json:"sourceUrl,omitempty"`
+	GitHub               string                 `json:"github,omitempty"`
+	Homepage             string                 `json:"homepage,omitempty"`
+	SignPrivateKey       string                 `json:"signPrivateKey,omitempty"`
+	PublicKey            string                 `json:"publicKey,omitempty"`
+	KeyID                string                 `json:"keyId,omitempty"`
+	VerifySignature      bool                   `json:"verifySignature,omitempty"`
+	RequireSignature     bool                   `json:"requireSignature,omitempty"`
+	Algorithm            string                 `json:"algorithm,omitempty"`
+	LoadTested           bool                   `json:"loadTested,omitempty"`
+	LocalInstallTested   bool                   `json:"localInstallTested,omitempty"`
+	SkipLocalInstallTest bool                   `json:"skipLocalInstallTest,omitempty"`
+}
+
+type PluginValidationResult struct {
+	Valid           bool                   `json:"valid"`
+	Plugin          map[string]interface{} `json:"plugin"`
+	Checksum        string                 `json:"checksum"`
+	SigningChecksum string                 `json:"signingChecksum"`
+	FileSize        int64                  `json:"fileSize"`
+	SignatureInfo   map[string]interface{} `json:"signatureInfo,omitempty"`
+}
+
+type PluginPackResult struct {
+	Success      bool                   `json:"success"`
+	Summary      map[string]interface{} `json:"summary"`
+	IndexEntry   map[string]interface{} `json:"indexEntry"`
+	MetadataPath string                 `json:"metadataPath,omitempty"`
+	Signature    map[string]interface{} `json:"signature,omitempty"`
+}
+
+type PluginReleaseKitResult struct {
+	Success            bool                   `json:"success"`
+	Plugin             map[string]interface{} `json:"plugin"`
+	Summary            map[string]interface{} `json:"summary"`
+	Metadata           map[string]interface{} `json:"metadata"`
+	IndexEntry         map[string]interface{} `json:"indexEntry"`
+	Checklist          map[string]interface{} `json:"checklist"`
+	SubmissionMarkdown string                 `json:"submissionMarkdown"`
+	Signature          map[string]interface{} `json:"signature,omitempty"`
+}
+
 // PluginTemplate 插件模板
 type PluginTemplate struct {
 	Name        string                       `json:"name"`

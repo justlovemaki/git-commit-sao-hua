@@ -698,6 +698,67 @@ async testBatchGenerationInvalidMode() {
         assert(res.data.success === false, 'Should have success: false');
     },
 
+    async testPluginAuthorValidate() {
+        const res = await post('/api/plugin-author/validate', {
+            plugin: {
+                name: 'author-validate-pack',
+                version: '1.0.0',
+                data: {
+                    'zh-CN': {
+                        feat: {
+                            love: ['作者校验成功']
+                        }
+                    }
+                }
+            }
+        });
+        assert(res.status === 200, 'Plugin author validate should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.valid === true, 'Should be valid');
+        assert(typeof res.data.data.checksum === 'string', 'Should include checksum');
+    },
+
+    async testPluginAuthorPack() {
+        const res = await post('/api/plugin-author/pack', {
+            pluginJson: JSON.stringify({
+                name: 'author-pack',
+                version: '1.0.0',
+                data: {
+                    'zh-CN': {
+                        feat: {
+                            love: ['作者打包成功']
+                        }
+                    }
+                }
+            }),
+            github: 'owner/repo:plugin.json@main'
+        });
+        assert(res.status === 200, 'Plugin author pack should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.success === true, 'Pack result should be success');
+        assert(res.data.data.indexEntry.name === 'author-pack', 'Should include index entry');
+    },
+
+    async testPluginAuthorReleaseKit() {
+        const res = await post('/api/plugin-author/release-kit', {
+            plugin: {
+                name: 'author-release-kit',
+                version: '1.0.0',
+                data: {
+                    'zh-CN': {
+                        feat: {
+                            love: ['作者交付包成功']
+                        }
+                    }
+                }
+            }
+        });
+        assert(res.status === 200, 'Plugin author release kit should return 200');
+        assert(res.data.success === true, 'Should have success: true');
+        assert(res.data.data.success === true, 'Release kit result should be success');
+        assert(res.data.data.submissionMarkdown.includes('author-release-kit'), 'Should include submission markdown');
+    },
+
     async testPluginDeleteSuccess() {
         const res = await del('/api/plugins/test-api-plugin');
         assert(res.status === 200, 'Delete should return 200');

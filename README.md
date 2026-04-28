@@ -357,6 +357,40 @@ JSON 字段说明：
 - `*.index-entry.json`，可直接复制到插件索引仓库
 - `*.submission.md`，内含插件信息、校验和、签名字段、索引条目和提交流程清单
 
+### 插件作者 API / SDK 下沉（v1.40.0）
+
+现在插件作者侧工作流不再局限于本地 CLI。REST API 与 JavaScript / Python / Go SDK 已同步支持“校验 / 打包预览 / release kit 预览”，适合接入 CI、远程服务和 Web 控制台。
+
+```bash
+POST /api/plugin-author/validate
+POST /api/plugin-author/pack
+POST /api/plugin-author/release-kit
+```
+
+JavaScript / TypeScript：
+
+```ts
+await client.validatePluginAuthorPayload({ plugin })
+await client.packPluginAuthorPayload({ pluginJson })
+await client.generatePluginReleaseKit({ plugin, github: 'owner/repo:plugin.json@main' })
+```
+
+Python：
+
+```python
+client.validate_plugin_author_payload(plugin=plugin)
+client.pack_plugin_author_payload(plugin_json=plugin_json)
+client.generate_plugin_release_kit(plugin=plugin, github='owner/repo:plugin.json@main')
+```
+
+Go：
+
+```go
+client.ValidatePluginAuthorPayload(&git_saohua.PluginAuthorPayload{Plugin: plugin})
+client.PackPluginAuthorPayload(&git_saohua.PluginAuthorPayload{PluginJSON: pluginJSON})
+client.GeneratePluginReleaseKit(&git_saohua.PluginAuthorPayload{Plugin: plugin})
+```
+
 ### 插件安装治理与锁文件（v1.33.0）
 
 - 每次安装插件后，都会在插件目录生成或更新 `plugins.lock.json`

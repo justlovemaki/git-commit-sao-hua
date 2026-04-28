@@ -15,6 +15,9 @@ from .models import (
     StatsData,
     PluginsData,
     PluginResult,
+    PluginValidationResult,
+    PluginPackResult,
+    PluginReleaseKitResult,
     BatchSaohuaItem,
     BatchSaohuaResult,
     NaturalLanguageAnalysisData,
@@ -604,6 +607,36 @@ class SaohuaClient:
             body["author"] = author
         data = self._post("/api/plugins/create", json_body=body)
         return PluginResult.from_dict(data)
+
+    def validate_plugin_author_payload(self, plugin: Optional[Dict[str, Any]] = None, plugin_json: Optional[str] = None, **options: Any) -> PluginValidationResult:
+        """校验插件作者载荷。"""
+        body: Dict[str, Any] = {**options}
+        if plugin is not None:
+            body["plugin"] = plugin
+        if plugin_json is not None:
+            body["pluginJson"] = plugin_json
+        data = self._post("/api/plugin-author/validate", json_body=body)
+        return PluginValidationResult.from_dict(data)
+
+    def pack_plugin_author_payload(self, plugin: Optional[Dict[str, Any]] = None, plugin_json: Optional[str] = None, **options: Any) -> PluginPackResult:
+        """生成插件打包预览。"""
+        body: Dict[str, Any] = {**options}
+        if plugin is not None:
+            body["plugin"] = plugin
+        if plugin_json is not None:
+            body["pluginJson"] = plugin_json
+        data = self._post("/api/plugin-author/pack", json_body=body)
+        return PluginPackResult.from_dict(data)
+
+    def generate_plugin_release_kit(self, plugin: Optional[Dict[str, Any]] = None, plugin_json: Optional[str] = None, **options: Any) -> PluginReleaseKitResult:
+        """生成插件 release kit 预览。"""
+        body: Dict[str, Any] = {**options}
+        if plugin is not None:
+            body["plugin"] = plugin
+        if plugin_json is not None:
+            body["pluginJson"] = plugin_json
+        data = self._post("/api/plugin-author/release-kit", json_body=body)
+        return PluginReleaseKitResult.from_dict(data)
 
     def reload_plugins(self) -> PluginResult:
         """重新加载所有插件数据。"""

@@ -678,6 +678,36 @@ func (c *Client) CreatePluginTemplate(name, version, author, description string)
 	return &result, nil
 }
 
+// ValidatePluginAuthorPayload 校验插件作者载荷
+func (c *Client) ValidatePluginAuthorPayload(payload *PluginAuthorPayload) (*PluginValidationResult, error) {
+	var result PluginValidationResult
+	err := c.doRequest("POST", "/api/plugin-author/validate", payload, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// PackPluginAuthorPayload 生成插件打包预览
+func (c *Client) PackPluginAuthorPayload(payload *PluginAuthorPayload) (*PluginPackResult, error) {
+	var result PluginPackResult
+	err := c.doRequest("POST", "/api/plugin-author/pack", payload, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GeneratePluginReleaseKit 生成插件 release kit 预览
+func (c *Client) GeneratePluginReleaseKit(payload *PluginAuthorPayload) (*PluginReleaseKitResult, error) {
+	var result PluginReleaseKitResult
+	err := c.doRequest("POST", "/api/plugin-author/release-kit", payload, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ReloadPlugins 重载插件数据
 func (c *Client) ReloadPlugins() (*PluginResult, error) {
 	var result PluginResult
