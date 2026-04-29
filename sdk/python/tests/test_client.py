@@ -200,6 +200,35 @@ class TestSaohuaClient(unittest.TestCase):
         self.assertIn("fix:", result.payload.get("body", ""))
 
     @patch("git_saohua.client.requests.Session.request")
+    def test_deliver_chatops_payload(self, mock_req):
+        mock_req.return_value = _mock_response(_ok({
+            "envelope": {
+                "target": "slack",
+                "text": "Git Commit 骚话",
+                "payload": {"text": "feat: 新功能也想和你贴贴"},
+                "meta": {"source": "saohua", "type": "feat", "style": "love", "language": "zh-CN", "supportedTargets": ["plain", "slack"]}
+            },
+            "delivery": {
+                "ok": True,
+                "status": 200,
+                "statusText": "OK",
+                "target": "slack",
+                "url": "https://hooks.slack.test/abc",
+                "attemptedAt": "2026-04-29T02:20:00.000Z",
+                "durationMs": 12,
+                "responseBody": "ok",
+                "payload": {"text": "feat: 新功能也想和你贴贴"}
+            }
+        }))
+        result = self.client.deliver_chatops_payload(
+            "https://hooks.slack.test/abc", style="love", commit_type="feat", target="slack", secret_header="X-Test-Signature"
+        )
+        self.assertEqual(result.delivery.status, 200)
+        call_args = mock_req.call_args
+        self.assertEqual(call_args.kwargs.get("json", {}).get("webhookUrl"), "https://hooks.slack.test/abc")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("secretHeader"), "X-Test-Signature")
+
+    @patch("git_saohua.client.requests.Session.request")
     def test_generate_release_notes(self, mock_req):
         mock_req.return_value = _mock_response(_ok({
             "markdown": "# v1.1.0",

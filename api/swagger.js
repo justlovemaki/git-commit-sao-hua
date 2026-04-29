@@ -235,6 +235,38 @@ const options = {
                         }
                     ]
                 },
+                ChatOpsDeliveryRequest: {
+                    allOf: [
+                        { $ref: '#/components/schemas/ChatOpsPayloadRequest' },
+                        {
+                            type: 'object',
+                            required: ['webhookUrl'],
+                            properties: {
+                                webhookUrl: { type: 'string', example: 'https://hooks.slack.com/services/T000/B000/XXX' },
+                                headers: { type: 'object', additionalProperties: { type: 'string' } },
+                                timeoutMs: { type: 'integer', example: 8000 },
+                                secret: { type: 'string', example: 'chatops-secret' },
+                                secretHeader: { type: 'string', example: 'X-Saohua-Signature-256' }
+                            }
+                        }
+                    ]
+                },
+                ChatOpsNaturalDeliveryRequest: {
+                    allOf: [
+                        { $ref: '#/components/schemas/ChatOpsNaturalRequest' },
+                        {
+                            type: 'object',
+                            required: ['webhookUrl'],
+                            properties: {
+                                webhookUrl: { type: 'string', example: 'https://discord.com/api/webhooks/123/abc' },
+                                headers: { type: 'object', additionalProperties: { type: 'string' } },
+                                timeoutMs: { type: 'integer', example: 8000 },
+                                secret: { type: 'string', example: 'chatops-secret' },
+                                secretHeader: { type: 'string', example: 'X-Saohua-Signature-256' }
+                            }
+                        }
+                    ]
+                },
                 ChatOpsPayloadData: {
                     type: 'object',
                     properties: {
@@ -258,6 +290,27 @@ const options = {
                                 }
                             }
                         }
+                    }
+                },
+                ChatOpsDeliveryResult: {
+                    type: 'object',
+                    properties: {
+                        ok: { type: 'boolean', example: true },
+                        status: { type: 'integer', example: 200 },
+                        statusText: { type: 'string', example: 'OK' },
+                        target: { type: 'string', example: 'slack' },
+                        url: { type: 'string', example: 'https://hooks.slack.com/services/T000/B000/XXX' },
+                        attemptedAt: { type: 'string', example: '2026-04-29T02:30:00.000Z' },
+                        durationMs: { type: 'integer', example: 182 },
+                        responseBody: { type: 'string', example: 'ok' },
+                        payload: { type: 'object', description: '实际投递的 payload 内容' }
+                    }
+                },
+                ChatOpsDeliveryData: {
+                    type: 'object',
+                    properties: {
+                        envelope: { $ref: '#/components/schemas/ChatOpsPayloadData' },
+                        delivery: { $ref: '#/components/schemas/ChatOpsDeliveryResult' }
                     }
                 },
                 TypesData: {
@@ -1463,6 +1516,106 @@ const options = {
                             content: {
                                 'application/json': {
                                     schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/integrations/chatops/saohua/deliver': {
+                post: {
+                    tags: ['Integrations'],
+                    summary: '生成骚话并直接投递 ChatOps webhook',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ChatOpsDeliveryRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: '投递成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsDeliveryData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        400: {
+                            description: '参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        502: {
+                            description: 'Webhook 投递失败',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsDeliveryData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            '/api/integrations/chatops/natural/deliver': {
+                post: {
+                    tags: ['Integrations'],
+                    summary: '从自然语言生成骚话并直接投递 ChatOps webhook',
+                    requestBody: {
+                        required: true,
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ChatOpsNaturalDeliveryRequest' }
+                            }
+                        }
+                    },
+                    responses: {
+                        200: {
+                            description: '投递成功',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsDeliveryData' } } }
+                                        ]
+                                    }
+                                }
+                            }
+                        },
+                        400: {
+                            description: '参数错误',
+                            content: {
+                                'application/json': {
+                                    schema: { $ref: '#/components/schemas/ErrorResponse' }
+                                }
+                            }
+                        },
+                        502: {
+                            description: 'Webhook 投递失败',
+                            content: {
+                                'application/json': {
+                                    schema: {
+                                        allOf: [
+                                            { $ref: '#/components/schemas/SuccessResponse' },
+                                            { type: 'object', properties: { data: { $ref: '#/components/schemas/ChatOpsDeliveryData' } } }
+                                        ]
+                                    }
                                 }
                             }
                         }

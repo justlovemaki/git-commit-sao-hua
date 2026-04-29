@@ -23,6 +23,7 @@ from .models import (
     NaturalLanguageAnalysisData,
     NaturalLanguageGenerateData,
     ChatOpsPayloadData,
+    ChatOpsDeliveryData,
     ReleaseNotesResult,
     ReleaseManifestResult,
     StreamSaohuaMeta,
@@ -536,6 +537,71 @@ class SaohuaClient:
             body["target"] = target
         data = self._post("/api/integrations/chatops/natural", json_body=body)
         return ChatOpsPayloadData.from_dict(data)
+
+    def deliver_chatops_payload(
+        self,
+        webhook_url: str,
+        lang: Optional[str] = None,
+        style: Optional[str] = None,
+        commit_type: Optional[str] = None,
+        target: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout_ms: Optional[int] = None,
+        secret: Optional[str] = None,
+        secret_header: Optional[str] = None,
+    ) -> ChatOpsDeliveryData:
+        body: Dict[str, Any] = {"webhookUrl": webhook_url}
+        if lang:
+            body["lang"] = lang
+        if style:
+            body["style"] = style
+        if commit_type:
+            body["type"] = commit_type
+        if target:
+            body["target"] = target
+        if headers:
+            body["headers"] = headers
+        if timeout_ms is not None:
+            body["timeoutMs"] = timeout_ms
+        if secret:
+            body["secret"] = secret
+        if secret_header:
+            body["secretHeader"] = secret_header
+        data = self._post("/api/integrations/chatops/saohua/deliver", json_body=body)
+        return ChatOpsDeliveryData.from_dict(data)
+
+    def deliver_chatops_payload_from_natural_language(
+        self,
+        text: str,
+        webhook_url: str,
+        lang: Optional[str] = None,
+        style: Optional[str] = None,
+        commit_type: Optional[str] = None,
+        target: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+        timeout_ms: Optional[int] = None,
+        secret: Optional[str] = None,
+        secret_header: Optional[str] = None,
+    ) -> ChatOpsDeliveryData:
+        body: Dict[str, Any] = {"text": text, "webhookUrl": webhook_url}
+        if lang:
+            body["lang"] = lang
+        if style:
+            body["style"] = style
+        if commit_type:
+            body["type"] = commit_type
+        if target:
+            body["target"] = target
+        if headers:
+            body["headers"] = headers
+        if timeout_ms is not None:
+            body["timeoutMs"] = timeout_ms
+        if secret:
+            body["secret"] = secret
+        if secret_header:
+            body["secretHeader"] = secret_header
+        data = self._post("/api/integrations/chatops/natural/deliver", json_body=body)
+        return ChatOpsDeliveryData.from_dict(data)
 
     def generate_release_notes(
         self,

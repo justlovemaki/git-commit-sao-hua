@@ -586,6 +586,81 @@ func (c *Client) GenerateChatOpsPayloadFromNaturalLanguage(text, lang, style, co
 	return &result, nil
 }
 
+func (c *Client) DeliverChatOpsPayload(lang, style, commitType, target, webhookURL string, headers map[string]string, timeoutMs int, secret, secretHeader string) (*ChatOpsDeliveryData, error) {
+	body := map[string]interface{}{
+		"webhookUrl": webhookURL,
+	}
+	if lang != "" {
+		body["lang"] = lang
+	}
+	if style != "" {
+		body["style"] = style
+	}
+	if commitType != "" {
+		body["type"] = commitType
+	}
+	if target != "" {
+		body["target"] = target
+	}
+	if len(headers) > 0 {
+		body["headers"] = headers
+	}
+	if timeoutMs > 0 {
+		body["timeoutMs"] = timeoutMs
+	}
+	if secret != "" {
+		body["secret"] = secret
+	}
+	if secretHeader != "" {
+		body["secretHeader"] = secretHeader
+	}
+
+	var result ChatOpsDeliveryData
+	err := c.doRequest("POST", "/api/integrations/chatops/saohua/deliver", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (c *Client) DeliverChatOpsPayloadFromNaturalLanguage(text, lang, style, commitType, target, webhookURL string, headers map[string]string, timeoutMs int, secret, secretHeader string) (*ChatOpsDeliveryData, error) {
+	body := map[string]interface{}{
+		"text":       text,
+		"webhookUrl": webhookURL,
+	}
+	if lang != "" {
+		body["lang"] = lang
+	}
+	if style != "" {
+		body["style"] = style
+	}
+	if commitType != "" {
+		body["type"] = commitType
+	}
+	if target != "" {
+		body["target"] = target
+	}
+	if len(headers) > 0 {
+		body["headers"] = headers
+	}
+	if timeoutMs > 0 {
+		body["timeoutMs"] = timeoutMs
+	}
+	if secret != "" {
+		body["secret"] = secret
+	}
+	if secretHeader != "" {
+		body["secretHeader"] = secretHeader
+	}
+
+	var result ChatOpsDeliveryData
+	err := c.doRequest("POST", "/api/integrations/chatops/natural/deliver", body, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // GenerateReleaseNotes 生成 release notes
 func (c *Client) GenerateReleaseNotes(rangeValue, title, repo, tagName string) (*ReleaseNotesResult, error) {
 	body := map[string]interface{}{}

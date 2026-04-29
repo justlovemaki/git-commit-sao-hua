@@ -52,6 +52,7 @@
 - ✅ **MCP HTTP 远程传输** 已完成，在保留 stdio MCP 入口的基础上，新增基于 Node 内置 `http` 的远程 JSON-RPC 入口、`GET /health` 健康检查，以及 Bearer Token 保护能力，平台从“只能本地进程内接入 MCP”继续前进到“可被远程 Agent 网关、安全代理和自建服务稳定接入”的网络化集成阶段
 - ✅ **插件作者能力 API / SDK 下沉** 已完成，原本主要停留在 CLI / core 的插件作者工作流（校验、打包预览、release kit 预览）已下沉到 REST API `POST /api/plugin-author/validate|pack|release-kit`，并同步开放给 JavaScript / Python / Go SDK，平台从“作者需在本地 CLI 中手工走流程”继续前进到“CI、Web 控制台、远程服务与多语言集成可直接编排插件发布准备”的生态接入阶段
 - ✅ **ChatOps Payload 集成能力** 已完成，新增共享 `lib/chatops.js` 渲染层，可把单条骚话或自然语言生成结果直接输出为 `plain / slack / discord / lark / github-comment` 五类结构化 payload；REST API 新增 `POST /api/integrations/chatops/saohua` 与 `POST /api/integrations/chatops/natural`，JavaScript / Python / Go SDK 同步开放客户端方法与测试，平台从“能产出 commit 文案”继续前进到“能把 commit 文案直接接进聊天机器人、通知系统与工作流编排”的 ChatOps 集成阶段
+- ✅ **ChatOps Webhook 直投能力** 已完成，在既有 payload 渲染层之上新增 webhook 直投链路，支持 Slack / Discord / 飞书 / GitHub Comment 目标、可选自定义 headers、超时控制与 HMAC-SHA256 签名头；REST API 新增 `/api/integrations/chatops/saohua/deliver` 与 `/api/integrations/chatops/natural/deliver`，JavaScript / Python SDK 同步开放直投方法，平台从“只能导出结构化 payload 交给外部系统发送”继续前进到“可直接把骚话安全送入机器人和通知 webhook”的执行型 ChatOps 集成阶段
 
 ---
 
@@ -66,6 +67,7 @@
 | **GitHub App** | ✅ 完成 | 自动监听 PR/Issue 并评论骚话 |
 | **REST API** | ✅ 完成 | Express.js HTTP 服务，支持全部生成能力 + AI + 批量生成 + 自然语言分析/生成 + 统计 + 插件 CRUD，并补齐健康探针、请求追踪、运行时指标快照与 Prometheus 标准导出 |
 | **ChatOps Payload 集成** | ✅ 完成 | 可把骚话与自然语言生成结果直接渲染为 `plain / slack / discord / lark / github-comment` 五类结构化消息 payload，API 与 JavaScript / Python / Go SDK 已同步开放，适合机器人通知、CI 工作流和评论系统复用 |
+| **ChatOps Webhook 直投** | ✅ 完成 | 在 payload 渲染基础上支持 webhook 直投、响应状态回传、可选 HMAC-SHA256 签名、自定义 headers 与超时控制，REST API 与 JavaScript / Python SDK 已开放 |
 | **SSE 实时流式生成** | ✅ 完成 | `GET /api/saohua/stream` 支持按类型/风格/语言持续推送骚话候选，输出 `meta/item/done/error` 事件，适合终端预览、机器人和前端实时消费 |
 | **WebSocket 实时流式生成** | ✅ 完成 | `ws://.../api/saohua/ws` 支持与 SSE 同构的 `{ event, data }` 消息，适合机器人、终端 UI 与浏览器长连接消费 |
 | **API 可观测性 / 运维治理** | ✅ 完成 | 新增 request ID、中间件级请求聚合、`/api/health/live`、`/api/health/ready`、`/api/metrics` 与 `/api/metrics/prometheus`，API 已具备部署探针、运行态观察与 Prometheus 直接抓取能力 |
@@ -172,7 +174,7 @@
 12. **多语言 SDK 长连接能力刚完成对齐，仍缺生产级验收** — 当前 Python / Go SDK 已补齐 SSE 与 WebSocket 实时流式消费接口，但仍需在真实部署环境中验证断线重连、代理/负载均衡、超时配置与发布链路表现
 13. **MCP Server 的协议覆盖仍未完全产品化** — 当前已支持 stdio + JSON-RPC 的 tools/resources/prompts，以及 HTTP JSON-RPC 远程入口、健康检查与 Bearer Token 保护，但尚未覆盖 OAuth/API 认证透传、SSE transport、resources 订阅能力与更细粒度的工具输出 schema
 14. **插件作者 API 当前仍偏“预览态编排”** — 现已能远程返回校验结果、metadata、index entry 与 submission markdown，但尚未直接打通“提交官方索引 PR / 上传 release 资产 / 管理发布者公钥”的闭环自动上架流程
-15. **ChatOps 集成当前仍停留在 payload 渲染层** — 现已能输出 Slack/Discord/飞书/GitHub Comment 结构化 payload，但尚未内建 webhook 投递、签名校验、重试队列与模板定制能力
+15. **ChatOps 直投仍缺少生产级队列与模板治理** — 现已能直接投递 Slack/Discord/飞书/GitHub Comment webhook，并支持签名头、headers 与超时控制，但仍缺少重试队列、目的地模板库、签名校验回执与批量路由策略
 
 ---
 
@@ -220,6 +222,7 @@
 - 批量生成能力继续向 CLI / GitHub Action 渗透 — 让流水线可直接消费成批 commit 候选与 diff 列表
 - Prometheus / OpenTelemetry 导出层 — 在现有 JSON 指标快照基础上补齐标准监控协议与分布式链路观测
 - ChatOps webhook / 模板治理 — 在现有 payload 渲染层基础上继续补齐 webhook 投递、签名、重试与模板定制能力
+- ChatOps webhook / 模板治理 — 在现有 webhook 直投基础上继续补齐失败重试队列、模板变量系统、目的地预设与批量路由策略
 
 ### 远期愿景
 - 成为 Git 提交信息领域最有趣的开源工具
@@ -232,8 +235,8 @@
 
 | 轮次 | 日期 | 类型 | 改动概要 | 阶段变化 |
 |------|------|------|---------|---------|
-| 最新 | 2026-04-28 🚀 大演进 | ChatOps Payload 集成能力 — 新增 `lib/chatops.js` 统一渲染层，把骚话与自然语言生成结果直接导出为 `plain / slack / discord / lark / github-comment` 五类结构化 payload；REST API 新增 `/api/integrations/chatops/saohua` 与 `/api/integrations/chatops/natural`，JavaScript / Python / Go SDK 同步补齐客户端方法、模型、测试与 README 示例。项目从“能生成 commit 文案”继续前进到“能直接接入聊天机器人、通知系统与评论工作流”的新集成维度 | Stage 5 不变（平台集成生态扩展） |
-| -1 | 2026-04-27 🚀 大演进 | Release 治理能力 API / SDK 下沉 — 在 `api/server.js` 与 `api/swagger.js` 新增 `POST /api/release-notes/generate`、`POST /api/release-notes/manifest` 两个发布治理端点，复用 `lib/release-notes.js` 完成 release notes、GitHub release payload 与资产 manifest 组装；同步为 JavaScript / Python / Go SDK 补齐客户端方法、模型、测试与 README 示例。项目从“CLI / core 才能消费发布治理能力”继续前进到“服务端与多语言集成也能直接编排发布叙事与资产清单”的开放发布能力状态 | Stage 5 不变（平台发布治理能力扩展） |
-| -2 | 2026-04-26 🚀 大演进 | MCP HTTP 远程入口 — 在 `mcp-server/server.js` 新增 `createHttpServer()`，基于 Node 内置 `http` 模块提供最小依赖 HTTP 服务，新增 `GET /health` 健康检查与 `POST /mcp` JSON-RPC 入口，支持 Bearer Token 鉴权（`MCP_AUTH_TOKEN`）与可配置端口（`MCP_HTTP_PORT`）；同步补齐 `test.js` HTTP 测试、README 文档。项目从“仅 stdio 模式”继续前进到“可远程 HTTP 调用、适合 Agent 跨进程集成”的 MCP 远程入口状态 | Stage 5 不变（MCP 平台远程协议能力增强） |
-| -3 | 2026-04-26 🚀 大演进 | MCP prompts/resources 能力补齐 — 在 `mcp-server/server.js` 中为 `initialize` 补齐 `resources` / `prompts` capabilities，新增 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，提供 `git-sao-hua://info/server`、commit/style taxonomy、usage guide 资源，以及自然语言 / diff 两类 prompt 模板；同步补齐 `mcp-server/test.js` 端到端测试与根 README 文档。项目从“Agent 只能调用工具”继续前进到“Agent 可自助发现能力、读取知识、复用提示模板”的更完整 MCP 平台接入状态 | Stage 5 不变（平台生态协议能力增强） |
-| -4 | 2026-04-25 🚀 大演进 | MCP Server / Agent 集成入口 — 新增 `mcp-server/server.js` 与 `mcp-server/package.json`，不依赖第三方 MCP SDK，直接通过 stdio + JSON-RPC 实现 `initialize`、`tools/list`、`tools/call`，并暴露 `generate_saohua`、`batch_generate_saohua`、`generate_from_natural_language`、`list_taxonomy` 工具；同步补齐 `mcp-server/test.js` 端到端协议测试与根 README 文档。项目从“人类用户或 SDK 通过 CLI/API 接入”继续前进到“AI Agent 可通过 MCP 原生接入骚话能力”的新生态状态 | Stage 5 不变（平台生态入口扩展） |
+| 最新 | 2026-04-29 🚀 大演进 | ChatOps Webhook 直投能力 — 在 `lib/chatops.js` 上新增 webhook 直投、响应状态回传、可选 HMAC-SHA256 签名头、自定义 headers 与超时控制；REST API 新增 `/api/integrations/chatops/saohua/deliver` 与 `/api/integrations/chatops/natural/deliver`，JavaScript / Python SDK 同步开放直投方法与测试。项目从“能输出 ChatOps payload”继续前进到“能直接把骚话安全投递到机器人与通知 webhook”的执行型集成阶段 | Stage 5 不变（平台集成从渲染层走向执行层） |
+| -1 | 2026-04-28 🚀 大演进 | ChatOps Payload 集成能力 — 新增 `lib/chatops.js` 统一渲染层，把骚话与自然语言生成结果直接导出为 `plain / slack / discord / lark / github-comment` 五类结构化 payload；REST API 新增 `/api/integrations/chatops/saohua` 与 `/api/integrations/chatops/natural`，JavaScript / Python / Go SDK 同步补齐客户端方法、模型、测试与 README 示例。项目从“能生成 commit 文案”继续前进到“能直接接入聊天机器人、通知系统与评论工作流”的新集成维度 | Stage 5 不变（平台集成生态扩展） |
+| -2 | 2026-04-27 🚀 大演进 | Release 治理能力 API / SDK 下沉 — 在 `api/server.js` 与 `api/swagger.js` 新增 `POST /api/release-notes/generate`、`POST /api/release-notes/manifest` 两个发布治理端点，复用 `lib/release-notes.js` 完成 release notes、GitHub release payload 与资产 manifest 组装；同步为 JavaScript / Python / Go SDK 补齐客户端方法、模型、测试与 README 示例。项目从“CLI / core 才能消费发布治理能力”继续前进到“服务端与多语言集成也能直接编排发布叙事与资产清单”的开放发布能力状态 | Stage 5 不变（平台发布治理能力扩展） |
+| -3 | 2026-04-26 🚀 大演进 | MCP HTTP 远程入口 — 在 `mcp-server/server.js` 新增 `createHttpServer()`，基于 Node 内置 `http` 模块提供最小依赖 HTTP 服务，新增 `GET /health` 健康检查与 `POST /mcp` JSON-RPC 入口，支持 Bearer Token 鉴权（`MCP_AUTH_TOKEN`）与可配置端口（`MCP_HTTP_PORT`）；同步补齐 `test.js` HTTP 测试、README 文档。项目从“仅 stdio 模式”继续前进到“可远程 HTTP 调用、适合 Agent 跨进程集成”的 MCP 远程入口状态 | Stage 5 不变（MCP 平台远程协议能力增强） |
+| -4 | 2026-04-26 🚀 大演进 | MCP prompts/resources 能力补齐 — 在 `mcp-server/server.js` 中为 `initialize` 补齐 `resources` / `prompts` capabilities，新增 `resources/list` / `resources/read` / `prompts/list` / `prompts/get`，提供 `git-sao-hua://info/server`、commit/style taxonomy、usage guide 资源，以及自然语言 / diff 两类 prompt 模板；同步补齐 `mcp-server/test.js` 端到端测试与根 README 文档。项目从“Agent 只能调用工具”继续前进到“Agent 可自助发现能力、读取知识、复用提示模板”的更完整 MCP 平台接入状态 | Stage 5 不变（平台生态协议能力增强） |

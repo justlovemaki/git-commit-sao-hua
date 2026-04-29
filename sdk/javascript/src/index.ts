@@ -235,6 +235,35 @@ export interface ChatOpsPayloadData {
   };
 }
 
+export interface ChatOpsDeliveryResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  target: ChatOpsTarget;
+  url: string;
+  attemptedAt: string;
+  durationMs: number;
+  responseBody: string;
+  payload: Record<string, any>;
+}
+
+export interface ChatOpsDeliveryData {
+  envelope: ChatOpsPayloadData;
+  delivery: ChatOpsDeliveryResult;
+}
+
+export interface ChatOpsDeliveryOptions {
+  lang?: string;
+  style?: string;
+  type?: string;
+  target?: ChatOpsTarget;
+  webhookUrl: string;
+  headers?: Record<string, string>;
+  timeoutMs?: number;
+  secret?: string;
+  secretHeader?: string;
+}
+
 export interface ReleaseNotesGenerateOptions {
   range?: string;
   title?: string;
@@ -630,6 +659,20 @@ export class SaohuaClient {
     options: { lang?: string; style?: string; type?: string; target?: ChatOpsTarget } = {},
   ): Promise<ChatOpsPayloadData> {
     return this.request('POST', '/api/integrations/chatops/natural', {
+      text,
+      ...options,
+    });
+  }
+
+  async deliverChatOpsPayload(options: ChatOpsDeliveryOptions): Promise<ChatOpsDeliveryData> {
+    return this.request('POST', '/api/integrations/chatops/saohua/deliver', options);
+  }
+
+  async deliverChatOpsPayloadFromNaturalLanguage(
+    text: string,
+    options: ChatOpsDeliveryOptions,
+  ): Promise<ChatOpsDeliveryData> {
+    return this.request('POST', '/api/integrations/chatops/natural/deliver', {
       text,
       ...options,
     });

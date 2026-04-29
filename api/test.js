@@ -373,6 +373,49 @@ const tests = {
         assert(res.data.success === false, 'Should have success: false');
     },
 
+    async testChatOpsSaohuaDeliver() {
+        const http = await import('http');
+        const received = await new Promise((resolve, reject) => {
+            const webhook = http.createServer((req, res) => {
+                let body = '';
+                req.on('data', chunk => {
+                    body += chunk;
+                });
+                req.on('end', () => {
+                    res.writeHead(200, { 'Content-Type': 'text/plain' });
+                    res.end('ok');
+                    webhook.close(() => resolve({ headers: req.headers, body }));
+                });
+            });
+            webhook.on('error', reject);
+            webhook.listen(0, async () => {
+                const { port } = webhook.address();
+                const res = await post('/api/integrations/chatops/saohua/deliver', {
+                    type: 'feat',
+                    style: 'love',
+                    target: 'slack',
+                    webhookUrl: `http://127.0.0.1:${port}/hook`,
+                    secret: 'abc123'
+                });
+                assert(res.status === 200, 'ChatOps deliver should return 200');
+                assert(res.data.success === true, 'Should have success: true');
+                assert(res.data.data.delivery.ok === true, 'Delivery should be ok');
+            });
+        });
+
+        assert(received.headers['x-saohua-signature-256'], 'Should include signature header');
+        assert(received.body.includes('feat:'), 'Webhook body should include commit message');
+    },
+
+    async testChatOpsNaturalDeliverValidation() {
+        const res = await post('/api/integrations/chatops/natural/deliver', {
+            text: '修复登录异常',
+            target: 'github-comment'
+        });
+        assert(res.status === 400, 'Missing webhookUrl should return 400');
+        assert(res.data.success === false, 'Should have success: false');
+    },
+
     async testAIGenerationNoDiff() {
         const res = await post('/api/saohua/ai', {});
         assert(res.status === 400, 'No diff should return 400');

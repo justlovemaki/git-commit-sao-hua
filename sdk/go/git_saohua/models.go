@@ -235,6 +235,23 @@ type ChatOpsPayloadData struct {
 	Meta    map[string]interface{} `json:"meta"`
 }
 
+type ChatOpsDeliveryResult struct {
+	OK          bool                   `json:"ok"`
+	Status      int                    `json:"status"`
+	StatusText  string                 `json:"statusText"`
+	Target      string                 `json:"target"`
+	URL         string                 `json:"url"`
+	AttemptedAt string                 `json:"attemptedAt"`
+	DurationMs  int                    `json:"durationMs"`
+	ResponseBody string                `json:"responseBody"`
+	Payload     map[string]interface{} `json:"payload"`
+}
+
+type ChatOpsDeliveryData struct {
+	Envelope ChatOpsPayloadData   `json:"envelope"`
+	Delivery ChatOpsDeliveryResult `json:"delivery"`
+}
+
 // ReleaseNotesResult release notes 生成结果
 type ReleaseNotesResult struct {
 	Markdown      string                 `json:"markdown"`

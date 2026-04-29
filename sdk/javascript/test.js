@@ -630,3 +630,31 @@ test('generateFromNaturalLanguage() supports override type and style', async () 
   assert.equal(result.style, 'love');
   assert.equal(result.fullMessage, 'feat: 新功能也想和你贴贴');
 });
+
+test('deliverChatOpsPayload() posts webhook delivery options', async () => {
+  const client = new SaohuaClient({
+    baseUrl: 'http://test.local',
+    fetch: createFetch(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.webhookUrl, 'https://hooks.slack.test/abc');
+      assert.equal(body.secretHeader, 'X-Test-Signature');
+      return jsonResponse({
+        success: true,
+        data: {
+          envelope: { target: 'slack', text: 'hi', payload: { text: 'feat: hi' }, meta: { source: 'saohua', type: 'feat', style: 'love', language: 'zh-CN', supportedTargets: ['plain', 'slack'] } },
+          delivery: { ok: true, status: 200, statusText: 'OK', target: 'slack', url: body.webhookUrl, attemptedAt: '2026-04-29T02:20:00.000Z', durationMs: 12, responseBody: 'ok', payload: { text: 'feat: hi' } },
+        },
+      });
+    }),
+  });
+
+  const result = await client.deliverChatOpsPayload({
+    webhookUrl: 'https://hooks.slack.test/abc',
+    style: 'love',
+    type: 'feat',
+    target: 'slack',
+    secretHeader: 'X-Test-Signature',
+  });
+  assert.equal(result.delivery.ok, true);
+  assert.equal(result.envelope.target, 'slack');
+});

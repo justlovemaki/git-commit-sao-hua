@@ -48,6 +48,7 @@
 - 🌐 **REST API** - 独立 HTTP 服务，支持随机/类型/风格/AI 骚话生成，带速率限制、健康探针、请求追踪与指标快照，兼容 Prometheus 抓取协议（v1.25.0 起持续增强）
 - 💬 **自然语言提交** - 用中文/英文描述自动生成 commit message，无需指定类型和风格（v1.35.0 新增）
 - 🔗 **ChatOps Payload 集成** - 直接生成 Slack / Discord / 飞书 / GitHub Comment 可消费的结构化消息 payload，方便机器人、工作流和通知系统复用（v1.41.0 新增）
+- 🚚 **ChatOps Webhook 直投** - 在生成 payload 之外，REST API 与多语言 SDK 现在还支持直接投递到 Slack / Discord / 飞书 / GitHub Comment webhook，并可附带 HMAC-SHA256 签名头（v1.42.0 新增）
 
 ## 🔗 Git Hook 自动集成（v1.26.0 新增 🎉）
 
@@ -218,6 +219,53 @@ git-sao-hua batch --file ./items.json --format json
   "prerelease": false,
   "target_commitish": "main"
 }
+
+## 💬 ChatOps Webhook 直投（v1.42.0）
+
+如果你不想自己再拼 HTTP 请求，现在可以让 API / SDK 直接把骚话投递到 webhook：
+
+```bash
+curl -X POST http://localhost:3000/api/integrations/chatops/saohua/deliver \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "type": "feat",
+    "style": "love",
+    "target": "slack",
+    "webhookUrl": "https://hooks.slack.com/services/T000/B000/XXX",
+    "secret": "chatops-secret"
+  }'
+```
+
+也支持自然语言入口：
+
+```bash
+curl -X POST http://localhost:3000/api/integrations/chatops/natural/deliver \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "text": "修复登录按钮点击无效",
+    "target": "github-comment",
+    "webhookUrl": "https://example.com/webhook/github-comment",
+    "headers": {"X-Env": "staging"},
+    "timeoutMs": 8000,
+    "secretHeader": "X-Saohua-Signature-256"
+  }'
+```
+
+返回结果会同时包含：
+- `envelope`: 渲染后的 ChatOps payload
+- `delivery`: 实际投递状态（`ok/status/statusText/url/durationMs/responseBody`）
+
+JavaScript SDK：
+
+```ts
+await client.deliverChatOpsPayload({
+  type: 'feat',
+  style: 'love',
+  target: 'slack',
+  webhookUrl: 'https://hooks.slack.com/services/T000/B000/XXX',
+  secret: 'chatops-secret'
+});
+```
 ```
 
 可配合这些参数使用：

@@ -181,6 +181,17 @@ function buildChatOpsEnvelope(result, target) {
     return saoHuaCore.buildChatOpsPayload(result, { target: parseChatOpsTarget(target) });
 }
 
+function parseChatOpsDeliveryOptions(body = {}) {
+    return {
+        target: parseChatOpsTarget(body.target),
+        webhookUrl: body.webhookUrl,
+        headers: body.headers,
+        timeoutMs: body.timeoutMs,
+        secret: body.secret,
+        secretHeader: body.secretHeader
+    };
+}
+
 function validateStreamParams({ language, msgType, msgStyle }) {
     const validTypes = saoHuaCore.getAllTypes(language);
     if (msgType && !validTypes.includes(msgType)) {
@@ -557,6 +568,55 @@ app.post('/api/integrations/chatops/natural', (req, res) => {
         });
 
         res.json(successResponse(buildChatOpsEnvelope(result, target), '自然语言 ChatOps payload 生成成功~'));
+    } catch (error) {
+        res.status(400).json(errorResponse(error.message));
+    }
+});
+
+app.post('/api/integrations/chatops/saohua/deliver', async (req, res) => {
+    try {
+        const { lang, style, type } = req.body || {};
+        const language = lang || 'zh-CN';
+
+        let result;
+        if (type && style) {
+            result = saoHuaCore.generateByType(type, style, language);
+        } else if (type) {
+            result = saoHuaCore.generateByType(type, undefined, language);
+        } else if (style) {
+            result = saoHuaCore.generateByStyle(style, language);
+        } else {
+            result = saoHuaCore.generateRandom(language);
+        }
+
+        const envelope = buildChatOpsEnvelope(result, req.body?.target);
+        const delivery = await saoHuaCore.deliverChatOpsPayload(envelope, parseChatOpsDeliveryOptions(req.body));
+        const statusCode = delivery.ok ? 200 : 502;
+        res.status(statusCode).json(successResponse({ envelope, delivery }, delivery.ok ? 'ChatOps webhook 投递成功~' : 'ChatOps webhook 投递失败~'));
+    } catch (error) {
+        res.status(400).json(errorResponse(error.message));
+    }
+});
+
+app.post('/api/integrations/chatops/natural/deliver', async (req, res) => {
+    try {
+        const { text, lang, style, type } = req.body || {};
+
+        if (!text) {
+            return res.status(400).json(errorResponse('请提供 text 自然语言描述~'));
+        }
+
+        const language = lang || 'zh-CN';
+        const result = saoHuaCore.generateCommitFromNaturalLanguage(text, {
+            language,
+            style,
+            type
+        });
+
+        const envelope = buildChatOpsEnvelope(result, req.body?.target);
+        const delivery = await saoHuaCore.deliverChatOpsPayload(envelope, parseChatOpsDeliveryOptions(req.body));
+        const statusCode = delivery.ok ? 200 : 502;
+        res.status(statusCode).json(successResponse({ envelope, delivery }, delivery.ok ? '自然语言 ChatOps webhook 投递成功~' : '自然语言 ChatOps webhook 投递失败~'));
     } catch (error) {
         res.status(400).json(errorResponse(error.message));
     }

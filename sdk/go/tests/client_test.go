@@ -281,6 +281,27 @@ func TestGenerateChatOpsPayloadFromNaturalLanguage(t *testing.T) {
 	}
 }
 
+func TestDeliverChatOpsPayload(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/integrations/chatops/saohua/deliver" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"envelope":{"target":"slack","text":"Git Commit 骚话","payload":{"text":"feat: 新功能也想和你贴贴"},"meta":{"source":"saohua","type":"feat","style":"love","language":"zh-CN","supportedTargets":["plain","slack"]}},"delivery":{"ok":true,"status":200,"statusText":"OK","target":"slack","url":"https://hooks.slack.test/abc","attemptedAt":"2026-04-29T02:20:00.000Z","durationMs":12,"responseBody":"ok","payload":{"text":"feat: 新功能也想和你贴贴"}}}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	result, err := client.DeliverChatOpsPayload("zh-CN", "love", "feat", "slack", "https://hooks.slack.test/abc", nil, 0, "", "X-Test-Signature")
+	if err != nil {
+		t.Fatalf("DeliverChatOpsPayload failed: %v", err)
+	}
+	if !result.Delivery.OK || result.Envelope.Target != "slack" {
+		t.Fatalf("unexpected delivery result: %+v", result)
+	}
+}
+
 func TestGenerateReleaseNotes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/release-notes/generate" {

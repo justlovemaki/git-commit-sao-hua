@@ -393,6 +393,46 @@ class ChatOpsPayloadData:
 
 
 @dataclass
+class ChatOpsDeliveryResult:
+    ok: bool = False
+    status: int = 0
+    status_text: str = ""
+    target: str = "plain"
+    url: str = ""
+    attempted_at: str = ""
+    duration_ms: int = 0
+    response_body: str = ""
+    payload: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatOpsDeliveryResult":
+        return cls(
+            ok=data.get("ok", False),
+            status=data.get("status", 0),
+            status_text=data.get("statusText", "") or "",
+            target=data.get("target", "plain") or "plain",
+            url=data.get("url", "") or "",
+            attempted_at=data.get("attemptedAt", "") or "",
+            duration_ms=data.get("durationMs", 0) or 0,
+            response_body=data.get("responseBody", "") or "",
+            payload=data.get("payload", {}) or {},
+        )
+
+
+@dataclass
+class ChatOpsDeliveryData:
+    envelope: ChatOpsPayloadData = field(default_factory=ChatOpsPayloadData)
+    delivery: ChatOpsDeliveryResult = field(default_factory=ChatOpsDeliveryResult)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ChatOpsDeliveryData":
+        return cls(
+            envelope=ChatOpsPayloadData.from_dict(data.get("envelope", {}) or {}),
+            delivery=ChatOpsDeliveryResult.from_dict(data.get("delivery", {}) or {}),
+        )
+
+
+@dataclass
 class ReleaseNotesResult:
     """Release notes 生成结果。"""
 
