@@ -661,21 +661,53 @@ func (c *Client) DeliverChatOpsPayloadFromNaturalLanguage(text, lang, style, com
 	return &result, nil
 }
 
-// GenerateReleaseNotes 生成 release notes
-func (c *Client) GenerateReleaseNotes(rangeValue, title, repo, tagName string) (*ReleaseNotesResult, error) {
+func buildReleaseNotesRequest(options ReleaseNotesOptions) map[string]interface{} {
 	body := map[string]interface{}{}
-	if rangeValue != "" {
-		body["range"] = rangeValue
+	if options.Range != "" {
+		body["range"] = options.Range
 	}
-	if title != "" {
-		body["title"] = title
+	if options.Title != "" {
+		body["title"] = options.Title
 	}
-	if repo != "" {
-		body["repo"] = repo
+	if options.Repo != "" {
+		body["repo"] = options.Repo
 	}
-	if tagName != "" {
-		body["tagName"] = tagName
+	if options.TagName != "" {
+		body["tagName"] = options.TagName
 	}
+	if options.Body != "" {
+		body["body"] = options.Body
+	}
+	if options.TargetCommitish != "" {
+		body["targetCommitish"] = options.TargetCommitish
+	}
+	if options.Draft != nil {
+		body["draft"] = *options.Draft
+	}
+	if options.Prerelease != nil {
+		body["prerelease"] = *options.Prerelease
+	}
+	if options.Enrich != nil {
+		body["enrich"] = *options.Enrich
+	}
+	if options.EnrichGitHub != nil {
+		body["enrichGitHub"] = *options.EnrichGitHub
+	}
+	if options.GitHubToken != "" {
+		body["githubToken"] = options.GitHubToken
+	}
+	if options.GitHubMetadata != nil {
+		body["githubMetadata"] = options.GitHubMetadata
+	}
+	if options.RepoPath != "" {
+		body["repoPath"] = options.RepoPath
+	}
+	return body
+}
+
+// GenerateReleaseNotes 生成 release notes
+func (c *Client) GenerateReleaseNotes(options ReleaseNotesOptions) (*ReleaseNotesResult, error) {
+	body := buildReleaseNotesRequest(options)
 
 	var result ReleaseNotesResult
 	err := c.doRequest("POST", "/api/release-notes/generate", body, &result)
@@ -686,22 +718,9 @@ func (c *Client) GenerateReleaseNotes(rangeValue, title, repo, tagName string) (
 }
 
 // GenerateReleaseManifest 生成 GitHub release manifest
-func (c *Client) GenerateReleaseManifest(assetPaths []string, rangeValue, title, repo, tagName string) (*ReleaseManifestResult, error) {
-	body := map[string]interface{}{
-		"assetPaths": assetPaths,
-	}
-	if rangeValue != "" {
-		body["range"] = rangeValue
-	}
-	if title != "" {
-		body["title"] = title
-	}
-	if repo != "" {
-		body["repo"] = repo
-	}
-	if tagName != "" {
-		body["tagName"] = tagName
-	}
+func (c *Client) GenerateReleaseManifest(assetPaths []string, options ReleaseNotesOptions) (*ReleaseManifestResult, error) {
+	body := buildReleaseNotesRequest(options)
+	body["assetPaths"] = assetPaths
 
 	var result ReleaseManifestResult
 	err := c.doRequest("POST", "/api/release-notes/manifest", body, &result)

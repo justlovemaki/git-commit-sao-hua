@@ -273,7 +273,11 @@ export interface ReleaseNotesGenerateOptions {
   targetCommitish?: string;
   draft?: boolean;
   prerelease?: boolean;
+  enrich?: boolean;
   enrichGitHub?: boolean;
+  githubToken?: string;
+  githubMetadata?: Record<string, unknown>;
+  repoPath?: string;
 }
 
 export interface ReleaseNotesResult {

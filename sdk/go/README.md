@@ -82,6 +82,13 @@ func main() {
 | `GeneratePluginReleaseKit(payload)` | 生成插件 release kit 预览 |
 | `ReloadPlugins()` | 重载插件数据 |
 
+### Release 治理
+
+| 方法 | 说明 |
+|------|------|
+| `GenerateReleaseNotes(options)` | 生成 release notes，支持 GitHub 富化、repoPath、draft / prerelease 等高级参数 |
+| `GenerateReleaseManifest(assetPaths, options)` | 生成 GitHub release manifest，支持 release body、target commitish、GitHub metadata 等参数 |
+
 ### 其他
 
 | 方法 | 说明 |
@@ -175,6 +182,49 @@ validation, _ := client.ValidatePluginAuthorPayload(&git_saohua.PluginAuthorPayl
 packPreview, _ := client.PackPluginAuthorPayload(&git_saohua.PluginAuthorPayload{Plugin: plugin})
 releaseKit, _ := client.GeneratePluginReleaseKit(&git_saohua.PluginAuthorPayload{Plugin: plugin})
 fmt.Println(validation.Checksum, packPreview.IndexEntry, releaseKit.SubmissionMarkdown)
+```
+
+## Release Notes / Manifest
+
+```go
+draft := true
+prerelease := false
+enrich := true
+enrichGitHub := true
+
+notes, err := client.GenerateReleaseNotes(git_saohua.ReleaseNotesOptions{
+    Range:           "v1.4.0..HEAD",
+    Title:           "v1.5.0",
+    Repo:            "justlovemaki/git-commit-sao-hua",
+    TagName:         "v1.5.0",
+    Body:            "本次版本补齐多语言 SDK 的 release 治理能力。",
+    TargetCommitish: "main",
+    Draft:           &draft,
+    Prerelease:      &prerelease,
+    Enrich:          &enrich,
+    EnrichGitHub:    &enrichGitHub,
+    GitHubToken:     "ghp_xxx",
+    RepoPath:        ".",
+})
+if err != nil {
+    panic(err)
+}
+
+manifest, err := client.GenerateReleaseManifest([]string{"README.md"}, git_saohua.ReleaseNotesOptions{
+    Repo:     "justlovemaki/git-commit-sao-hua",
+    TagName:  "v1.5.0",
+    RepoPath: ".",
+    GitHubMetadata: map[string]interface{}{
+        "prs": map[string]interface{}{
+            "12": map[string]interface{}{"labels": []string{"release"}, "user": "justlovemaki"},
+        },
+    },
+})
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(notes.GitHubRelease, manifest.Assets[0].Name)
 ```
 
 ## 错误处理

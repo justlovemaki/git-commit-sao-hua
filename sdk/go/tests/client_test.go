@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -307,6 +308,19 @@ func TestGenerateReleaseNotes(t *testing.T) {
 		if r.URL.Path != "/api/release-notes/generate" {
 			t.Fatalf("unexpected path: %s", r.URL.Path)
 		}
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body failed: %v", err)
+		}
+		if body["tagName"] != "v1.1.0" || body["body"] != "Release body" || body["targetCommitish"] != "main" {
+			t.Fatalf("unexpected release request body: %+v", body)
+		}
+		if body["draft"] != true || body["prerelease"] != true || body["enrich"] != false || body["enrichGitHub"] != true {
+			t.Fatalf("unexpected release flags: %+v", body)
+		}
+		if body["githubToken"] != "ghs_demo" || body["repoPath"] != "fixtures/release-repo" {
+			t.Fatalf("unexpected release github payload: %+v", body)
+		}
 		fmt.Fprint(w, `{"success":true,"data":{"markdown":"# v1.1.0","data":{"title":"v1.1.0"},"repo":"justlovemaki/git-commit-sao-hua","githubRelease":{"tag_name":"v1.1.0"},"totalCommits":2}}`)
 	}))
 	defer server.Close()
@@ -314,12 +328,80 @@ func TestGenerateReleaseNotes(t *testing.T) {
 	client := git_saohua.NewClient(server.URL)
 	defer client.Close()
 
-	result, err := client.GenerateReleaseNotes("v1.0.0..HEAD", "v1.1.0", "justlovemaki/git-commit-sao-hua", "v1.1.0")
+	draft := true
+	prerelease := true
+	enrich := false
+	enrichGitHub := true
+	result, err := client.GenerateReleaseNotes(git_saohua.ReleaseNotesOptions{
+		Range:           "v1.0.0..HEAD",
+		Title:           "v1.1.0",
+		Repo:            "justlovemaki/git-commit-sao-hua",
+		TagName:         "v1.1.0",
+		Body:            "Release body",
+		TargetCommitish: "main",
+		Draft:           &draft,
+		Prerelease:      &prerelease,
+		Enrich:          &enrich,
+		EnrichGitHub:    &enrichGitHub,
+		GitHubToken:     "ghs_demo",
+		GitHubMetadata: map[string]interface{}{
+			"prs": map[string]interface{}{
+				"12": map[string]interface{}{"labels": []string{"release"}},
+			},
+		},
+		RepoPath: "fixtures/release-repo",
+	})
 	if err != nil {
 		t.Fatalf("GenerateReleaseNotes failed: %v", err)
 	}
 	if result.TotalCommits != 2 {
 		t.Fatalf("expected total commits 2, got %d", result.TotalCommits)
+	}
+}
+
+func TestGenerateReleaseManifest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/release-notes/manifest" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body failed: %v", err)
+		}
+		assets, ok := body["assetPaths"].([]interface{})
+		if !ok || len(assets) != 1 || assets[0] != "README.md" {
+			t.Fatalf("unexpected asset paths: %+v", body)
+		}
+		if body["githubToken"] != "ghs_demo" || body["repoPath"] != "fixtures/release-repo" {
+			t.Fatalf("unexpected manifest payload: %+v", body)
+		}
+		fmt.Fprint(w, `{"success":true,"data":{"success":true,"githubRelease":{"tag_name":"v1.1.0"},"assets":[{"name":"README.md","path":"/tmp/README.md","size":1,"sha256":"abc","contentType":"text/markdown"}]}}`)
+	}))
+	defer server.Close()
+
+	client := git_saohua.NewClient(server.URL)
+	defer client.Close()
+
+	draft := true
+	prerelease := true
+	enrich := false
+	enrichGitHub := true
+	result, err := client.GenerateReleaseManifest([]string{"README.md"}, git_saohua.ReleaseNotesOptions{
+		TagName:         "v1.1.0",
+		Body:            "Release body",
+		TargetCommitish: "main",
+		Draft:           &draft,
+		Prerelease:      &prerelease,
+		Enrich:          &enrich,
+		EnrichGitHub:    &enrichGitHub,
+		GitHubToken:     "ghs_demo",
+		RepoPath:        "fixtures/release-repo",
+	})
+	if err != nil {
+		t.Fatalf("GenerateReleaseManifest failed: %v", err)
+	}
+	if len(result.Assets) != 1 || result.Assets[0].Name != "README.md" {
+		t.Fatalf("unexpected manifest result: %+v", result)
 	}
 }
 

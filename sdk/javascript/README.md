@@ -76,6 +76,8 @@ const client = new SaohuaClient({
 - `validatePluginAuthorPayload(payload)`
 - `packPluginAuthorPayload(payload)`
 - `generatePluginReleaseKit(payload)`
+- `generateReleaseNotes({ range?, title?, repo?, tagName?, body?, targetCommitish?, draft?, prerelease?, enrich?, enrichGitHub?, githubToken?, githubMetadata?, repoPath? })`
+- `generateReleaseManifest(assetPaths, { range?, title?, repo?, tagName?, body?, targetCommitish?, draft?, prerelease?, enrich?, enrichGitHub?, githubToken?, githubMetadata?, repoPath? })`
 - `reloadPlugins()`
 - `searchPluginRegistry(query?, indexUrl?)`
 - `installFromIndex(name, indexUrl?)`
@@ -176,6 +178,38 @@ const client = new SaohuaClient({
   baseUrl: 'http://localhost:3000',
   WebSocket,
 });
+```
+
+### Release Notes / Manifest 示例
+
+```ts
+const releaseNotes = await client.generateReleaseNotes({
+  range: 'v1.4.0..HEAD',
+  title: 'v1.5.0',
+  repo: 'justlovemaki/git-commit-sao-hua',
+  tagName: 'v1.5.0',
+  body: '本次版本补齐多语言 SDK 的 release 治理能力。',
+  targetCommitish: 'main',
+  draft: true,
+  prerelease: false,
+  enrich: true,
+  enrichGitHub: true,
+  githubToken: process.env.GITHUB_TOKEN,
+  repoPath: '.',
+});
+
+const manifest = await client.generateReleaseManifest(['README.md'], {
+  repo: 'justlovemaki/git-commit-sao-hua',
+  tagName: 'v1.5.0',
+  enrichGitHub: true,
+  githubMetadata: {
+    prs: {
+      '12': { labels: ['release'], user: 'justlovemaki' },
+    },
+  },
+});
+
+console.log(releaseNotes.githubRelease, manifest.assets);
 ```
 
 ## 开发

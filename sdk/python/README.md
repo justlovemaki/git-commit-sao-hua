@@ -85,6 +85,13 @@ with SaohuaClient("http://localhost:3000") as client:
 | `generate_plugin_release_kit(...)` | 生成插件 release kit 预览 |
 | `reload_plugins()` | 重载插件数据 |
 
+### Release 治理
+
+| 方法 | 说明 |
+|------|------|
+| `generate_release_notes(...)` | 生成 release notes，支持 `enrich` / `enrich_github` / `github_token` / `github_metadata` / `repo_path` 等高级参数 |
+| `generate_release_manifest(asset_paths, ...)` | 生成 GitHub release manifest，支持 release body、target commitish、draft / prerelease 等参数 |
+
 ### 其他
 
 | 方法 | 说明 |
@@ -155,6 +162,40 @@ with SaohuaClient("http://localhost:3000") as client:
     pack_preview = client.pack_plugin_author_payload(plugin=plugin, github="owner/repo:plugin.json@main")
     release_kit = client.generate_plugin_release_kit(plugin=plugin)
     print(validation.checksum, pack_preview.index_entry, release_kit.submission_markdown)
+```
+
+## Release Notes / Manifest
+
+```python
+with SaohuaClient("http://localhost:3000") as client:
+    notes = client.generate_release_notes(
+        range="v1.4.0..HEAD",
+        title="v1.5.0",
+        repo="justlovemaki/git-commit-sao-hua",
+        tag_name="v1.5.0",
+        release_body="本次版本补齐多语言 SDK 的 release 治理能力。",
+        target_commitish="main",
+        draft=True,
+        prerelease=False,
+        enrich=True,
+        enrich_github=True,
+        github_token="ghp_xxx",
+        repo_path=".",
+    )
+
+    manifest = client.generate_release_manifest(
+        ["README.md"],
+        repo="justlovemaki/git-commit-sao-hua",
+        tag_name="v1.5.0",
+        github_metadata={
+            "prs": {
+                "12": {"labels": ["release"], "user": "justlovemaki"}
+            }
+        },
+    )
+
+    print(notes.github_release)
+    print(manifest.assets[0].name)
 ```
 
 ## 错误处理

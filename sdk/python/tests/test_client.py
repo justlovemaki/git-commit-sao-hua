@@ -237,11 +237,31 @@ class TestSaohuaClient(unittest.TestCase):
             "githubRelease": {"tag_name": "v1.1.0"},
             "totalCommits": 2
         }))
-        result = self.client.generate_release_notes(range="v1.0.0..HEAD", tag_name="v1.1.0")
+        result = self.client.generate_release_notes(
+            range="v1.0.0..HEAD",
+            tag_name="v1.1.0",
+            release_body="Release body",
+            target_commitish="main",
+            draft=True,
+            prerelease=True,
+            enrich=False,
+            enrich_github=True,
+            github_token="ghs_demo",
+            github_metadata={"prs": {"12": {"labels": ["release"]}}},
+            repo_path="fixtures/release-repo",
+        )
         self.assertIsInstance(result, ReleaseNotesResult)
         self.assertEqual(result.total_commits, 2)
         call_args = mock_req.call_args
         self.assertEqual(call_args.kwargs.get("json", {}).get("tagName"), "v1.1.0")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("body"), "Release body")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("targetCommitish"), "main")
+        self.assertTrue(call_args.kwargs.get("json", {}).get("draft"))
+        self.assertTrue(call_args.kwargs.get("json", {}).get("prerelease"))
+        self.assertFalse(call_args.kwargs.get("json", {}).get("enrich"))
+        self.assertTrue(call_args.kwargs.get("json", {}).get("enrichGitHub"))
+        self.assertEqual(call_args.kwargs.get("json", {}).get("githubToken"), "ghs_demo")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("repoPath"), "fixtures/release-repo")
 
     @patch("git_saohua.client.requests.Session.request")
     def test_generate_release_manifest(self, mock_req):
@@ -252,11 +272,31 @@ class TestSaohuaClient(unittest.TestCase):
                 {"name": "README.md", "path": "/tmp/README.md", "size": 1, "sha256": "abc", "contentType": "text/markdown"}
             ]
         }))
-        result = self.client.generate_release_manifest(["README.md"], tag_name="v1.1.0")
+        result = self.client.generate_release_manifest(
+            ["README.md"],
+            tag_name="v1.1.0",
+            release_body="Release body",
+            target_commitish="main",
+            draft=True,
+            prerelease=True,
+            enrich=False,
+            enrich_github=True,
+            github_token="ghs_demo",
+            github_metadata={"prs": {"12": {"labels": ["release"]}}},
+            repo_path="fixtures/release-repo",
+        )
         self.assertIsInstance(result, ReleaseManifestResult)
         self.assertEqual(result.assets[0].name, "README.md")
         call_args = mock_req.call_args
         self.assertEqual(call_args.kwargs.get("json", {}).get("assetPaths"), ["README.md"])
+        self.assertEqual(call_args.kwargs.get("json", {}).get("body"), "Release body")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("targetCommitish"), "main")
+        self.assertTrue(call_args.kwargs.get("json", {}).get("draft"))
+        self.assertTrue(call_args.kwargs.get("json", {}).get("prerelease"))
+        self.assertFalse(call_args.kwargs.get("json", {}).get("enrich"))
+        self.assertTrue(call_args.kwargs.get("json", {}).get("enrichGitHub"))
+        self.assertEqual(call_args.kwargs.get("json", {}).get("githubToken"), "ghs_demo")
+        self.assertEqual(call_args.kwargs.get("json", {}).get("repoPath"), "fixtures/release-repo")
 
     @patch("git_saohua.client.requests.Session.request")
     def test_validate_plugin_author_payload(self, mock_req):

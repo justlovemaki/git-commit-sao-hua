@@ -277,6 +277,23 @@ type ReleaseManifestResult struct {
 	Assets        []ReleaseAsset         `json:"assets"`
 }
 
+// ReleaseNotesOptions release notes / manifest 请求参数
+type ReleaseNotesOptions struct {
+	Range           string                 `json:"range,omitempty"`
+	Title           string                 `json:"title,omitempty"`
+	Repo            string                 `json:"repo,omitempty"`
+	TagName         string                 `json:"tagName,omitempty"`
+	Body            string                 `json:"body,omitempty"`
+	TargetCommitish string                 `json:"targetCommitish,omitempty"`
+	Draft           *bool                  `json:"draft,omitempty"`
+	Prerelease      *bool                  `json:"prerelease,omitempty"`
+	Enrich          *bool                  `json:"enrich,omitempty"`
+	EnrichGitHub    *bool                  `json:"enrichGitHub,omitempty"`
+	GitHubToken     string                 `json:"githubToken,omitempty"`
+	GitHubMetadata  map[string]interface{} `json:"githubMetadata,omitempty"`
+	RepoPath        string                 `json:"repoPath,omitempty"`
+}
+
 // StreamOptions 流式骚话请求参数
 type StreamOptions struct {
 	Type       string

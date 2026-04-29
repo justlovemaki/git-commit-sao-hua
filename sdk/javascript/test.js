@@ -243,6 +243,11 @@ test('generateReleaseNotes() posts release options', async () => {
       const body = JSON.parse(init.body);
       assert.equal(body.range, 'v1.0.0..HEAD');
       assert.equal(body.tagName, 'v1.1.0');
+      assert.equal(body.enrich, false);
+      assert.equal(body.enrichGitHub, true);
+      assert.equal(body.githubToken, 'ghs_demo');
+      assert.equal(body.repoPath, 'fixtures/release-repo');
+      assert.deepEqual(body.githubMetadata, { prs: { '12': { labels: ['release'] } } });
       return jsonResponse({
         success: true,
         data: {
@@ -256,7 +261,15 @@ test('generateReleaseNotes() posts release options', async () => {
     }),
   });
 
-  const result = await client.generateReleaseNotes({ range: 'v1.0.0..HEAD', tagName: 'v1.1.0' });
+  const result = await client.generateReleaseNotes({
+    range: 'v1.0.0..HEAD',
+    tagName: 'v1.1.0',
+    enrich: false,
+    enrichGitHub: true,
+    githubToken: 'ghs_demo',
+    githubMetadata: { prs: { '12': { labels: ['release'] } } },
+    repoPath: 'fixtures/release-repo',
+  });
   assert.equal(result.totalCommits, 2);
   assert.equal(result.githubRelease.tag_name, 'v1.1.0');
 });
@@ -267,6 +280,14 @@ test('generateReleaseManifest() sends asset paths', async () => {
     fetch: createFetch(async (_url, init) => {
       const body = JSON.parse(init.body);
       assert.deepEqual(body.assetPaths, ['README.md']);
+      assert.equal(body.body, 'Release body');
+      assert.equal(body.targetCommitish, 'main');
+      assert.equal(body.draft, true);
+      assert.equal(body.prerelease, true);
+      assert.equal(body.enrich, false);
+      assert.equal(body.enrichGitHub, true);
+      assert.equal(body.githubToken, 'ghs_demo');
+      assert.equal(body.repoPath, 'fixtures/release-repo');
       return jsonResponse({
         success: true,
         data: {
@@ -280,7 +301,17 @@ test('generateReleaseManifest() sends asset paths', async () => {
     }),
   });
 
-  const result = await client.generateReleaseManifest(['README.md'], { tagName: 'v1.1.0' });
+  const result = await client.generateReleaseManifest(['README.md'], {
+    tagName: 'v1.1.0',
+    body: 'Release body',
+    targetCommitish: 'main',
+    draft: true,
+    prerelease: true,
+    enrich: false,
+    enrichGitHub: true,
+    githubToken: 'ghs_demo',
+    repoPath: 'fixtures/release-repo',
+  });
   assert.equal(result.assets[0].name, 'README.md');
 });
 

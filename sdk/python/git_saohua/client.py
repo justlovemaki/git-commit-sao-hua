@@ -609,18 +609,45 @@ class SaohuaClient:
         title: Optional[str] = None,
         repo: Optional[str] = None,
         tag_name: Optional[str] = None,
+        release_body: Optional[str] = None,
+        target_commitish: Optional[str] = None,
+        draft: Optional[bool] = None,
+        prerelease: Optional[bool] = None,
+        enrich: Optional[bool] = None,
+        enrich_github: Optional[bool] = None,
+        github_token: Optional[str] = None,
+        github_metadata: Optional[Dict[str, Any]] = None,
+        repo_path: Optional[str] = None,
     ) -> ReleaseNotesResult:
         """生成 release notes。"""
-        body: Dict[str, Any] = {}
+        payload: Dict[str, Any] = {}
         if range:
-            body["range"] = range
+            payload["range"] = range
         if title:
-            body["title"] = title
+            payload["title"] = title
         if repo:
-            body["repo"] = repo
+            payload["repo"] = repo
         if tag_name:
-            body["tagName"] = tag_name
-        data = self._post("/api/release-notes/generate", json_body=body)
+            payload["tagName"] = tag_name
+        if release_body is not None:
+            payload["body"] = release_body
+        if target_commitish:
+            payload["targetCommitish"] = target_commitish
+        if draft is not None:
+            payload["draft"] = draft
+        if prerelease is not None:
+            payload["prerelease"] = prerelease
+        if enrich is not None:
+            payload["enrich"] = enrich
+        if enrich_github is not None:
+            payload["enrichGitHub"] = enrich_github
+        if github_token:
+            payload["githubToken"] = github_token
+        if github_metadata is not None:
+            payload["githubMetadata"] = github_metadata
+        if repo_path:
+            payload["repoPath"] = repo_path
+        data = self._post("/api/release-notes/generate", json_body=payload)
         return ReleaseNotesResult.from_dict(data)
 
     def generate_release_manifest(
@@ -630,18 +657,45 @@ class SaohuaClient:
         title: Optional[str] = None,
         repo: Optional[str] = None,
         tag_name: Optional[str] = None,
+        release_body: Optional[str] = None,
+        target_commitish: Optional[str] = None,
+        draft: Optional[bool] = None,
+        prerelease: Optional[bool] = None,
+        enrich: Optional[bool] = None,
+        enrich_github: Optional[bool] = None,
+        github_token: Optional[str] = None,
+        github_metadata: Optional[Dict[str, Any]] = None,
+        repo_path: Optional[str] = None,
     ) -> ReleaseManifestResult:
         """生成 GitHub release manifest。"""
-        body: Dict[str, Any] = {"assetPaths": asset_paths}
+        payload: Dict[str, Any] = {"assetPaths": asset_paths}
         if range:
-            body["range"] = range
+            payload["range"] = range
         if title:
-            body["title"] = title
+            payload["title"] = title
         if repo:
-            body["repo"] = repo
+            payload["repo"] = repo
         if tag_name:
-            body["tagName"] = tag_name
-        data = self._post("/api/release-notes/manifest", json_body=body)
+            payload["tagName"] = tag_name
+        if release_body is not None:
+            payload["body"] = release_body
+        if target_commitish:
+            payload["targetCommitish"] = target_commitish
+        if draft is not None:
+            payload["draft"] = draft
+        if prerelease is not None:
+            payload["prerelease"] = prerelease
+        if enrich is not None:
+            payload["enrich"] = enrich
+        if enrich_github is not None:
+            payload["enrichGitHub"] = enrich_github
+        if github_token:
+            payload["githubToken"] = github_token
+        if github_metadata is not None:
+            payload["githubMetadata"] = github_metadata
+        if repo_path:
+            payload["repoPath"] = repo_path
+        data = self._post("/api/release-notes/manifest", json_body=payload)
         return ReleaseManifestResult.from_dict(data)
 
     # ── 类型与风格 ───────────────────────────────────────
